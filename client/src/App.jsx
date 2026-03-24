@@ -3,6 +3,8 @@ import "./App.css";
 
 function App() {
   const isDev = import.meta.env.DEV;
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
   const [backendStatus, setBackendStatus] = useState("Checking...");
 
   useEffect(() => {
@@ -10,11 +12,11 @@ function App() {
       return;
     }
 
-    fetch("http://localhost:5001/api/health")
+    fetch(`${apiBaseUrl}/api/health`)
       .then((res) => res.json())
       .then((data) => setBackendStatus(data.status))
       .catch(() => setBackendStatus("Offline"));
-  }, [isDev]);
+  }, [apiBaseUrl, isDev]);
 
   return (
     <main className="landing-shell">

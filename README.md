@@ -51,7 +51,7 @@ npm -v         # Should show 9.x or higher
 #### 1. Clone the Repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/UOA-CS732-S1-2026/group-project-have-a-byte.git
 cd group-project-have-a-byte
 ```
 
@@ -66,7 +66,10 @@ Create a `.env` file in the `server/` directory:
 
 ```env
 PORT=5001
+# Backend dev server port
+
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
+# MongoDB connection URL
 ```
 
 #### 3. Set Up Frontend
@@ -74,6 +77,16 @@ MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrit
 ```bash
 cd ../client
 npm install
+```
+
+Create a `.env` file in the `client/` directory:
+
+```env
+VITE_PORT=5173
+# Frontend dev server port
+
+VITE_API_BASE_URL=http://localhost:5001
+# Base URL used by the frontend to send requests to the backend
 ```
 
 ---
@@ -90,18 +103,19 @@ npm run dev
 ```
 
 The backend will start on `http://localhost:5001`
+The backend port comes from `server/.env`. If you change `PORT`, update `VITE_API_BASE_URL` in `client/.env` to match.
+If the database connection succeeds, the backend terminal will print `MongoDB connected`.
 
-
-#### Terminal 2: Frontend Development Server
+#### Terminal 2: Frontend Server
 
 ```bash
 cd client
 npm run dev
 ```
 
-The frontend development server will usually run on `http://localhost:5173`
+The frontend development server will run on the port defined by `VITE_PORT` in `client/.env` and usually uses `http://localhost:5173`
 
-After opening the frontend on `http://localhost:5173`, check the backend status shown in the bottom-right corner:
+After opening the frontend, check the backend status shown in the bottom-right corner:
 
 - `Backend: Offline` means the frontend is not connected to the backend.
 - `Backend: OK` means the frontend is successfully connected to the backend.
