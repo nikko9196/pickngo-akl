@@ -298,5 +298,4 @@ The core collection managing the session lifecycle, state machine, and participa
     * `updatedAt`: **date**.
 
 
-
 ![Have A Byte](./Have%20A%20Byte.png)
