@@ -11,22 +11,13 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
-## Project Structure
+## 🚀 Getting Started
 
-```text
-.
-|-- client/    React + Vite frontend
-|-- server/    Express + MongoDB backend
-|-- docs/      Project notes and supporting documentation
-```
-
-## Tech Stack
+### Tech Stack
 
 - Frontend: React 19, Vite
 - Backend: Node.js, Express 5
 - Database: MongoDB Atlas, Mongoose
-
-## 🚀 Getting Started
 
 ### Prerequisites
 
@@ -121,6 +112,102 @@ After opening the frontend, check the backend status shown in the bottom-right c
 - `Backend: OK` means the frontend is successfully connected to the backend.
 
 ---
+
+## Project Structure
+
+```text
+group-project-have-a-byte/
+|-- client/                      # React + Vite frontend
+|   |-- public/                  # Static assets served directly by Vite
+|   |-- src/                     # Frontend source code
+|   |   |-- api/                 # API request functions and backend communication
+|   |   |-- assets/              # Images, icons, and other frontend assets
+|   |   |-- components/          # Reusable UI components
+|   |   |-- context/             # Shared React context and global state
+|   |   |-- pages/               # Page-level React components
+|   |   |-- utils/               # Utility helpers currently stored in this folder
+|   |   |-- App.jsx              # Main frontend app component
+|   |   |-- App.css              # Styles used by the main app/page shell
+|   |   |-- index.css            # Global frontend styles
+|   |   |-- main.jsx             # Frontend entry file that mounts React
+|   |-- .env                     # Frontend local environment variables
+|   |-- eslint.config.js         # ESLint rules for frontend code quality
+|   |-- package.json             # Frontend scripts and dependencies
+|   |-- vite.config.js           # Vite dev/build configuration
+|-- server/                      # Node.js + Express backend
+|   |-- src/                     # Backend source code
+|   |   |-- config/              # Backend configuration such as MongoDB connection
+|   |   |-- controllers/         # Request handlers and business logic
+|   |   |-- middleware/          # Express middleware such as auth or validation
+|   |   |-- models/              # Mongoose models and database schema files
+|   |   |-- routes/              # Express route definitions and API endpoints
+|   |   |-- services/            # Reusable backend service logic
+|   |   |-- app.js               # Current backend entry file
+|   |-- .env                     # Backend local environment variables
+|   |-- package.json             # Backend scripts and dependencies
+|-- docs/                        # Project notes and supporting documentation
+|-- README.md                    # Setup guide and project overview
+```
+
+### Environment Files
+
+- `server/.env`: Backend environment variables such as `PORT` and `MONGODB_URI`.
+- `client/.env`: Frontend environment variables such as `VITE_PORT` and `VITE_API_BASE_URL`.
+
+### File Naming Conventions
+
+- Use `.jsx` for React files that render JSX, such as files in `pages/`, `components/`, and `context/`.
+- Use `.js` for non-UI logic files, such as files in `api/`, backend `src/`, and utility/helper files.
+- Keep React page names descriptive, for example `HomePage.jsx`, `LoginPage.jsx`, and `DashboardPage.jsx`.
+- Keep reusable React component names descriptive, for example `Navbar.jsx`, `StatusBadge.jsx`, and `QuestionCard.jsx`.
+- Keep API and utility filenames action-based, for example `health.js`, `auth.js`, `session.js`, or `formatDate.js`.## Project Structure
+
+```text
+group-project-have-a-byte/
+|-- client/                      # React + Vite frontend
+|   |-- public/                  # Static assets served directly by Vite
+|   |-- src/                     # Frontend source code
+|   |   |-- api/                 # API request functions and backend communication
+|   |   |-- assets/              # Images, icons, and other frontend assets
+|   |   |-- components/          # Reusable UI components
+|   |   |-- context/             # Shared React context and global state
+|   |   |-- pages/               # Page-level React components
+|   |   |-- utils/              # Utility helpers currently stored in this folder
+|   |   |-- App.jsx              # Main frontend app component
+|   |   |-- App.css              # Styles used by the main app/page shell
+|   |   |-- index.css            # Global frontend styles
+|   |   |-- main.jsx             # Frontend entry file that mounts React
+|   |-- .env                     # Frontend local environment variables
+|   |-- eslint.config.js         # ESLint rules for frontend code quality
+|   |-- package.json             # Frontend scripts and dependencies
+|   |-- vite.config.js           # Vite dev/build configuration
+|-- server/                      # Node.js + Express backend
+|   |-- src/                     # Backend source code
+|   |   |-- config/              # Backend configuration such as MongoDB connection
+|   |   |-- controllers/         # Request handlers and business logic
+|   |   |-- middleware/          # Express middleware such as auth or validation
+|   |   |-- models/              # Mongoose models and database schema files
+|   |   |-- routes/              # Express route definitions and API endpoints
+|   |   |-- services/            # Reusable backend service logic
+|   |   |-- app.js               # Current backend entry file
+|   |-- .env                     # Backend local environment variables
+|   |-- package.json             # Backend scripts and dependencies
+|-- docs/                        # Project notes and supporting documentation
+|-- README.md                    # Setup guide and project overview
+```
+
+### Environment Files
+
+- `server/.env`: Backend environment variables such as `PORT` and `MONGODB_URI`.
+- `client/.env`: Frontend environment variables such as `VITE_PORT` and `VITE_API_BASE_URL`.
+
+### File Naming Conventions
+
+- Use `.jsx` for React files that render JSX, such as files in `pages/`, `components/`, and `context/`.
+- Use `.js` for non-UI logic files, such as files in `api/`, backend `src/`, and utility/helper files.
+- Keep React page names descriptive, for example `HomePage.jsx`, `LoginPage.jsx`, and `DashboardPage.jsx`.
+- Keep reusable React component names descriptive, for example `Navbar.jsx`, `StatusBadge.jsx`, and `QuestionCard.jsx`.
+- Keep API and utility filenames action-based, for example `health.js`, `auth.js`, `session.js`, or `formatDate.js`.
 
 ## 📦 Database Schema (MongoDB)
 
