@@ -1,17 +1,248 @@
-# CS732 project - Team Have A Byte
+# Have A Byte
 
-Welcome to the CS732 project. We look forward to seeing the amazing things you create this semester! This is your team's repository.
+Have A Byte is a full-stack web project for CS732. This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
 
-Your team members are:
-- Cheng Cheng _(cche860@aucklanduni.ac.nz)_
-- Annie Lin _(yiln996@aucklanduni.ac.nz)_
-- Nhu Pham _(dpha478@aucklanduni.ac.nz)_
-- Phuong Phan _(ppha961@aucklanduni.ac.nz)_
-- Vincent Su _(hsu901@aucklanduni.ac.nz)_
-- Cynthia Xie _(zxie211@aucklanduni.ac.nz)_
+## Team Members
 
-You have complete control over how you run this repo. All your members will have admin access. The only thing setup by default is branch protections on `main`, requiring a PR with at least one code reviewer to modify `main` rather than direct pushes.
+- Cheng Cheng (`cche860@aucklanduni.ac.nz`)
+- Annie Lin (`yiln996@aucklanduni.ac.nz`)
+- Nhu Pham (`dpha478@aucklanduni.ac.nz`)
+- Phuong Phan (`ppha961@aucklanduni.ac.nz`)
+- Vincent Su (`hsu901@aucklanduni.ac.nz`)
+- Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
-Please use good version control practices, such as feature branching, both to make it easier for markers to see your group's history and to lower the chances of you tripping over each other during development
+## Project Structure
 
-![](./Have%20A%20Byte.png)
+```text
+.
+|-- client/    React + Vite frontend
+|-- server/    Express + MongoDB backend
+|-- docs/      Project notes and supporting documentation
+```
+
+## Tech Stack
+
+- Frontend: React 19, Vite
+- Backend: Node.js, Express 5
+- Database: MongoDB Atlas, Mongoose
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+#### Development Environment
+
+- **IDE**: Visual Studio Code ([download](https://code.visualstudio.com/)), JetBrains WebStorm ([download](https://www.jetbrains.com/webstorm/)), or JetBrains IntelliJ IDEA ([download](https://www.jetbrains.com/idea/))
+- **Node.js**: v18.x LTS or higher ([download](https://nodejs.org/))
+- **npm**: v9.x or higher (installed with Node.js)
+- **MongoDB**: Atlas account (free tier) or another valid MongoDB connection string
+
+Verify installations:
+
+```bash
+node -v        # Should show v18.x or higher
+npm -v         # Should show 9.x or higher
+```
+
+---
+
+### Installation
+
+#### 1. Clone the Repository
+
+```bash
+git clone <your-repo-url>
+cd group-project-have-a-byte
+```
+
+#### 2. Set Up Backend
+
+```bash
+cd server
+npm install
+```
+
+Create a `.env` file in the `server/` directory:
+
+```env
+PORT=5001
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
+```
+
+#### 3. Set Up Frontend
+
+```bash
+cd ../client
+npm install
+```
+
+---
+
+### Running the Application
+
+You need **two terminal windows** to run the current project setup.
+
+#### Terminal 1: Backend Server
+
+```bash
+cd server
+npm run dev
+```
+
+The backend will start on `http://localhost:5001`
+
+
+#### Terminal 2: Frontend Development Server
+
+```bash
+cd client
+npm run dev
+```
+
+The frontend development server will usually run on `http://localhost:5173`
+
+After opening the frontend on `http://localhost:5173`, check the backend status shown in the bottom-right corner:
+
+- `Backend: Offline` means the frontend is not connected to the backend.
+- `Backend: OK` means the frontend is successfully connected to the backend.
+
+---
+
+## 📦 Database Schema (MongoDB)
+
+This project uses **MongoDB (NoSQL)**. Each collection is designed based on the session-driven workflow.
+
+---
+
+### 1. 🧑‍💻 Users
+Stores core user account information and authentication credentials.
+
+* **Collection: `users`**
+    * `userId`: **string** (Primary Key) — Unique identifier.
+    * `displayName`: **string** — Public name shown to other participants.
+    * `email`: **string** — Registered email address.
+    * `avatarUrl`: **string** — URL to the user's profile picture.
+    * `authProviders`: **array** — List of authentication methods.
+        * `provider`: **string** (Enum ["local", "google"]).
+        * `providerUserId`: **string**.
+        * `passwordHash`: **string**.
+    * `isAdmin`: **boolean** — Administrative privilege flag.
+    * `lastLoginAt`: **date** - Last login time.
+    * `createdAt`: **date** - Creation time.
+    * `updatedAt`: **date** - Update personal information time.
+
+---
+
+### 2. ❓ Question Lists
+Stores question pools grouped by categories to collect user preferences.
+
+* **Collection: `questionLists`**
+    * `questionListId`: **string** (Primary Key).
+    * `category`: **string** (Enum ["budget", "cuisine", "distance", "vibe"]).
+    * `isActive`: **boolean** — Indicates if this list is currently in use.
+    * `questionList`: **array** — List of specific questions.
+        * `questionId`: **string**.
+        * `questionType`: **string** (Enum ["text","single_choice", "multiple_choice"]).
+        * `questionText`: **string** — The actual question string.
+        * `questionValue`: **array** (Optional in choice question)
+            * `optionLabel`: **string** (Enum [A, B, C, D, E]).
+            * `optionText`: **string** — The displayed text for the option.
+
+---
+
+### 3. 📝 Responses
+Stores individual user answers to questions within a specific session.
+
+* **Collection: `responses`**
+    * `responseId`: **string** (Primary Key).
+    * `sessionId`: **string** (Foreign Key) — Associated session.
+    * `userId`: **string** (Foreign Key) — User who provided the answer.
+    * `questionId`: **string** (Foreign Key) — The specific question being answered.
+    * `answer`: **string** — Selected option label or raw text input.
+    * `skipped`: **boolean** — Flag if the user bypassed the question.
+    * `createdAt`: **date**.
+
+---
+
+### 4. 🤖 Recommendation Sets
+Stores restaurant suggestions generated by the AI.
+
+* **Collection: `recommendationSets`**
+    * `recommendationSetId`: **string** (Primary Key).
+    * `sessionId`: **string** (Foreign Key).
+    * `generatedBy`: **string** (Enum ["Gemini", "ChatGPT"]).
+    * `items`: **array** — Fixed list of 10 recommended restaurants.
+        * `placeId`: **string** — Google Maps Place API Unique ID.
+        * `rank`: **number** (1 to 10).
+    * `createdAt`: **date**.
+
+---
+
+### 5. ❤️ User Selections
+Stores the specific restaurants users have "liked" from the AI recommendations.
+
+* **Collection: `userSelections`**
+    * `selectionId`: **string** (Primary Key).
+    * `sessionId`: **string** (Foreign Key).
+    * `userId`: **string** (Foreign Key).
+    * `recommendationSetId`: **string** (Foreign Key).
+    * `selectedItems`: **array** — Restaurants shortlisted by the user.
+        * `placeId`: **string**.
+    * `createdAt`: **date**.
+
+---
+
+### 6. 🎡 Wheel Rounds
+Stores data for each iteration of the decision-making spinning wheel.
+
+* **Collection: `wheelRounds`**
+    * `wheelRoundId`: **string** (Primary Key).
+    * `sessionId`: **string** (Foreign Key).
+    * `wheelItems`: **array** — The pool of restaurants entering the wheel.
+        * `placeId`: **string**.
+    * `resultPlaceId`: **string** — The result restaurant ID.
+    * `status`: **string** (Enum ["pending", "spinning", "completed"]).
+    * `createdAt`: **date**.
+
+---
+
+### 7. 🗳️ Votes
+Stores final user confirmation votes for the decision results.
+
+* **Collection: `votes`**
+    * `voteId`: **string** (Primary Key).
+    * `sessionId`: **string** (Foreign Key).
+    * `wheelRoundId`: **string** (Foreign Key).
+    * `userId`: **string** (Foreign Key).
+    * `vote`: **string** (Enum ["accept", "respin"]).
+    * `createdAt`: **date**.
+
+---
+
+### 8. 🧩 Sessions
+The core collection managing the session lifecycle, state machine, and participant status.
+
+* **Collection: `sessions`**
+    * `sessionId`: **string** (Primary Key).
+    * `hostUserId`: **string** (Foreign Key) — ID of the session creator.
+    * `sessionCode`: **string** — Unique room code for invites.
+    * `joinUrl`: **string** — Direct link to join the session.
+    * `status`: **string** — Current state of the workflow.
+        * Enum: `waiting`, `questioning`, `generating`, `selecting`, `spinning`, `voting`, `completed`.
+    * `participants`: **array** — Dynamic list of users in the room.
+        * `userId`: **string** (Foreign Key).
+        * `role`: **string** (Enum ["host", "member"]).
+        * `joinedAt`: **date**.
+        * `hasCompletedQuestions`: **boolean**.
+        * `hasCompletedSelection`: **boolean**.
+        * `hasVote`: **boolean**.
+    * `generationList`: **array** — History of AI recommendation sets.
+        * `recommendationSetId`: **string** (Foreign Key).
+    * `wheelRoundList`: **array** — History of wheel spin rounds.
+        * `wheelRoundId`: **string** (Foreign Key).
+    * `createdAt`: **date**.
+    * `updatedAt`: **date**.
+
+
+
+![Have A Byte](./Have%20A%20Byte.png)
