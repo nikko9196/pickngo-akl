@@ -61,6 +61,12 @@ PORT=5001
 
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
 # MongoDB connection URL
+
+JWT_SECRET=change-this-jwt-secret
+# Secret used to sign login tokens
+
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+# Optional: required only if you want Google sign-in enabled
 ```
 
 #### 3. Set Up Frontend
@@ -78,6 +84,9 @@ VITE_PORT=5173
 
 VITE_API_BASE_URL=http://localhost:5001
 # Base URL used by the frontend to send requests to the backend
+
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+# Optional: required only if you want Google sign-in enabled
 ```
 
 ---

@@ -1,8 +1,10 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Sriracha&family=Suez+One&display=swap");
+
 :root {
   --page-bg: #1e1d1c;
-  --body-font: "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
-  --display-font: Georgia, "Times New Roman", serif;
-  --accent-font: "Trebuchet MS", "Segoe UI", sans-serif;
+  --body-font: "Inter", "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+  --display-font: "Suez One", Georgia, "Times New Roman", serif;
+  --accent-font: "Sriracha", "Trebuchet MS", "Segoe UI", sans-serif;
   font-family: var(--body-font);
   line-height: 1.5;
   font-weight: 400;
