@@ -21,5 +21,5 @@ async function request(path, token, options = {}) {
 }
 
 export function getActiveQuestionLists(token) {
-  return request("/api/questions/active", token);
+  return request("/api/questions", token);
 }

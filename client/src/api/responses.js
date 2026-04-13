@@ -21,8 +21,10 @@ async function request(path, token, options = {}) {
 }
 
 export function submitResponse(token, payload) {
-  return request("/api/responses", token, {
+  const { sessionId, ...body } = payload;
+
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/responses`, token, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 }

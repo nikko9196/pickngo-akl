@@ -6,6 +6,6 @@ const { requireAuth } = require("../middleware/auth");
 const router = express.Router();
 
 router.use(requireAuth);
-router.get("/active", getActiveQuestionLists);
+router.get("/", getActiveQuestionLists);
 
 module.exports = router;

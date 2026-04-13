@@ -15,7 +15,7 @@ function QuestionPage() {
   const location = useLocation();
   const { sessionCode } = useParams();
   const initialSession = location.state?.inviteSession || null;
-  const { isAuthenticated, isAuthReady, token, user } = useAuth();
+  const { isAuthenticated, isAuthReady, token } = useAuth();
   const [session, setSession] = useState(initialSession);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -351,15 +351,6 @@ function QuestionPage() {
           </section>
         )}
 
-        {!isGeneratingRestaurants ? (
-          <div className="question-page-user-badge" aria-label={user?.displayName || user?.email || "Current user"}>
-            {user?.avatarUrl ? (
-              <img src={user.avatarUrl} alt={user.displayName || "Current user"} />
-            ) : (
-              <span>{(user?.displayName || user?.email || "U").trim().charAt(0).toUpperCase()}</span>
-            )}
-          </div>
-        ) : null}
       </section>
     </main>
   );

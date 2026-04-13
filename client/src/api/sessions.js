@@ -32,7 +32,7 @@ export function getMySessions(token) {
 }
 
 export function getSessionByCode(token, sessionCode) {
-  return request(`/api/sessions/code/${encodeURIComponent(sessionCode)}`, token);
+  return request(`/api/sessions/${encodeURIComponent(sessionCode)}`, token);
 }
 
 export function getSessionProgress(token, sessionId) {
@@ -42,13 +42,6 @@ export function getSessionProgress(token, sessionId) {
 export function joinSession(token, payload) {
   return request("/api/sessions/join", token, {
     method: "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export function updateMySessionProfile(token, sessionId, payload) {
-  return request(`/api/sessions/${sessionId}/me`, token, {
-    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

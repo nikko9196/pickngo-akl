@@ -51,7 +51,7 @@ async function updateSessionStatusIfComplete(sessionId) {
 }
 
 async function upsertResponse(req, res) {
-  const sessionId = req.body.sessionId?.trim();
+  const sessionId = req.params.sessionId?.trim();
   const questionId = req.body.questionId?.trim();
   const answer = parseAnswer(req.body.answer);
   const skipped = Boolean(req.body.skipped);

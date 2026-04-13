@@ -250,35 +250,6 @@ async function joinSession(req, res) {
   return res.json({ session: serializeSession(session, req.userId) });
 }
 
-async function updateMySessionProfile(req, res) {
-  const roomDisplayName = parseRoomDisplayName(req.body.roomDisplayName);
-
-  if (!roomDisplayName) {
-    return res.status(400).json({
-      message: `Room display name is required and must be ${ROOM_DISPLAY_NAME_MAX_LENGTH} characters or fewer.`,
-    });
-  }
-
-  const session = await fetchSessionById(req.params.sessionId);
-
-  if (!session) {
-    return res.status(404).json({ message: "Room not found." });
-  }
-
-  const currentParticipant = session.participants.find(
-    (participant) => getUserIdValue(participant.userId) === req.userId
-  );
-
-  if (!currentParticipant) {
-    return res.status(403).json({ message: "You are not a participant in this room." });
-  }
-
-  currentParticipant.roomDisplayName = roomDisplayName;
-  await session.save();
-
-  return res.json({ session: serializeSession(session, req.userId) });
-}
-
 async function updateSession(req, res) {
   const maxParticipants = parseCapacity(req.body.maxParticipants);
 
@@ -413,6 +384,5 @@ module.exports = {
   getSessionByCode,
   joinSession,
   updateSessionStatus,
-  updateMySessionProfile,
   updateSession,
 };
