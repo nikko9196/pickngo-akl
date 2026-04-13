@@ -40,6 +40,12 @@ export function loginWithGoogle(credential) {
   });
 }
 
+export function continueAsGuest() {
+  return request("/api/auth/guest", {
+    method: "POST",
+  });
+}
+
 export function getCurrentUser(token) {
   return request("/api/auth/me", {
     headers: {

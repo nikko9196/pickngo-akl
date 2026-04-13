@@ -1,4 +1,5 @@
 const {
+  createGuestUser,
   getUserById,
   loginLocalUser,
   loginWithGoogle,
@@ -11,17 +12,17 @@ function getMessage(error, fallback) {
 
 async function register(req, res) {
   try {
-    const { displayName, email, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!displayName?.trim() || !email?.trim() || !password) {
-      return res.status(400).json({ message: "Display name, email, and password are required." });
+    if (!email?.trim() || !password) {
+      return res.status(400).json({ message: "Email and password are required." });
     }
 
     if (password.length < 8) {
       return res.status(400).json({ message: "Password must be at least 8 characters long." });
     }
 
-    const authResult = await registerLocalUser({ displayName, email, password });
+    const authResult = await registerLocalUser({ email, password });
     return res.status(201).json(authResult);
   } catch (error) {
     const message = getMessage(error, "Registration failed.");
@@ -66,6 +67,16 @@ async function googleLogin(req, res) {
   }
 }
 
+async function guestLogin(req, res) {
+  try {
+    const authResult = await createGuestUser();
+    return res.status(201).json(authResult);
+  } catch (error) {
+    const message = getMessage(error, "Guest sign-in failed.");
+    return res.status(500).json({ message });
+  }
+}
+
 async function me(req, res) {
   const user = await getUserById(req.userId);
 
@@ -77,6 +88,7 @@ async function me(req, res) {
 }
 
 module.exports = {
+  guestLogin,
   googleLogin,
   login,
   me,

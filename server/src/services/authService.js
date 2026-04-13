@@ -19,6 +19,7 @@ function sanitizeUser(user) {
     email: user.email,
     avatarUrl: user.avatarUrl,
     authProviders: user.authProviders.map(({ provider }) => provider),
+    isGuest: user.authProviders.some(({ provider }) => provider === "guest"),
     isAdmin: user.isAdmin,
     lastLoginAt: user.lastLoginAt,
     createdAt: user.createdAt,
@@ -41,7 +42,7 @@ function getProvider(user, provider) {
   return user.authProviders.find((entry) => entry.provider === provider);
 }
 
-async function registerLocalUser({ displayName, email, password }) {
+async function registerLocalUser({ email, password }) {
   const normalizedEmail = email.trim().toLowerCase();
   const existingUser = await User.findOne({ email: normalizedEmail });
 
@@ -57,14 +58,38 @@ async function registerLocalUser({ displayName, email, password }) {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const now = new Date();
+  const derivedDisplayName = normalizedEmail.split("@")[0];
 
   const user = await User.create({
-    displayName: displayName.trim(),
+    displayName: derivedDisplayName,
     email: normalizedEmail,
     authProviders: [
       {
         provider: "local",
         passwordHash,
+      },
+    ],
+    lastLoginAt: now,
+  });
+
+  return {
+    token: createToken(user),
+    user: sanitizeUser(user),
+  };
+}
+
+async function createGuestUser() {
+  const now = new Date();
+  const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+  const guestId = `guest-${Date.now()}-${suffix.toLowerCase()}`;
+
+  const user = await User.create({
+    displayName: `Guest ${suffix}`,
+    email: `${guestId}@guest.haveabyte.local`,
+    authProviders: [
+      {
+        provider: "guest",
+        providerUserId: guestId,
       },
     ],
     lastLoginAt: now,
@@ -174,6 +199,7 @@ async function getUserById(userId) {
 }
 
 module.exports = {
+  createGuestUser,
   createToken,
   getUserById,
   loginLocalUser,

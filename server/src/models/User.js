@@ -4,7 +4,7 @@ const authProviderSchema = new mongoose.Schema(
   {
     provider: {
       type: String,
-      enum: ["local", "google"],
+      enum: ["local", "google", "guest"],
       required: true,
     },
     providerUserId: {

@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState } from "react";
 
 import {
+  continueAsGuest,
   getCurrentUser,
   login,
   loginWithGoogle,
@@ -83,6 +84,7 @@ export function AuthProvider({ children }) {
     register: (payload) => handleAuthRequest(register, payload),
     loginWithGoogle: (credential) =>
       handleAuthRequest(() => loginWithGoogle(credential)),
+    continueAsGuest: () => handleAuthRequest(continueAsGuest),
     logout: () => {
       setAuthState({ token: "", user: null });
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
