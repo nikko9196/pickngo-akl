@@ -1,0 +1,329 @@
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import {
+  deleteSession,
+  getMySessions,
+  updateSession,
+} from "../api/sessions";
+import foodPatternBackground from "../assets/background - pattern - food 1.png";
+import logoPointer from "../assets/Polygon 1.svg";
+import taglineImage from "../assets/Tagline 1.png";
+import { useAuth } from "../context/useAuth";
+import "./HomePage.css";
+
+function HomePage() {
+  const navigate = useNavigate();
+  const [rooms, setRooms] = useState([]);
+  const [roomDrafts, setRoomDrafts] = useState({});
+  const [roomMessage, setRoomMessage] = useState("");
+  const [roomError, setRoomError] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isRoomsLoading, setIsRoomsLoading] = useState(false);
+  const [activeRoomId, setActiveRoomId] = useState("");
+  const [roomPendingDelete, setRoomPendingDelete] = useState(null);
+  const { isAuthenticated, logout, token, user } = useAuth();
+
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setRooms([]);
+      setRoomDrafts({});
+      return;
+    }
+
+    let ignore = false;
+
+    async function hydrateRooms() {
+      setIsRoomsLoading(true);
+
+      try {
+        const { sessions } = await getMySessions(token);
+
+        if (ignore) {
+          return;
+        }
+
+        setRooms(sessions);
+        setRoomDrafts(
+          sessions.reduce((drafts, room) => {
+            drafts[room.id] = room.maxParticipants;
+            return drafts;
+          }, {})
+        );
+      } catch (error) {
+        if (!ignore) {
+          setRoomError(error.message);
+        }
+      } finally {
+        if (!ignore) {
+          setIsRoomsLoading(false);
+        }
+      }
+    }
+
+    void hydrateRooms();
+
+    return () => {
+      ignore = true;
+    };
+  }, [isAuthenticated, token]);
+
+  const welcomeName = user?.displayName || user?.email || "Friend";
+  const avatarLabel = welcomeName.trim().charAt(0).toUpperCase() || "U";
+  const roomsById = useMemo(
+    () =>
+      rooms.reduce((lookup, room) => {
+        lookup[room.id] = room;
+        return lookup;
+      }, {}),
+    [rooms]
+  );
+
+  function handleRoomDraftChange(roomId, value) {
+    setRoomDrafts((current) => ({ ...current, [roomId]: value }));
+  }
+
+  async function handleRoomUpdate(roomId) {
+    setRoomError("");
+    setRoomMessage("");
+    setActiveRoomId(roomId);
+
+    try {
+      const { session } = await updateSession(token, roomId, {
+        maxParticipants: Number(roomDrafts[roomId]),
+      });
+      setRooms((current) => current.map((room) => (room.id === roomId ? session : room)));
+      setRoomDrafts((current) => ({ ...current, [roomId]: session.maxParticipants }));
+      setRoomMessage(`Room ${session.sessionCode} updated.`);
+    } catch (error) {
+      setRoomError(error.message);
+    } finally {
+      setActiveRoomId("");
+    }
+  }
+
+  async function handleRoomDelete(roomId) {
+    const room = roomsById[roomId];
+
+    if (!room) {
+      return;
+    }
+
+    setRoomError("");
+    setRoomMessage("");
+    setActiveRoomId(roomId);
+
+    try {
+      await deleteSession(token, roomId);
+      setRooms((current) => current.filter((item) => item.id !== roomId));
+      setRoomMessage(`Room ${room.sessionCode} deleted.`);
+    } catch (error) {
+      setRoomError(error.message);
+    } finally {
+      setActiveRoomId("");
+    }
+  }
+
+  function requestRoomDelete(roomId) {
+    const room = roomsById[roomId];
+
+    if (!room) {
+      return;
+    }
+
+    setRoomPendingDelete(room);
+  }
+
+  return (
+    <main className="landing-shell">
+      <section className="landing-page">
+        <div
+          className="landing-pattern"
+          aria-hidden="true"
+          style={{ "--landing-background-image": `url("${foodPatternBackground}")` }}
+        />
+        <header className="top-banner">
+          <div className="brand-lockup">
+            <div className="brand-name" aria-label="PICK n GO AKL">
+              <span className="brand-word brand-word-left">PICK</span>
+              <span className="brand-word brand-word-connector">n</span>
+              <span className="brand-word brand-word-right">GO</span>
+            </div>
+            <div className="brand-city">
+              <span>AKL</span>
+              <img src={logoPointer} alt="" aria-hidden="true" />
+            </div>
+          </div>
+        </header>
+
+        {isAuthenticated ? (
+          <div className="account-menu landing-account-menu">
+            <button
+              className="account-pill account-pill-trigger landing-account-trigger"
+              type="button"
+              onClick={() => setIsMenuOpen((current) => !current)}
+            >
+              {user?.avatarUrl ? (
+                <img className="account-avatar" src={user.avatarUrl} alt={welcomeName} />
+              ) : (
+                <div className="account-avatar account-avatar-fallback" aria-hidden="true">
+                  {avatarLabel}
+                </div>
+              )}
+              <span className="landing-account-name">{welcomeName}</span>
+            </button>
+
+            {isMenuOpen ? (
+              <section className="account-dropdown landing-account-dropdown">
+                <div className="account-dropdown-header">
+                  <strong>My rooms</strong>
+                  <span>{rooms.length} total</span>
+                </div>
+
+                {isRoomsLoading ? <p className="account-dropdown-state">Loading rooms...</p> : null}
+                {roomMessage ? <p className="auth-status success">{roomMessage}</p> : null}
+                {roomError ? <p className="auth-status error">{roomError}</p> : null}
+
+                {!isRoomsLoading && rooms.length === 0 ? (
+                  <p className="account-dropdown-state">You have not joined any rooms yet.</p>
+                ) : null}
+
+                <div className="room-list">
+                  {rooms.map((room) => {
+                    const isHost = room.currentUserRole === "host";
+                    const isBusy = activeRoomId === room.id;
+
+                    return (
+                      <article className="room-card" key={room.id}>
+                        <div className="room-card-head">
+                          <strong>{room.sessionCode}</strong>
+                          <span>{isHost ? "Host" : "Member"}</span>
+                        </div>
+                        <p>
+                          {room.participantCount}/{room.maxParticipants} participants
+                        </p>
+                        {isHost ? (
+                          <div className="room-card-actions">
+                            <input
+                              type="number"
+                              min="2"
+                              max="50"
+                              value={roomDrafts[room.id] ?? room.maxParticipants}
+                              onChange={(event) => handleRoomDraftChange(room.id, event.target.value)}
+                            />
+                            <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
+                              Save
+                            </button>
+                            <button type="button" onClick={() => navigate(`/sessions/${room.sessionCode}`)}>
+                              Open
+                            </button>
+                            <button type="button" className="danger" onClick={() => requestRoomDelete(room.id)} disabled={isBusy}>
+                              Delete
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="room-card-member-actions">
+                            <p className="room-card-readonly">Members can view rooms here, but only hosts can edit them.</p>
+                            <button type="button" onClick={() => navigate(`/sessions/${room.sessionCode}`)}>
+                              Open room
+                            </button>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+
+                <button className="sign-in-link account-signout" type="button" onClick={logout}>
+                  Sign out
+                </button>
+              </section>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            className="sign-in-link landing-sign-in-link"
+            type="button"
+            onClick={() => navigate("/auth")}
+          >
+            Sign in
+          </button>
+        )}
+
+        <section className="landing-hero">
+          <div className="hero-text">
+            <img className="hero-tagline-image" src={taglineImage} alt="Let Fate Pick the Table" />
+            <p>
+              Pick a place to eat together in the most fun way possible.
+            </p>
+          </div>
+
+          <div className="hero-actions">
+            <button className="cta-button" type="button" onClick={() => navigate("/join")}>
+              Join Room
+            </button>
+            <button
+              className="cta-button secondary"
+              type="button"
+              onClick={() => navigate(isAuthenticated ? "/rooms/create" : "/auth")}
+            >
+              Create Room
+            </button>
+          </div>
+        </section>
+
+      </section>
+
+      {roomPendingDelete ? (
+        <div className="modal-backdrop" role="presentation" onClick={() => setRoomPendingDelete(null)}>
+          <section
+            className="room-modal room-confirm-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Delete room confirmation"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="room-modal-copy">
+              <span className="hero-tag room-danger-tag">Delete room</span>
+              <h2>Remove {roomPendingDelete.sessionCode}?</h2>
+              <p>
+                This room will disappear from your room list. Members will no longer be
+                able to access it with the current invite link or session code.
+              </p>
+            </div>
+
+            <div className="room-confirm-details">
+              <strong>{roomPendingDelete.sessionCode}</strong>
+              <span>
+                {roomPendingDelete.participantCount}/{roomPendingDelete.maxParticipants} participants
+              </span>
+            </div>
+
+            <div className="room-modal-actions">
+              <button
+                className="cta-button secondary room-modal-button"
+                type="button"
+                onClick={() => setRoomPendingDelete(null)}
+              >
+                Keep room
+              </button>
+              <button
+                className="cta-button room-modal-button room-danger-button"
+                type="button"
+                onClick={async () => {
+                  const roomId = roomPendingDelete.id;
+                  setRoomPendingDelete(null);
+                  await handleRoomDelete(roomId);
+                }}
+              >
+                Delete room
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+    </main>
+  );
+}
+
+export default HomePage;
