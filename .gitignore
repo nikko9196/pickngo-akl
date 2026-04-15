@@ -1,6 +1,3 @@
-# Please edit this gitignore file to suit your needs. You may
-# look at other .gitignore files in the provided examples for inspiration.
-
 .DS_Store
 node_modules
 logs
@@ -10,9 +7,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-client/dist
-client/dist-ssr
-client/*.local
+
+frontend/dist
+frontend/dist-ssr
+frontend/.vite
+frontend/*.local
+
+backend/dist
+
 .vscode/*
 !.vscode/extensions.json
 .idea
@@ -22,9 +24,8 @@ client/*.local
 *.sln
 *.sw?
 
-# Environment variables - Edit if necessary
+# Environment variables
 .env
 .env.*
 !.env.example
 !.env.test
-!client/.env
