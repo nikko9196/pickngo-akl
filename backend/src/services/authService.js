@@ -175,7 +175,7 @@ async function loginWithGoogle(googleCredential) {
       googleProvider.providerUserId = googleSubject;
     }
 
-    if (!user.avatarUrl && payload.picture) {
+    if (payload.picture) {
       user.avatarUrl = payload.picture;
     }
 

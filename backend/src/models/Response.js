@@ -1,14 +1,7 @@
 const mongoose = require("mongoose");
-const { randomUUID } = require("crypto");
 
 const responseSchema = new mongoose.Schema(
   {
-    responseId: {
-      type: String,
-      required: true,
-      default: () => randomUUID(),
-      index: true,
-    },
     sessionId: {
       type: String,
       required: true,

@@ -22,6 +22,7 @@ function SessionPage() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(
     location.state?.inviteSession?.currentUserRole === "host"
   );
+  const [brokenAvatarUrls, setBrokenAvatarUrls] = useState({});
 
   useEffect(() => {
     if (isAuthReady && !isAuthenticated) {
@@ -130,6 +131,16 @@ function SessionPage() {
     }
   }
 
+  function handleParticipantAvatarError(participantId, avatarUrl) {
+    if (!avatarUrl) {
+      return;
+    }
+
+    setBrokenAvatarUrls((current) =>
+      current[participantId] ? current : { ...current, [participantId]: true }
+    );
+  }
+
   if (!isAuthReady) {
     return <main className="room-page-shell room-page-status">Restoring session...</main>;
   }
@@ -185,14 +196,19 @@ function SessionPage() {
                   const participantInitial =
                     participant.roomDisplayName?.trim().charAt(0).toUpperCase() || "U";
                   const isCurrentUser = participant.userId === user?.id;
+                  const showAvatarImage =
+                    participant.avatarUrl && !brokenAvatarUrls[participant.userId];
 
                   return (
                     <article className="participant-card" key={participant.userId}>
-                      {participant.avatarUrl ? (
+                      {showAvatarImage ? (
                         <img
                           className="participant-avatar"
                           src={participant.avatarUrl}
                           alt={participant.roomDisplayName}
+                          onError={() =>
+                            handleParticipantAvatarError(participant.userId, participant.avatarUrl)
+                          }
                         />
                       ) : (
                         <div className="participant-avatar participant-avatar-fallback" aria-hidden="true">

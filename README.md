@@ -11,7 +11,7 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Tech Stack
 
@@ -21,21 +21,17 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 
 ### Prerequisites
 
-#### Development Environment
-
-- **IDE**: Visual Studio Code ([download](https://code.visualstudio.com/)), JetBrains WebStorm ([download](https://www.jetbrains.com/webstorm/)), or JetBrains IntelliJ IDEA ([download](https://www.jetbrains.com/idea/))
-- **Node.js**: v18.x LTS or higher ([download](https://nodejs.org/))
-- **npm**: v9.x or higher (installed with Node.js)
-- **MongoDB**: Atlas account (free tier) or another valid MongoDB connection string
+- IDE: Visual Studio Code, WebStorm, or IntelliJ IDEA
+- Node.js: v18.x LTS or higher
+- npm: v9.x or higher
+- MongoDB: Atlas account or another valid MongoDB connection string
 
 Verify installations:
 
 ```bash
-node -v        # Should show v18.x or higher
-npm -v         # Should show 9.x or higher
+node -v
+npm -v
 ```
-
----
 
 ### Installation
 
@@ -49,262 +45,294 @@ cd group-project-have-a-byte
 #### 2. Set Up Backend
 
 ```bash
-cd server
+cd backend
 npm install
 ```
 
-Create a `.env` file in the `server/` directory:
+Create a `.env` file in the `backend/` directory:
 
 ```env
 PORT=5001
-# Backend dev server port
-
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
-# MongoDB connection URL
-
 JWT_SECRET=change-this-jwt-secret
-# Secret used to sign login tokens
-
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-# Optional: required only if you want Google sign-in enabled
+CLIENT_BASE_URL=http://localhost:5173
 ```
+
+Variable notes:
+
+- `PORT`: backend development server port
+- `MONGODB_URI`: MongoDB connection string
+- `JWT_SECRET`: secret used to sign authentication tokens
+- `GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
+- `CLIENT_BASE_URL`: base frontend URL used to generate session join links
 
 #### 3. Set Up Frontend
 
 ```bash
-cd ../client
+cd ../frontend
 npm install
 ```
 
-Create a `.env` file in the `client/` directory:
+Create a `.env` file in the `frontend/` directory:
 
 ```env
 VITE_PORT=5173
-# Frontend dev server port
-
 VITE_API_BASE_URL=http://localhost:5001
-# Base URL used by the frontend to send requests to the backend
-
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-# Optional: required only if you want Google sign-in enabled
 ```
 
----
+Variable notes:
+
+- `VITE_PORT`: frontend development server port
+- `VITE_API_BASE_URL`: backend base URL used by the frontend
+- `VITE_GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
 
 ### Running the Application
 
-You need **two terminal windows** to run the current project setup.
+You need two terminal windows to run the current project setup.
 
 #### Terminal 1: Backend Server
 
 ```bash
-cd server
+cd backend
 npm run dev
 ```
 
-The backend will start on `http://localhost:5001`
-The backend port comes from `server/.env`. If you change `PORT`, update `VITE_API_BASE_URL` in `client/.env` to match.
-If the database connection succeeds, the backend terminal will print `MongoDB connected`.
+The backend starts on `http://localhost:5001` by default.
 
 #### Terminal 2: Frontend Server
 
 ```bash
-cd client
+cd frontend
 npm run dev
 ```
 
-The frontend development server will run on the port defined by `VITE_PORT` in `client/.env` and usually uses `http://localhost:5173`
+The frontend development server runs on the port defined by `VITE_PORT`, usually `http://localhost:5173`.
 
-After opening the frontend, check the backend status shown in the bottom-right corner:
-
-- `Backend: Offline` means the frontend is not connected to the backend.
-- `Backend: OK` means the frontend is successfully connected to the backend.
-
----
+If you change the backend port, update `VITE_API_BASE_URL` in `frontend/.env` to match.
 
 ## Project Structure
 
 ```text
 group-project-have-a-byte/
-|-- client/                      # React + Vite frontend
+|-- frontend/                    # React + Vite frontend
 |   |-- public/                  # Static assets served directly by Vite
-|   |-- src/                     # Frontend source code
-|   |   |-- api/                 # API request functions and backend communication
-|   |   |-- assets/              # Images, icons, and other frontend assets
+|   |-- src/
+|   |   |-- api/                 # API request functions
+|   |   |-- assets/              # Images, icons, and static frontend assets
 |   |   |-- components/          # Reusable UI components
-|   |   |-- context/             # Shared React context and global state
+|   |   |-- context/             # Authentication and shared React context
 |   |   |-- pages/               # Page-level React components
-|   |   |-- utils/               # Utility helpers currently stored in this folder
+|   |   |-- utils/               # Frontend helper functions
 |   |   |-- App.jsx              # Main frontend app component
-|   |   |-- App.css              # Styles used by the main app/page shell
 |   |   |-- index.css            # Global frontend styles
-|   |   |-- main.jsx             # Frontend entry file that mounts React
-|   |-- .env                     # Frontend local environment variables
-|   |-- eslint.config.js         # ESLint rules for frontend code quality
+|   |   |-- main.jsx             # Frontend entry point
+|   |-- .env                     # Frontend environment variables
+|   |-- eslint.config.js         # Frontend lint configuration
 |   |-- package.json             # Frontend scripts and dependencies
-|   |-- vite.config.js           # Vite dev/build configuration
-|-- server/                      # Node.js + Express backend
-|   |-- src/                     # Backend source code
+|   |-- vite.config.js           # Vite configuration
+|-- backend/                     # Node.js + Express backend
+|   |-- src/
 |   |   |-- config/              # Backend configuration such as MongoDB connection
 |   |   |-- controllers/         # Request handlers and business logic
-|   |   |-- middleware/          # Express middleware such as auth or validation
-|   |   |-- models/              # Mongoose models and database schema files
-|   |   |-- routes/              # Express route definitions and API endpoints
+|   |   |-- middleware/          # Express middleware
+|   |   |-- models/              # Mongoose models
+|   |   |-- routes/              # Express route definitions
 |   |   |-- services/            # Reusable backend service logic
-|   |   |-- app.js               # Current backend entry file
-|   |-- .env                     # Backend local environment variables
+|   |   |-- app.js               # Backend entry file
+|   |-- .env                     # Backend environment variables
 |   |-- package.json             # Backend scripts and dependencies
-|-- docs/                        # Project notes and supporting documentation
 |-- README.md                    # Setup guide and project overview
 ```
 
 ### Environment Files
 
-- `server/.env`: Backend environment variables such as `PORT` and `MONGODB_URI`.
-- `client/.env`: Frontend environment variables such as `VITE_PORT` and `VITE_API_BASE_URL`.
+- `backend/.env`: backend environment variables such as `PORT`, `MONGODB_URI`, and `JWT_SECRET`
+- `frontend/.env`: frontend environment variables such as `VITE_PORT` and `VITE_API_BASE_URL`
 
 ### File Naming Conventions
 
-- Use `.jsx` for React files that render JSX, such as files in `pages/`, `components/`, and `context/`.
-- Use `.js` for non-UI logic files, such as files in `api/`, backend `src/`, and utility/helper files.
-- Keep React page names descriptive, for example `HomePage.jsx`, `LoginPage.jsx`, and `DashboardPage.jsx`.
-- Keep reusable React component names descriptive, for example `Navbar.jsx`, `StatusBadge.jsx`, and `QuestionCard.jsx`.
-- Keep API and utility filenames action-based, for example `health.js`, `auth.js`, `session.js`, or `formatDate.js`.## Project Structure
+- Use `.jsx` for React files that render JSX
+- Use `.js` for non-UI logic files such as API helpers, backend files, and utilities
+- Keep React page names descriptive, for example `HomePage.jsx`, `AuthPage.jsx`, and `SessionPage.jsx`
+- Keep reusable component names descriptive, for example `Navbar.jsx`, `QuestionCard.jsx`, or `StatusBadge.jsx`
+- Keep API/helper filenames action-based, for example `auth.js`, `questions.js`, `sessions.js`, or `formatDate.js`
 
-## 📦 Database Schema (MongoDB)
+## Current API
 
-This project uses **MongoDB (NoSQL)**. Each collection is designed based on the session-driven workflow.
+Notes:
 
----
+- `sessionCode` is the public room code used to join or fetch a session
+- `sessionId` in API paths refers to the internal MongoDB `_id` of a session
+- All routes except registration and login routes require authentication
 
-### 1. 🧑‍💻 Users
-Stores core user account information and authentication credentials.
+### Auth
 
-* **Collection: `users`**
-    * `userId`: **string** (Primary Key) — Unique identifier.
-    * `displayName`: **string** — Public name shown to other participants.
-    * `email`: **string** — Registered email address.
-    * `avatarUrl`: **string** — URL to the user's profile picture.
-    * `authProviders`: **array** — List of authentication methods.
-        * `provider`: **string** (Enum ["local", "google"]).
-        * `providerUserId`: **string**.
-        * `passwordHash`: **string**.
-    * `isAdmin`: **boolean** — Administrative privilege flag.
-    * `lastLoginAt`: **date** - Last login time.
-    * `createdAt`: **date** - Creation time.
-    * `updatedAt`: **date** - Update personal information time.
+- `POST /api/auth/register`
+  - Registers a local user with email and password.
+- `POST /api/auth/login`
+  - Logs in a local user with email and password.
+- `POST /api/auth/google`
+  - Logs in a user with Google Sign-In.
+- `POST /api/auth/guest`
+  - Creates and logs in a guest user.
+- `GET /api/auth/me`
+  - Returns the currently authenticated user.
 
----
+### Questions
 
-### 2. ❓ Question Lists
-Stores question pools grouped by categories to collect user preferences.
+- `GET /api/questions`
+  - Returns the active question lists used in the questionnaire stage.
 
-* **Collection: `questionLists`**
-    * `questionListId`: **string** (Primary Key).
-    * `category`: **string** (Enum ["budget", "cuisine", "distance", "vibe"]).
-    * `isActive`: **boolean** — Indicates if this list is currently in use.
-    * `questionList`: **array** — List of specific questions.
-        * `questionId`: **string**.
-        * `questionType`: **string** (Enum ["text","single_choice", "multiple_choice"]).
-        * `questionText`: **string** — The actual question string.
-        * `questionValue`: **array** (Optional in choice question)
-            * `optionLabel`: **string** (Enum [A, B, C, D, E]).
-            * `optionText`: **string** — The displayed text for the option.
+### Sessions
 
----
+- `POST /api/sessions`
+  - Creates a new session for the host.
+- `POST /api/sessions/join`
+  - Joins a session using a public `sessionCode`.
+- `GET /api/sessions/mine`
+  - Returns the sessions the current user belongs to.
+- `GET /api/sessions/:sessionCode`
+  - Returns session details for a participant using the public room code.
+- `GET /api/sessions/:sessionId/progress`
+  - Returns questionnaire completion progress for participants in a session.
+- `PATCH /api/sessions/:sessionId`
+  - Updates session settings such as `maxParticipants`.
+- `PATCH /api/sessions/:sessionId/status`
+  - Updates the workflow status of a session.
+- `DELETE /api/sessions/:sessionId`
+  - Deletes a session. Only the host can perform this action.
 
-### 3. 📝 Responses
-Stores individual user answers to questions within a specific session.
+### User Responses
 
-* **Collection: `responses`**
-    * `responseId`: **string** (Primary Key).
-    * `sessionId`: **string** (Foreign Key) — Associated session.
-    * `userId`: **string** (Foreign Key) — User who provided the answer.
-    * `questionId`: **string** (Foreign Key) — The specific question being answered.
-    * `answer`: **string** — Selected option label or raw text input.
-    * `skipped`: **boolean** — Flag if the user bypassed the question.
-    * `createdAt`: **date**.
+- `POST /api/sessions/:sessionId/responses`
+  - Submits or updates a participant's answer to a question in a session.
 
----
+## Database Schema (MongoDB)
 
-### 4. 🤖 Recommendation Sets
-Stores restaurant suggestions generated by the AI.
+This section is intended as a development reference for the current and planned session-driven workflow.
 
-* **Collection: `recommendationSets`**
-    * `recommendationSetId`: **string** (Primary Key).
-    * `sessionId`: **string** (Foreign Key).
-    * `generatedBy`: **string** (Enum ["Gemini", "ChatGPT"]).
-    * `items`: **array** — Fixed list of 10 recommended restaurants.
-        * `placeId`: **string** — Google Maps Place API Unique ID.
-        * `rank`: **number** (1 to 10).
-    * `createdAt`: **date**.
+### ID Mapping Notes
 
----
+MongoDB automatically creates an `_id` field for every document. In this project, `_id` is the real database primary key.
 
-### 5. ❤️ User Selections
-Stores the specific restaurants users have "liked" from the AI recommendations.
+When these values are exposed to application code or API responses, they may be mapped to business-friendly names:
 
-* **Collection: `userSelections`**
-    * `selectionId`: **string** (Primary Key).
-    * `sessionId`: **string** (Foreign Key).
-    * `userId`: **string** (Foreign Key).
-    * `recommendationSetId`: **string** (Foreign Key).
-    * `selectedItems`: **array** — Restaurants shortlisted by the user.
-        * `placeId`: **string**.
-    * `createdAt`: **date**.
+- `sessions._id` -> `sessionId` in API path parameters, and currently exposed as `id` in serialized session responses
+- `users._id` -> `userId` in participant-related logic, and currently exposed as `id` in serialized user responses
+- `responses._id` -> internal response identifier unless a separate response field is introduced later
+- `recommendationSets._id` -> recommendation set identifier in future workflow stages
+- `userSelections._id` -> selection identifier in future workflow stages
+- `wheelRounds._id` -> wheel round identifier in future workflow stages
+- `votes._id` -> vote identifier in future workflow stages
 
----
+Recommendation for ongoing development:
 
-### 6. 🎡 Wheel Rounds
-Stores data for each iteration of the decision-making spinning wheel.
+- Keep MongoDB `_id` as the real primary key
+- Only introduce custom public identifiers when there is a clear product or integration need
 
-* **Collection: `wheelRounds`**
-    * `wheelRoundId`: **string** (Primary Key).
-    * `sessionId`: **string** (Foreign Key).
-    * `wheelItems`: **array** — The pool of restaurants entering the wheel.
-        * `placeId`: **string**.
-    * `resultPlaceId`: **string** — The result restaurant ID.
-    * `status`: **string** (Enum ["pending", "spinning", "completed"]).
-    * `createdAt`: **date**.
+### Users
 
----
+Collection: `users`
 
-### 7. 🗳️ Votes
-Stores final user confirmation votes for the decision results.
+- `_id`: MongoDB primary key
+- `displayName`: public name shown to other participants
+- `email`: registered email address
+- `avatarUrl`: URL to the user's profile picture
+- `authProviders`: list of authentication methods
+- `isAdmin`: administrative privilege flag
+- `lastLoginAt`: last login time
+- `createdAt`: creation time
+- `updatedAt`: last update time
 
-* **Collection: `votes`**
-    * `voteId`: **string** (Primary Key).
-    * `sessionId`: **string** (Foreign Key).
-    * `wheelRoundId`: **string** (Foreign Key).
-    * `userId`: **string** (Foreign Key).
-    * `vote`: **string** (Enum ["accept", "respin"]).
-    * `createdAt`: **date**.
+### Question Lists
 
----
+Collection: `questionLists`
 
-### 8. 🧩 Sessions
-The core collection managing the session lifecycle, state machine, and participant status.
+- `_id`: MongoDB primary key
+- `questionListId`: application-level question list identifier
+- `category`: question category
+- `isActive`: indicates whether the list is currently active
+- `questionList`: list of questions
+  - `questionId`
+  - `questionType`
+  - `questionText`
+  - `questionValue`
 
-* **Collection: `sessions`**
-    * `sessionId`: **string** (Primary Key).
-    * `hostUserId`: **string** (Foreign Key) — ID of the session creator.
-    * `sessionCode`: **string** — Unique room code for invites.
-    * `joinUrl`: **string** — Direct link to join the session.
-    * `status`: **string** — Current state of the workflow.
-        * Enum: `waiting`, `questioning`, `generating`, `selecting`, `spinning`, `voting`, `completed`.
-    * `participants`: **array** — Dynamic list of users in the room.
-        * `userId`: **string** (Foreign Key).
-        * `role`: **string** (Enum ["host", "member"]).
-        * `joinedAt`: **date**.
-        * `hasCompletedQuestions`: **boolean**.
-        * `hasCompletedSelection`: **boolean**.
-        * `hasVote`: **boolean**.
-    * `generationList`: **array** — History of AI recommendation sets.
-        * `recommendationSetId`: **string** (Foreign Key).
-    * `wheelRoundList`: **array** — History of wheel spin rounds.
-        * `wheelRoundId`: **string** (Foreign Key).
-    * `createdAt`: **date**.
-    * `updatedAt`: **date**.
+### Responses
 
+Collection: `responses`
+
+- `_id`: MongoDB primary key
+- `sessionId`: associated session identifier
+- `userId`: user who provided the answer
+- `questionId`: associated question identifier
+- `answer`: submitted answer text
+- `skipped`: whether the question was skipped
+- `createdAt`: creation time
+
+### Recommendation Sets
+
+Collection: `recommendationSets`
+
+- `_id`: MongoDB primary key
+- `sessionId`: associated session identifier
+- `generatedBy`: AI provider used to create recommendations
+- `items`: list of recommended restaurants
+- `createdAt`: creation time
+
+### User Selections
+
+Collection: `userSelections`
+
+- `_id`: MongoDB primary key
+- `sessionId`: associated session identifier
+- `userId`: associated user identifier
+- `recommendationSetId`: associated recommendation set identifier
+- `selectedItems`: shortlisted restaurants
+- `createdAt`: creation time
+
+### Wheel Rounds
+
+Collection: `wheelRounds`
+
+- `_id`: MongoDB primary key
+- `sessionId`: associated session identifier
+- `wheelItems`: restaurants included in the wheel round
+- `resultPlaceId`: final result restaurant identifier
+- `status`: wheel round status
+- `createdAt`: creation time
+
+### Votes
+
+Collection: `votes`
+
+- `_id`: MongoDB primary key
+- `sessionId`: associated session identifier
+- `wheelRoundId`: associated wheel round identifier
+- `userId`: associated user identifier
+- `vote`: final decision vote
+- `createdAt`: creation time
+
+### Sessions
+
+Collection: `sessions`
+
+- `_id`: MongoDB primary key
+- `hostUserId`: ID of the session creator
+- `sessionCode`: unique public room code
+- `joinUrl`: direct link used to join the session
+- `status`: current workflow state
+- `maxParticipants`: participant limit for the session
+- `participants`: users currently in the room
+  - `userId`
+  - `role`
+  - `roomDisplayName`
+  - `joinedAt`
+- `generationList`: history of recommendation sets planned for later workflow stages
+- `wheelRoundList`: history of wheel rounds planned for later workflow stages
+- `createdAt`: creation time
+- `updatedAt`: last update time
 
 ![Have A Byte](./Have%20A%20Byte.png)

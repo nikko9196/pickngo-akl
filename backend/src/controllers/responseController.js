@@ -97,7 +97,6 @@ async function upsertResponse(req, res) {
 
   return res.status(201).json({
     response: {
-      responseId: response.responseId,
       sessionId: response.sessionId,
       userId: response.userId,
       questionId: response.questionId,
