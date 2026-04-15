@@ -11,7 +11,7 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Tech Stack
 
@@ -124,6 +124,7 @@ group-project-have-a-byte/
 |   |   |-- components/          # Reusable UI components
 |   |   |-- context/             # Authentication and shared React context
 |   |   |-- pages/               # Page-level React components
+|   |   |-- services/            # Frontend service helpers
 |   |   |-- utils/               # Frontend helper functions
 |   |   |-- App.jsx              # Main frontend app component
 |   |   |-- index.css            # Global frontend styles
@@ -143,6 +144,7 @@ group-project-have-a-byte/
 |   |   |-- app.js               # Backend entry file
 |   |-- .env                     # Backend environment variables
 |   |-- package.json             # Backend scripts and dependencies
+|-- docs/                        # Supporting project notes and documentation
 |-- README.md                    # Setup guide and project overview
 ```
 
@@ -159,7 +161,7 @@ group-project-have-a-byte/
 - Keep reusable component names descriptive, for example `Navbar.jsx`, `QuestionCard.jsx`, or `StatusBadge.jsx`
 - Keep API/helper filenames action-based, for example `auth.js`, `questions.js`, `sessions.js`, or `formatDate.js`
 
-## Current API
+## 🔌 Current API
 
 Notes:
 
@@ -209,11 +211,11 @@ Notes:
 - `POST /api/sessions/:sessionId/responses`
   - Submits or updates a participant's answer to a question in a session.
 
-## Database Schema (MongoDB)
+## 📦 Database Schema (MongoDB)
 
 This section is intended as a development reference for the current and planned session-driven workflow.
 
-### ID Mapping Notes
+### 🧭 ID Mapping Notes
 
 MongoDB automatically creates an `_id` field for every document. In this project, `_id` is the real database primary key.
 
@@ -232,7 +234,7 @@ Recommendation for ongoing development:
 - Keep MongoDB `_id` as the real primary key
 - Only introduce custom public identifiers when there is a clear product or integration need
 
-### Users
+### 1. 🧑‍💻 Users
 
 Collection: `users`
 
@@ -246,7 +248,7 @@ Collection: `users`
 - `createdAt`: creation time
 - `updatedAt`: last update time
 
-### Question Lists
+### 2. ❓ Question Lists
 
 Collection: `questionLists`
 
@@ -260,7 +262,7 @@ Collection: `questionLists`
   - `questionText`
   - `questionValue`
 
-### Responses
+### 3. 📝 Responses
 
 Collection: `responses`
 
@@ -272,7 +274,7 @@ Collection: `responses`
 - `skipped`: whether the question was skipped
 - `createdAt`: creation time
 
-### Recommendation Sets
+### 4. 🤖 Recommendation Sets
 
 Collection: `recommendationSets`
 
@@ -282,7 +284,7 @@ Collection: `recommendationSets`
 - `items`: list of recommended restaurants
 - `createdAt`: creation time
 
-### User Selections
+### 5. ❤️ User Selections
 
 Collection: `userSelections`
 
@@ -293,7 +295,7 @@ Collection: `userSelections`
 - `selectedItems`: shortlisted restaurants
 - `createdAt`: creation time
 
-### Wheel Rounds
+### 6. 🎡 Wheel Rounds
 
 Collection: `wheelRounds`
 
@@ -304,7 +306,7 @@ Collection: `wheelRounds`
 - `status`: wheel round status
 - `createdAt`: creation time
 
-### Votes
+### 7. 🗳️ Votes
 
 Collection: `votes`
 
@@ -315,7 +317,7 @@ Collection: `votes`
 - `vote`: final decision vote
 - `createdAt`: creation time
 
-### Sessions
+### 8. 🧩 Sessions
 
 Collection: `sessions`
 
