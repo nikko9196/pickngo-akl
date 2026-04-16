@@ -32,7 +32,7 @@ export function getMySessions(token) {
 }
 
 export function getSessionByCode(token, sessionCode) {
-  return request(`/api/sessions/${encodeURIComponent(sessionCode)}`, token);
+  return request(`/api/sessions/code/${encodeURIComponent(sessionCode)}`, token);
 }
 
 export function getSessionProgress(token, sessionId) {

@@ -18,11 +18,17 @@ function serializeQuestionList(questionList) {
 }
 
 async function getActiveQuestionLists(req, res) {
-  const questionLists = await QuestionList.find({ isActive: true }).sort({ _id: 1 });
+  try {
+    const questionLists = await QuestionList.find({ isActive: true }).sort({ _id: 1 });
 
-  return res.json({
-    questionLists: questionLists.map(serializeQuestionList),
-  });
+    return res.json({
+      questionLists: questionLists.map(serializeQuestionList),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch active question lists.";
+    return res.status(500).json({ message });
+  }
 }
 
 module.exports = {

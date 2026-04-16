@@ -62,7 +62,11 @@ async function googleLogin(req, res) {
     return res.json(authResult);
   } catch (error) {
     const message = getMessage(error, "Google sign-in failed.");
-    const statusCode = message.includes("configured") ? 503 : 401;
+    const statusCode = message.includes("configured")
+      ? 503
+      : message.includes("not verified") || message.includes("Invalid")
+        ? 401
+        : 500;
     return res.status(statusCode).json({ message });
   }
 }
@@ -78,13 +82,18 @@ async function guestLogin(req, res) {
 }
 
 async function me(req, res) {
-  const user = await getUserById(req.userId);
+  try {
+    const user = await getUserById(req.userId);
 
-  if (!user) {
-    return res.status(404).json({ message: "User not found." });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.json({ user });
+  } catch (error) {
+    const message = getMessage(error, "Failed to fetch user.");
+    return res.status(500).json({ message });
   }
-
-  return res.json({ user });
 }
 
 module.exports = {

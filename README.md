@@ -195,12 +195,12 @@ Notes:
   - Joins a session using a public `sessionCode`.
 - `GET /api/sessions/mine`
   - Returns the sessions the current user belongs to.
-- `GET /api/sessions/:sessionCode`
+- `GET /api/sessions/code/:sessionCode`
   - Returns session details for a participant using the public room code.
 - `GET /api/sessions/:sessionId/progress`
   - Returns questionnaire completion progress for participants in a session.
 - `PATCH /api/sessions/:sessionId`
-  - Updates session settings such as `maxParticipants`.
+  - Updates session settings such as `maxParticipants` and `maxSelectionsPerUser`.
 - `PATCH /api/sessions/:sessionId/status`
   - Updates the workflow status of a session.
 - `DELETE /api/sessions/:sessionId`
@@ -327,6 +327,7 @@ Collection: `sessions`
 - `joinUrl`: direct link used to join the session
 - `status`: current workflow state
 - `maxParticipants`: participant limit for the session
+- `maxSelectionsPerUser`: how many recommended restaurants each participant can shortlist later
 - `participants`: users currently in the room
   - `userId`
   - `role`

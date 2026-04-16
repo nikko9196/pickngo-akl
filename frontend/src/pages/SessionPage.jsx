@@ -187,6 +187,13 @@ function SessionPage() {
                 ) : null}
               </div>
 
+              {session?.maxSelectionsPerUser ? (
+                <p className="session-config-note">
+                  Each person can shortlist up to <strong>{session.maxSelectionsPerUser}</strong>{" "}
+                  recommendation{session.maxSelectionsPerUser === 1 ? "" : "s"} later.
+                </p>
+              ) : null}
+
               {isLoading ? <p className="account-dropdown-state">Loading participants...</p> : null}
               {errorMessage ? <p className="auth-status error">{errorMessage}</p> : null}
               {statusMessage ? <p className="auth-status success">{statusMessage}</p> : null}

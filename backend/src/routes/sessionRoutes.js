@@ -18,7 +18,7 @@ const router = express.Router();
 router.use(requireAuth);
 router.get("/mine", getMySessions);
 router.get("/:sessionId/progress", getSessionProgress);
-router.get("/:sessionCode", getSessionByCode);
+router.get("/code/:sessionCode", getSessionByCode);
 router.post("/:sessionId/responses", upsertResponse);
 router.post("/", createSession);
 router.post("/join", joinSession);

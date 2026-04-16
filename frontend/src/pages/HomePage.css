@@ -320,14 +320,15 @@
 }
 
 .landing-account-dropdown .room-card-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-.landing-account-dropdown .room-card-actions input {
-  grid-column: 1 / -1;
+.landing-account-dropdown .room-card-field {
+  grid-column: span 3;
 }
 
 .landing-account-dropdown .room-card-actions button {
+  grid-column: span 2;
   width: 100%;
 }
 
@@ -389,6 +390,18 @@
   grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 10px;
   margin-top: 12px;
+}
+
+.room-card-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.room-card-field span {
+  color: rgba(23, 49, 137, 0.78);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .room-card-actions input {

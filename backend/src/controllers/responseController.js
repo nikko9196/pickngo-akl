@@ -68,43 +68,48 @@ async function upsertResponse(req, res) {
     return res.status(400).json({ message: "Answer is required unless the question is skipped." });
   }
 
-  const response = await Response.findOneAndUpdate(
-    {
-      sessionId,
-      userId: req.userId,
-      questionId,
-    },
-    {
-      $set: {
-        answer: skipped ? "" : answer,
-        skipped,
-      },
-      $setOnInsert: {
+  try {
+    const response = await Response.findOneAndUpdate(
+      {
         sessionId,
         userId: req.userId,
         questionId,
       },
-    },
-    {
-      returnDocument: "after",
-      upsert: true,
-      runValidators: true,
-      setDefaultsOnInsert: true,
-    }
-  );
+      {
+        $set: {
+          answer: skipped ? "" : answer,
+          skipped,
+        },
+        $setOnInsert: {
+          sessionId,
+          userId: req.userId,
+          questionId,
+        },
+      },
+      {
+        returnDocument: "after",
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
 
-  await updateSessionStatusIfComplete(sessionId);
+    await updateSessionStatusIfComplete(sessionId);
 
-  return res.status(201).json({
-    response: {
-      sessionId: response.sessionId,
-      userId: response.userId,
-      questionId: response.questionId,
-      answer: response.answer,
-      skipped: response.skipped,
-      createdAt: response.createdAt,
-    },
-  });
+    return res.status(200).json({
+      response: {
+        sessionId: response.sessionId,
+        userId: response.userId,
+        questionId: response.questionId,
+        answer: response.answer,
+        skipped: response.skipped,
+        createdAt: response.createdAt,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to save response.";
+    return res.status(500).json({ message });
+  }
 }
 
 module.exports = {

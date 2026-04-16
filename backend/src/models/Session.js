@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const MAX_SELECTIONS_PER_USER_DEFAULT = 3;
 
 const participantSchema = new mongoose.Schema(
   {
@@ -56,6 +57,13 @@ const sessionSchema = new mongoose.Schema(
       required: true,
       min: 2,
       max: 50,
+    },
+    maxSelectionsPerUser: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 10,
+      default: MAX_SELECTIONS_PER_USER_DEFAULT,
     },
     participants: {
       type: [participantSchema],
