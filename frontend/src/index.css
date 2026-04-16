@@ -1,0 +1,49 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&family=Sriracha&family=Suez+One&display=swap");
+
+:root {
+  --page-bg: #1e1d1c;
+  --body-font: "Inter", "Trebuchet MS", "Avenir Next", "Segoe UI", sans-serif;
+  --display-font: "Suez One", Georgia, "Times New Roman", serif;
+  --accent-font: "Sriracha", "Trebuchet MS", "Segoe UI", sans-serif;
+  --create-room-background-image: none;
+  --landing-background-image: none;
+  font-family: var(--body-font);
+  line-height: 1.5;
+  font-weight: 400;
+  color: #1f2340;
+  background:
+    radial-gradient(circle at top, rgba(255, 186, 118, 0.18), transparent 30%),
+    linear-gradient(180deg, #282624 0%, #1b1a19 100%);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+  width: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+  overflow-x: hidden;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
