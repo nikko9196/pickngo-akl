@@ -16,7 +16,7 @@ const wheelItemSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const wheelRoundsSchema = new mongoose.Schema(
+const wheelRoundSchema = new mongoose.Schema(
   {
     sessionId: {
       type: String,
@@ -46,4 +46,4 @@ const wheelRoundsSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model("WheelRound", wheelRoundsSchema);
+module.exports = mongoose.model("WheelRound", wheelRoundSchema);

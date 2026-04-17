@@ -11,7 +11,7 @@ const selectedItemSchema = new mongoose.Schema(
   { _id: false },
 );
 
-const userSelectionsSchema = new mongoose.Schema(
+const userSelectionSchema = new mongoose.Schema(
   {
     sessionId: {
       type: String,
@@ -43,6 +43,6 @@ const userSelectionsSchema = new mongoose.Schema(
   },
 );
 
-userSelectionsSchema.index({ sessionId: 1, userId: 1 }, { unique: true });
+userSelectionSchema.index({ sessionId: 1, userId: 1 }, { unique: true });
 
-module.exports = mongoose.model("UserSelection", userSelectionsSchema);
+module.exports = mongoose.model("UserSelection", userSelectionSchema);
