@@ -45,7 +45,10 @@ async function createWheelRound(req, res) {
     if (!userSelections.length) {
       return res
         .status(404)
-        .json({ message: "No user selections found for this session to build the wheel." });
+        .json({
+          message:
+            "No user selections found for this session to build the wheel.",
+        });
     }
 
     const wheelItems = userSelections.flatMap((selection) =>
@@ -58,7 +61,10 @@ async function createWheelRound(req, res) {
     if (!wheelItems.length) {
       return res
         .status(400)
-        .json({ message: "No wheel items available for this session to build the wheel." });
+        .json({
+          message:
+            "No wheel items available for this session to build the wheel.",
+        });
     }
 
     const maxPossibleWheelItems =
@@ -86,3 +92,7 @@ async function createWheelRound(req, res) {
     return res.status(500).json({ message });
   }
 }
+
+module.exports = {
+  createWheelRound,
+};
