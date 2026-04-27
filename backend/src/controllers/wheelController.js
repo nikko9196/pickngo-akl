@@ -1,29 +1,20 @@
-const Session = require("../models/Session");
 const UserSelection = require("../models/UserSelection");
+
+const {
+  findSessionById,
+  checkValidParticipant,
+} = require("../services/sessionService");
+
+function getErrorStatus(error) {
+  return error.statusCode || 500;
+}
 
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
-  if (!sessionId) {
-    return res.status(400).json({ message: "Session ID is required." });
-  }
-
   try {
-    const session = await Session.findById(sessionId);
-
-    if (!session) {
-      return res.status(404).json({ message: "Session not found." });
-    }
-
-    const isParticipant = session.participants.some(
-      (participant) => participant.userId.toString() === req.userId,
-    );
-
-    if (!isParticipant) {
-      return res
-        .status(403)
-        .json({ message: "You are not a participant in this session." });
-    }
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
 
     const userSelections = await UserSelection.find({ sessionId });
 
@@ -79,23 +70,15 @@ async function buildWheel(req, res) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to build the wheel.";
-    return res.status(500).json({ message });
+    return res.status(getErrorStatus(error)).json({ message });
   }
 }
 
 async function spinWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
-  if (!sessionId) {
-    return res.status(400).json({ message: "Session ID is required." });
-  }
-
   try {
-    const session = await Session.findById(sessionId);
-
-    if (!session) {
-      return res.status(404).json({ message: "Session not found." });
-    }
+    const session = await findSessionById(sessionId);
 
     if (session.hostUserId.toString() !== req.userId) {
       return res
@@ -143,7 +126,7 @@ async function spinWheel(req, res) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to spin the wheel.";
-    return res.status(500).json({ message });
+    return res.status(getErrorStatus(error)).json({ message });
   }
 }
 
