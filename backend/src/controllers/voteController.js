@@ -170,7 +170,48 @@ async function resolveVote(req, res) {
   }
 }
 
+// GET VOTE RESULT: Front-end uses this to display the current voting state:
+async function getVoteResult(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  if (!sessionId) {
+    return res.status(400).json({ message: "Session ID is required." });
+  }
+
+  try {
+    const session = await Session.findById(sessionId);
+
+    if (!session) {
+      return res.status(404).json({ message: "Session not found." });
+    }
+
+    const isParticipant = session.participants.some(
+      (p) => p.userId.toString() === req.userId,
+    );
+
+    if (!isParticipant) {
+      return res
+        .status(403)
+        .json({ message: "You are not a participant in this session." });
+    }
+
+    return res.status(200).json({
+      sessionId: session._id.toString(),
+      status: session.status,
+      currentWheelResult: session.currentWheelResult,
+      finalWheelResult: session.finalWheelResult,
+      voteSummary: session.voteSummary,
+      totalParticipants: session.participants.length,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch vote result.";
+    return res.status(500).json({ message });
+  }
+}
+
 module.exports = {
   submitVote,
   resolveVote,
+  getVoteResult,
 };
