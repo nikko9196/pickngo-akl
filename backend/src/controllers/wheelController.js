@@ -1,22 +1,7 @@
 const Session = require("../models/Session");
 const UserSelection = require("../models/UserSelection");
-const WheelRound = require("../models/WheelRound");
 
-function serialiseWheelRound(wheelRound) {
-  return {
-    id: wheelRound._id.toString(),
-    sessionId: wheelRound.sessionId,
-    wheelItems: wheelRound.wheelItems.map((item) => ({
-      recommendationSetId: item.recommendationSetId,
-      placeId: item.placeId,
-    })),
-    resultPlaceId: wheelRound.resultPlaceId,
-    status: wheelRound.status,
-    createdAt: wheelRound.createdAt,
-  };
-}
-
-async function createWheelRound(req, res) {
+async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
   if (!sessionId) {
@@ -73,32 +58,36 @@ async function createWheelRound(req, res) {
       });
     }
 
-    const wheelRound = await WheelRound.create({
-      sessionId,
-      wheelItems,
-      status: "pending",
-    });
+    session.wheelItems = wheelItems;
+    session.status = "spinning";
+    session.currentWheelResult = null;
+    session.finalWheelResult = null;
+    session.voteSummary = {
+      acceptCount: 0,
+      respinCount: 0,
+      votedUserIds: [],
+    };
 
-    return res.status(201).json({
-      wheelRound: serialiseWheelRound(wheelRound),
+    await session.save();
+
+    return res.status(200).json({
+      session: {
+        id: session._id.toString(),
+        wheelItems: session.wheelItems,
+      },
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to create wheel round.";
+      error instanceof Error ? error.message : "Failed to build the wheel.";
     return res.status(500).json({ message });
   }
 }
 
-async function spinWheelRound(req, res) {
+async function spinWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
-  const wheelRoundId = req.params.wheelRoundId?.trim();
 
   if (!sessionId) {
     return res.status(400).json({ message: "Session ID is required." });
-  }
-
-  if (!wheelRoundId) {
-    return res.status(400).json({ message: "Wheel round ID is required." });
   }
 
   try {
@@ -114,51 +103,51 @@ async function spinWheelRound(req, res) {
         .json({ message: "Only the host can spin the wheel." });
     }
 
-    const wheelRound = await WheelRound.findById(wheelRoundId);
-
-    if (!wheelRound) {
-      return res.status(404).json({ message: "Wheel round not found." });
-    }
-
-    if (wheelRound.sessionId !== sessionId) {
-      return res.status(400).json({
-        message: "This wheel round does not belong to the given session.",
-      });
-    }
-
-    if (wheelRound.status !== "pending") {
-      return res.status(400).json({
-        message: "This wheel round has already been spun.",
-      });
-    }
-
-    if (!wheelRound.wheelItems.length) {
+    if (!session.wheelItems || !session.wheelItems.length) {
       return res.status(400).json({
         message: "No wheel items available to spin.",
       });
     }
 
-    const randomIndex = Math.floor(
-      Math.random() * wheelRound.wheelItems.length,
-    );
-    const selectedItem = wheelRound.wheelItems[randomIndex];
+    if (session.status === "voting") {
+      return res.status(400).json({
+        message: "Wheel has already been spun.",
+      });
+    }
 
-    wheelRound.resultPlaceId = selectedItem.placeId;
-    wheelRound.status = "completed";
+    const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
 
-    await wheelRound.save();
+    const selectedItem = session.wheelItems[randomIndex];
+
+    session.currentWheelResult = {
+      recommendationSetId: selectedItem.recommendationSetId,
+      placeId: selectedItem.placeId,
+    };
+
+    session.status = "voting";
+
+    session.voteSummary = {
+      acceptCount: 0,
+      respinCount: 0,
+      votedUserIds: [],
+    };
+
+    await session.save();
 
     return res.status(200).json({
-      wheelRound: serialiseWheelRound(wheelRound),
+      session: {
+        id: session._id.toString(),
+        currentWheelResult: session.currentWheelResult,
+      },
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to spin wheel round.";
+      error instanceof Error ? error.message : "Failed to spin the wheel.";
     return res.status(500).json({ message });
   }
 }
 
 module.exports = {
-  createWheelRound,
-  spinWheelRound,
+  buildWheel,
+  spinWheel,
 };
