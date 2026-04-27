@@ -61,25 +61,7 @@ async function resolveVote(req, res) {
   }
 }
 
-// GET VOTE RESULT: Front-end uses this to display the current voting state:
-async function getVoteResult(req, res) {
-  const sessionId = req.params.sessionId?.trim();
-
-  try {
-    const session = await findSessionById(sessionId);
-
-    checkValidParticipant(session, req.userId);
-
-    return res.status(200).json(formatVoteResult(session));
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch vote result.";
-    return res.status(getErrorStatus(error)).json({ message });
-  }
-}
-
 module.exports = {
   submitVote,
   resolveVote,
-  getVoteResult,
 };

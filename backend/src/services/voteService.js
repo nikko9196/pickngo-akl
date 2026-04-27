@@ -44,7 +44,9 @@ async function calculateVoteResult(session) {
 
     return {
       result: "The wheel result is accepted.",
+      status: session.status,
       finalWheelResult: session.finalWheelResult,
+      voteSummary: session.voteSummary,
     };
   }
 
@@ -69,18 +71,28 @@ async function calculateVoteResult(session) {
       };
     }
 
+    const rejectedWheelResult = session.currentWheelResult;
+
     session.currentWheelResult = null;
-    session.voteSummary = resetVoteSummary();
     session.status = "spinning";
 
     await session.save();
 
     return {
       result: "The result is rejected. Spinning the wheel again.",
+      status: session.status,
+      rejectedWheelResult,
+      voteSummary: session.voteSummary,
     };
   }
 
   // CASE 3: Tie or no one votes, restart voting:
+  const previousVoteSummary = {
+    acceptCount: session.voteSummary.acceptCount,
+    respinCount: session.voteSummary.respinCount,
+    votedUserIds: [...session.voteSummary.votedUserIds],
+  };
+
   session.voteSummary = resetVoteSummary();
   session.status = "voting";
 
@@ -88,22 +100,12 @@ async function calculateVoteResult(session) {
 
   return {
     result: "The vote resulted in a tie or no votes were submitted.",
-  };
-}
-
-function formatVoteResult(session) {
-  return {
-    sessionId: session._id.toString(),
     status: session.status,
-    currentWheelResult: session.currentWheelResult,
-    finalWheelResult: session.finalWheelResult,
-    voteSummary: session.voteSummary,
-    totalParticipants: session.participants.length,
+    voteSummary: previousVoteSummary,
   };
 }
 
 module.exports = {
   applyVote,
   calculateVoteResult,
-  formatVoteResult,
 };
