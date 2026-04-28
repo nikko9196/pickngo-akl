@@ -1,0 +1,111 @@
+const {
+  findSessionById,
+  checkValidParticipant,
+} = require("../services/sessionService");
+
+function getErrorStatus(error) {
+  return error.statusCode || 500;
+}
+
+function getReadySummary(session) {
+  const participants = session.participants.map((participant) => ({
+    userId: participant.userId.toString(),
+    role: participant.role,
+    roomDisplayName: participant.roomDisplayName,
+    isReady: participant.isReady,
+  }));
+
+  const readyCount = participants.filter(
+    (participant) => participant.isReady,
+  ).length;
+
+  return {
+    sessionId: session._id.toString(),
+    readyCount,
+    totalParticipants: session.participants.length,
+    allReady: readyCount === session.participants.length,
+    participants,
+  };
+}
+
+// USER: Mark as READY:
+async function markReady(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    const participant = session.participants.find(
+      (p) => p.userId.toString() === req.userId,
+    );
+
+    participant.isReady = true;
+
+    await session.save();
+
+    return res.status(200).json({
+      message: "User is ready.",
+      readySummary: getReadySummary(session),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to mark user as ready.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
+// HOST: Send Reminder:
+async function sendReminder(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+
+    if (session.hostUserId.toString() !== req.userId) {
+      return res
+        .status(403)
+        .json({ message: "Only the host can send reminders." });
+    }
+
+    const waitingParticipants = session.participants.filter(
+      (participant) => !participant.isReady,
+    );
+
+    return res.status(200).json({
+      message: "Reminder sent to waiting users.",
+      remindedUserIds: waitingParticipants.map((participant) =>
+        participant.userId.toString(),
+      ),
+      readySummary: getReadySummary(session),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to send reminder.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
+// GET READY STATUS: Retrieves the current ready state of the session for all participants.
+async function getReadyStatus(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    return res.status(200).json({
+      readySummary: getReadySummary(session),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch ready status.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
+module.exports = {
+  markReady,
+  sendReminder,
+  getReadyStatus,
+};
