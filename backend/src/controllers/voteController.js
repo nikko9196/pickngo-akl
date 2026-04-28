@@ -7,7 +7,6 @@ const {
 const {
   applyVote,
   calculateVoteResult,
-  formatVoteResult,
 } = require("../services/voteService");
 
 function getErrorStatus(error) {

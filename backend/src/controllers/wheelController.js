@@ -1,4 +1,5 @@
 const UserSelection = require("../models/UserSelection");
+const RecommendationSnapshot = require("../models/RecommendationSnapshot");
 
 const {
   findSessionById,
@@ -61,10 +62,16 @@ async function buildWheel(req, res) {
 
     await session.save();
 
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+
+    const detailedWheelItems = session.wheelItems.map((item) =>
+      getRestaurantDetails(snapshot, item),
+    );
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
-        wheelItems: session.wheelItems,
+        wheelItems: detailedWheelItems,
       },
     });
   } catch (error) {
@@ -102,6 +109,9 @@ async function spinWheel(req, res) {
 
     const selectedItem = session.wheelItems[randomIndex];
 
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+    const detailedResult = getRestaurantDetails(snapshot, selectedItem);
+
     session.currentWheelResult = {
       recommendationSetId: selectedItem.recommendationSetId,
       placeId: selectedItem.placeId,
@@ -120,7 +130,7 @@ async function spinWheel(req, res) {
     return res.status(200).json({
       session: {
         id: session._id.toString(),
-        currentWheelResult: session.currentWheelResult,
+        currentWheelResult: detailedResult,
       },
     });
   } catch (error) {
@@ -128,6 +138,41 @@ async function spinWheel(req, res) {
       error instanceof Error ? error.message : "Failed to spin the wheel.";
     return res.status(getErrorStatus(error)).json({ message });
   }
+}
+
+async function getLatestRecommendationSnapshot(sessionId) {
+  return RecommendationSnapshot.findOne({ sessionId }).sort({
+    generatedAt: -1,
+  });
+}
+
+function getRestaurantByPlaceId(snapshot, placeId) {
+  if (!snapshot) {
+    return null;
+  }
+
+  return (
+    snapshot.restaurants.find((restaurant) => restaurant.placeId === placeId) ||
+    null
+  );
+}
+
+function getRestaurantDetails(snapshot, item) {
+  const restaurant = getRestaurantByPlaceId(snapshot, item.placeId);
+
+  return {
+    recommendationSetId: item.recommendationSetId,
+    placeId: item.placeId,
+    name: restaurant?.name || "",
+    address: restaurant?.address || "",
+    district: restaurant?.district || "",
+    rating: restaurant?.rating ?? null,
+    priceLevel: restaurant?.priceLevel ?? null,
+    cuisine: restaurant?.cuisine || [],
+    photos: restaurant?.photos || [],
+    distance: restaurant?.distance ?? null,
+    openNow: restaurant?.openNow ?? false,
+  };
 }
 
 module.exports = {
