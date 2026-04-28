@@ -14,7 +14,10 @@ const GOOGLE_PLACES_FIELD_MASK = [
   "places.primaryType",
   "places.types",
   "places.googleMapsUri",
+  "places.photos",
+  "places.currentOpeningHours",
 ].join(",");
+const GOOGLE_PLACE_PHOTO_MAX_WIDTH = 800;
 
 const GOOGLE_PRICE_LEVEL_MAP = {
   $: ["PRICE_LEVEL_INEXPENSIVE"],
@@ -142,9 +145,49 @@ async function searchGooglePlaces(groupPrefs) {
   return Array.isArray(payload.places) ? payload.places : [];
 }
 
+async function fetchPlacePhotoUri(photoName) {
+  if (!photoName || !process.env.GOOGLE_PLACES_API_KEY) {
+    return "";
+  }
+
+  const encodedPhotoName = photoName
+    .split("/")
+    .map((segment) => encodeURIComponent(segment))
+    .join("/");
+  const photoUrl =
+    `https://places.googleapis.com/v1/${encodedPhotoName}/media` +
+    `?key=${encodeURIComponent(process.env.GOOGLE_PLACES_API_KEY)}` +
+    `&maxWidthPx=${GOOGLE_PLACE_PHOTO_MAX_WIDTH}` +
+    "&skipHttpRedirect=true";
+
+  try {
+    const response = await fetch(photoUrl, {
+      method: "GET",
+    });
+
+    const responseText = await response.text();
+    let payload = {};
+
+    try {
+      payload = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      payload = {};
+    }
+
+    if (!response.ok) {
+      return "";
+    }
+
+    return typeof payload.photoUri === "string" ? payload.photoUri : "";
+  } catch {
+    return "";
+  }
+}
+
 module.exports = {
   buildPlacesSearchPayload,
   buildTextQuery,
+  fetchPlacePhotoUri,
   mapPreferredPriceToGoogleLevels,
   searchGooglePlaces,
 };

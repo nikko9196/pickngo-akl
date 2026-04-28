@@ -56,20 +56,40 @@ const groupPreferenceSchema = new mongoose.Schema(
 
 const restaurantSchema = new mongoose.Schema(
   {
+    placeId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     restaurantId: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     name: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
     address: {
       type: String,
       default: "",
       trim: true,
+    },
+    district: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    location: {
+      lat: {
+        type: Number,
+        default: null,
+      },
+      lng: {
+        type: Number,
+        default: null,
+      },
     },
     rating: {
       type: Number,
@@ -85,9 +105,8 @@ const restaurantSchema = new mongoose.Schema(
       trim: true,
     },
     priceLevel: {
-      type: String,
-      default: "",
-      trim: true,
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
     primaryType: {
       type: String,
@@ -97,6 +116,18 @@ const restaurantSchema = new mongoose.Schema(
     types: {
       type: [String],
       default: [],
+    },
+    cuisine: {
+      type: [String],
+      default: [],
+    },
+    photos: {
+      type: [String],
+      default: [],
+    },
+    openNow: {
+      type: Boolean,
+      default: false,
     },
     latitude: {
       type: Number,
@@ -112,6 +143,10 @@ const restaurantSchema = new mongoose.Schema(
       trim: true,
     },
     distanceKm: {
+      type: Number,
+      default: null,
+    },
+    distance: {
       type: Number,
       default: null,
     },

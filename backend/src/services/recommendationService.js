@@ -10,6 +10,7 @@ const {
 const { combineGroupPreferences } = require("./groupPreferenceService");
 const { searchGooglePlaces } = require("./googlePlacesService");
 const { normalizePlace } = require("./placeNormalizationService");
+const { presentRankedRestaurants, presentSnapshot } = require("./placePresentationService");
 const {
   buildQuestionLookup,
   createEmptyParticipantPreference,
@@ -118,7 +119,7 @@ async function generateRecommendationsForSession({
     return {
       cached: true,
       message: "Returning the most recent recommendation snapshot.",
-      snapshot: latestSnapshot.toObject(),
+      snapshot: presentSnapshot(latestSnapshot.toObject()),
       sessionStatus: session.status,
     };
   }
@@ -152,13 +153,14 @@ async function generateRecommendationsForSession({
     .map((place) => normalizePlace(place, groupPrefs))
     .filter(Boolean);
   const rankedRestaurants = rankRestaurants(normalizedPlaces, groupPrefs);
+  const presentedRestaurants = await presentRankedRestaurants(rankedRestaurants);
   const snapshot = await createRecommendationSnapshot({
     session,
     groupPrefs,
-    restaurants: rankedRestaurants,
+    restaurants: presentedRestaurants,
   });
 
-  if (rankedRestaurants.length > 0) {
+  if (presentedRestaurants.length > 0) {
     session.status = "selecting";
     await session.save();
   }
@@ -166,10 +168,10 @@ async function generateRecommendationsForSession({
   return {
     cached: false,
     message:
-      rankedRestaurants.length > 0
+      presentedRestaurants.length > 0
         ? "Generated group recommendations."
         : "No restaurants matched the current group preferences. Saved an empty recommendation snapshot.",
-    snapshot: snapshot.toObject(),
+    snapshot: presentSnapshot(snapshot.toObject()),
     sessionStatus: session.status,
   };
 }
@@ -193,7 +195,7 @@ async function getLatestRecommendationsForSession({ sessionId, requesterUserId }
 
   return {
     message: "Fetched the latest recommendation snapshot.",
-    snapshot: latestSnapshot.toObject(),
+    snapshot: presentSnapshot(latestSnapshot.toObject()),
     sessionStatus: session.status,
   };
 }

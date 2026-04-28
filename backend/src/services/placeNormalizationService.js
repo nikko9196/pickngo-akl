@@ -38,6 +38,15 @@ function normalizePlace(place, groupLocation) {
     priceLevel: mapGooglePriceLevelToSymbol(place.priceLevel || ""),
     primaryType: place.primaryType || "",
     types: Array.isArray(place.types) ? place.types : [],
+    photoNames: Array.isArray(place.photos)
+      ? place.photos
+          .map((photo) => (typeof photo?.name === "string" ? photo.name : ""))
+          .filter(Boolean)
+      : [],
+    openNow:
+      typeof place.currentOpeningHours?.openNow === "boolean"
+        ? place.currentOpeningHours.openNow
+        : null,
     latitude,
     longitude,
     mapsUrl: place.googleMapsUri || "",
