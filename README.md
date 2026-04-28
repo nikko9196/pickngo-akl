@@ -56,6 +56,7 @@ PORT=5001
 MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
 JWT_SECRET=change-this-jwt-secret
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_PLACES_API_KEY=your-google-places-api-key
 CLIENT_BASE_URL=http://localhost:5173
 ```
 
@@ -65,6 +66,7 @@ Variable notes:
 - `MONGODB_URI`: MongoDB connection string
 - `JWT_SECRET`: secret used to sign authentication tokens
 - `GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
+- `GOOGLE_PLACES_API_KEY`: required for session recommendation generation
 - `CLIENT_BASE_URL`: base frontend URL used to generate session join links
 
 #### 3. Set Up Frontend
@@ -111,6 +113,8 @@ npm run dev
 The frontend development server runs on the port defined by `VITE_PORT`, usually `http://localhost:5173`.
 
 If you change the backend port, update `VITE_API_BASE_URL` in `frontend/.env` to match.
+
+Recommendation endpoint setup, sample Postman requests, and a sample JSON response are documented in [docs/RECOMMENDATIONS_API.md](docs/RECOMMENDATIONS_API.md).
 
 ## Project Structure
 

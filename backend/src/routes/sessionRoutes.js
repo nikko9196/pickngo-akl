@@ -10,6 +10,10 @@ const {
   updateSessionStatus,
   updateSession,
 } = require("../controllers/sessionController");
+const {
+  generateSessionRecommendations,
+  getLatestSessionRecommendations,
+} = require("../controllers/recommendationController");
 const { upsertResponse } = require("../controllers/responseController");
 const { requireAuth } = require("../middleware/auth");
 
@@ -18,7 +22,9 @@ const router = express.Router();
 router.use(requireAuth);
 router.get("/mine", getMySessions);
 router.get("/:sessionId/progress", getSessionProgress);
+router.get("/:sessionId/recommendations/latest", getLatestSessionRecommendations);
 router.get("/code/:sessionCode", getSessionByCode);
+router.post("/:sessionId/recommendations", generateSessionRecommendations);
 router.post("/:sessionId/responses", upsertResponse);
 router.post("/", createSession);
 router.post("/join", joinSession);

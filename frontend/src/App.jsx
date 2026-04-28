@@ -8,6 +8,8 @@ import JoinRoomPage from "./pages/JoinRoomPage";
 import QuestionPage from "./pages/QuestionPage";
 import SessionPage from "./pages/SessionPage";
 
+import RecommendationPage from "./pages/RecommendationPage";
+
 function App() {
   return (
     <BrowserRouter>
@@ -20,6 +22,8 @@ function App() {
           <Route path="/join/:sessionCode" element={<JoinRoomPage />} />
           <Route path="/sessions/:sessionCode" element={<SessionPage />} />
           <Route path="/sessions/:sessionCode/question" element={<QuestionPage />} />
+
+          <Route path="/sessions/:sessionCode/recommendation" element={<RecommendationPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>
