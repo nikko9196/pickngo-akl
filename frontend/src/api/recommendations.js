@@ -20,10 +20,11 @@ async function request(path, token, options = {}) {
   return data;
 }
 
-export function generateRecommendations(token, sessionId, payload) {
-  return request(`/api/sessions/${sessionId}/recommendation`, token, {
+export function generateRecommendations(token, sessionId, options = {}) {
+  const refresh = options.refresh ? "?refresh=true" : "";
+
+  return request(`/api/sessions/${sessionId}/recommendations${refresh}`, token, {
     method: "POST",
-    body: JSON.stringify(payload),
   });
 }
 

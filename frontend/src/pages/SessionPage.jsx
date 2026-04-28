@@ -79,13 +79,26 @@ function SessionPage() {
   }, [initialSession, isAuthReady, isAuthenticated, sessionCode, token]);
 
   useEffect(() => {
-    if (session && session.status !== "waiting") {
-      navigate(`/sessions/${session.sessionCode}/question`, {
+    if (!session || session.status === "waiting") {
+      return;
+    }
+
+    const nextPath =
+      session.status === "questioning"
+        ? `/sessions/${session.sessionCode}/question`
+        : `/sessions/${session.sessionCode}/recommendation`;
+
+    if (location.pathname === nextPath) {
+      return;
+    }
+
+    if (session) {
+      navigate(nextPath, {
         replace: true,
         state: { inviteSession: session },
       });
     }
-  }, [navigate, session]);
+  }, [location.pathname, navigate, session]);
 
   const qrCodeUrl = useMemo(() => {
     if (!session?.joinUrl) {

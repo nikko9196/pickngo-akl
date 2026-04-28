@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import {
   generateRecommendations,
@@ -15,21 +15,21 @@ import {
 } from "../utils/mockRecommendations";
 import "./RecommendationPage.css";
 
-// Toggle between mock and real API during development.
-// Set VITE_USE_MOCK_RECOMMENDATIONS=false in .env when Annie's backend is ready.
-const USE_MOCK =
-  import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS !== "false";
-
-const AUCKLAND_CBD = { lat: -36.8485, lng: 174.7633 };
+const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
+const NO_SNAPSHOT_MESSAGE = "No recommendation snapshot has been generated yet.";
 
 function RecommendationPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { sessionCode } = useParams();
+  const initialSession = location.state?.inviteSession || null;
   const { isAuthenticated, isAuthReady, token } = useAuth();
+  const autoGenerateAttemptedRef = useRef(false);
 
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState([]);
   const [selectedPlaceIds, setSelectedPlaceIds] = useState([]);
+  const [hasSnapshot, setHasSnapshot] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,6 +43,12 @@ function RecommendationPage() {
   const maxSelections = session?.maxSelectionsPerUser ?? 3;
   const isHost = session?.currentUserRole === "host";
   const hasRecommendations = items.length > 0;
+  const shouldAutoGenerate =
+    !USE_MOCK &&
+    isHost &&
+    session?.status === "generating" &&
+    !hasSnapshot &&
+    !isGenerating;
 
   useEffect(() => {
     if (!isAuthReady) {
@@ -51,14 +57,47 @@ function RecommendationPage() {
 
     if (!isAuthenticated || !token) {
       navigate("/auth");
+    }
+  }, [isAuthReady, isAuthenticated, navigate, token]);
+
+  useEffect(() => {
+    autoGenerateAttemptedRef.current = false;
+  }, [session?.id]);
+
+  useEffect(() => {
+    if (!session) {
+      return;
+    }
+
+    if (session.status === "waiting") {
+      navigate(`/sessions/${session.sessionCode}`, {
+        replace: true,
+        state: { inviteSession: session },
+      });
+      return;
+    }
+
+    if (session.status === "questioning") {
+      navigate(`/sessions/${session.sessionCode}/question`, {
+        replace: true,
+        state: { inviteSession: session },
+      });
+    }
+  }, [navigate, session]);
+
+  useEffect(() => {
+    if (!isAuthReady || !isAuthenticated || !token || !sessionCode) {
       return;
     }
 
     let ignore = false;
 
-    async function hydratePage() {
-      setIsLoading(true);
-      setPageError("");
+    async function loadRecommendationState(options = {}) {
+      const { showLoader = false } = options;
+
+      if (showLoader) {
+        setIsLoading(true);
+      }
 
       try {
         const sessionResponse = await getSessionByCode(token, sessionCode);
@@ -67,62 +106,120 @@ function RecommendationPage() {
           return;
         }
 
-        setSession(sessionResponse.session);
+        const nextSession = sessionResponse.session;
+        setSession(nextSession);
+        setPageError("");
 
         try {
           const recommendationsResponse = USE_MOCK
             ? await mockGetRecommendations()
-            : await getRecommendations(token, sessionResponse.session.id);
+            : await getRecommendations(token, nextSession.id);
 
           if (ignore) {
             return;
           }
 
-          setItems(recommendationsResponse.items || []);
-        } catch {
-          // No recommendations yet is a valid state, not an error
-          if (!ignore) {
-            setItems([]);
+          const nextItems = USE_MOCK
+            ? recommendationsResponse.items || []
+            : recommendationsResponse.snapshot?.restaurants || [];
+
+          setItems(nextItems);
+          setHasSnapshot(true);
+        } catch (error) {
+          if (ignore) {
+            return;
           }
+
+          if (error.message === NO_SNAPSHOT_MESSAGE) {
+            setItems([]);
+            setHasSnapshot(false);
+            return;
+          }
+
+          throw error;
         }
       } catch (error) {
         if (!ignore) {
           setPageError(error.message);
         }
       } finally {
-        if (!ignore) {
+        if (!ignore && showLoader) {
           setIsLoading(false);
         }
       }
     }
 
-    void hydratePage();
+    void loadRecommendationState({ showLoader: true });
+
+    const intervalId = window.setInterval(() => {
+      const shouldPoll =
+        session?.status === "generating" ||
+        (!hasSnapshot && session?.status === "selecting");
+
+      if (shouldPoll) {
+        void loadRecommendationState();
+      }
+    }, 3000);
 
     return () => {
       ignore = true;
+      window.clearInterval(intervalId);
     };
-  }, [isAuthReady, isAuthenticated, token, sessionCode, navigate]);
+  }, [
+    hasSnapshot,
+    isAuthReady,
+    isAuthenticated,
+    session?.status,
+    sessionCode,
+    token,
+  ]);
 
-  async function handleGenerate() {
+  async function handleGenerate(options = {}) {
+    if (!session || !token) {
+      return;
+    }
+
+    const { isAutomatic = false } = options;
+
     setIsGenerating(true);
     setPageError("");
 
     try {
-      const centerLocation = await getCenterLocation();
       const response = USE_MOCK
         ? await mockGenerateRecommendations()
-        : await generateRecommendations(token, session.id, {
-            centerLocation,
-            radius: 10,
-          });
+        : await generateRecommendations(token, session.id, { refresh: true });
 
-      setItems(response.items || []);
+      const nextItems = USE_MOCK
+        ? response.items || []
+        : response.snapshot?.restaurants || [];
+      const nextSessionStatus = response.sessionStatus || session.status;
+
+      setItems(nextItems);
+      setHasSnapshot(true);
+      setSession((currentSession) =>
+        currentSession
+          ? { ...currentSession, status: nextSessionStatus }
+          : currentSession
+      );
     } catch (error) {
       setPageError(error.message);
+
+      if (isAutomatic) {
+        autoGenerateAttemptedRef.current = true;
+      }
     } finally {
       setIsGenerating(false);
     }
   }
+
+  useEffect(() => {
+    if (!shouldAutoGenerate || autoGenerateAttemptedRef.current) {
+      return;
+    }
+
+    autoGenerateAttemptedRef.current = true;
+    void handleGenerate({ isAutomatic: true });
+  }, [shouldAutoGenerate]);
 
   function handleToggle(placeId) {
     setSelectedPlaceIds((current) => {
@@ -148,13 +245,8 @@ function RecommendationPage() {
     setPageError("");
 
     try {
-      // TODO: Call selections API when it is ready
-      // await submitSelections(token, session.id, { selectedPlaceIds });
-
-      // Placeholder until selections API is ready
+      // TODO: Call selections API when it is ready.
       console.log("Submitting selections:", selectedPlaceIds);
-
-      // Navigate to wheel page (Paige's work, may not exist yet)
       navigate(`/sessions/${sessionCode}/wheel`);
     } catch (error) {
       setPageError(error.message);
@@ -188,7 +280,7 @@ function RecommendationPage() {
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Loading recommendations...</p>
         </div>
-      ) : pageError && !hasRecommendations ? (
+      ) : pageError && !hasRecommendations && !hasSnapshot ? (
         <div className="recommendation-state">
           <p className="recommendation-error">{pageError}</p>
           <button
@@ -209,22 +301,39 @@ function RecommendationPage() {
         <div className="recommendation-container">
           <section className="recommendation-intro">
             <h2>Picks for your group</h2>
-            <p className="recommendation-intro-sub">No recommendations yet.</p>
+            <p className="recommendation-intro-sub">
+              {hasSnapshot
+                ? "No restaurants matched the current preferences."
+                : "No recommendations yet."}
+            </p>
           </section>
           <div className="recommendation-state">
+            {pageError ? (
+              <p className="recommendation-error recommendation-error-banner">
+                {pageError}
+              </p>
+            ) : null}
             {isHost ? (
               <>
-                <p>Generate restaurant recommendations for your group.</p>
+                <p>
+                  {hasSnapshot
+                    ? "Try generating another recommendation set."
+                    : "Generate restaurant recommendations for your group."}
+                </p>
                 <button
                   className="recommendation-generate"
                   type="button"
-                  onClick={handleGenerate}
+                  onClick={() => handleGenerate({ isAutomatic: false })}
                 >
-                  Generate Recommendations
+                  {hasSnapshot ? "Generate Again" : "Generate Recommendations"}
                 </button>
               </>
             ) : (
-              <p>Waiting for the host to generate recommendations...</p>
+              <p>
+                {session?.status === "generating"
+                  ? "Waiting for the host to generate recommendations..."
+                  : "Recommendations are not available yet."}
+              </p>
             )}
           </div>
         </div>
@@ -277,28 +386,6 @@ function RecommendationPage() {
       )}
     </main>
   );
-}
-
-async function getCenterLocation() {
-  if (!navigator.geolocation) {
-    return AUCKLAND_CBD;
-  }
-
-  try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        timeout: 5000,
-        maximumAge: 60000,
-      });
-    });
-
-    return {
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    };
-  } catch {
-    return AUCKLAND_CBD;
-  }
 }
 
 export default RecommendationPage;
