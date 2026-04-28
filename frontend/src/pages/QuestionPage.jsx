@@ -130,6 +130,17 @@ function QuestionPage() {
   }, [navigate, session]);
 
   useEffect(() => {
+    if (!session || !["generating", "selecting"].includes(session.status)) {
+      return;
+    }
+
+    navigate(`/sessions/${session.sessionCode}/recommendation`, {
+      replace: true,
+      state: { inviteSession: session },
+    });
+  }, [navigate, session]);
+
+  useEffect(() => {
     setSelectedOptionId("");
     setSelectedOptionIds([]);
     setTextAnswer("");
