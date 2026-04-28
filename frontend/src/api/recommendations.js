@@ -21,12 +21,12 @@ async function request(path, token, options = {}) {
 }
 
 export function generateRecommendations(token, sessionId, payload) {
-  return request(`/api/sessions/${sessionId}/recommendations`, token, {
+  return request(`/api/sessions/${sessionId}/recommendation`, token, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
 export function getRecommendations(token, sessionId) {
-  return request(`/api/sessions/${sessionId}/recommendations`, token);
+  return request(`/api/sessions/${sessionId}/recommendations/latest`, token);
 }
