@@ -1,15 +1,30 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import http from "http";
-import { Server } from "socket.io";
-import { initSocket } from './socket/socketHandler.js';
+const express = require("express");
+const cors = require("cors");
 
-dotenv.config();
+// socket.io libraries
+const http = require("http");
+const { Server } = require("socket.io");
+
+require("dotenv").config();
+
+const connectDB = require("./config/db");
+const authRoutes = require("./routes/authRoutes");
+const questionRoutes = require("./routes/questionRoutes");
+const sessionRoutes = require("./routes/sessionRoutes");
+
+// --- Paige test ----
+// const userdecision = require("./mock-api/userdecisionRoutes");
+// const userhost = require("./mock-api/userRoutes");
+// -------
+
+// initSocket
+const { initSocket } = require("./socket/socketHandler");
 
 const app = express();
+const PORT = process.env.PORT || 5001;
 
-// Middleware
+connectDB();
+
 app.use(cors());
 app.use(express.json());
 
@@ -18,27 +33,24 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-const PORT = process.env.PORT
+app.use("/api/auth", authRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/sessions", sessionRoutes);
+
+// --- Paige test ----
+// app.use('/api/decision', userdecision);
+// app.use('/api/host', userhost);
+// -------
 
 
-import userdecision from './mock-api/userdecisionRoutes.js';
-app.use('/api/decision', userdecision);
-
-import userhost from './mock-api/userRoutes.js';
-app.use('/api/host', userhost);
-
-// socket.io logic
-
+// --- init socket.io ---
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: { origin: "*" },
 });
-
 initSocket(io);
+// ----
 
-// app.listen(PORT, () => {
-//   console.log(`Server running on port ${PORT}`);
-// });
-server.listen(PORT, () => {
+app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-  });
+});

@@ -1,11 +1,8 @@
-import pkg from 'pg';
-import dotenv from 'dotenv';
-dotenv.config();
-
-const { Pool } = pkg;
+const { Pool } = require('pg');
+require('dotenv').config();
 
 // Create connection pool
-export const pool = new Pool({
+const pool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
   database: process.env.DB_NAME,
@@ -14,7 +11,7 @@ export const pool = new Pool({
 });
 
 // Test connection (no leak)
-export const connectDB = async () => {
+const connectDB = async () => {
   try {
     const client = await pool.connect();
     console.log('PostgreSQL database connected');
@@ -24,3 +21,5 @@ export const connectDB = async () => {
     process.exit(1);
   }
 };
+
+module.exports = { pool, connectDB };

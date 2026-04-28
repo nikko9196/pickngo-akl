@@ -1,6 +1,7 @@
-import { selectUserDecision } from '../mock-api/userspinModels.js'
+// import { selectUserDecision } from '../mock-api/userspinModels.js'
+const { selectUserDecision } = require('../mock-api/userspinModels.js');
 
-export const initSocket = (io) => {
+const initSocket = (io) => {
     io.on("connection", (socket) => {
   
       socket.on("join_session", ({ sessionid, userid }) => {
@@ -32,4 +33,6 @@ export const initSocket = (io) => {
         console.log(`user ${socket.userid} disconnected`);
       });
     });
-  };
+};
+
+module.exports = { initSocket };

@@ -1,10 +1,30 @@
-# Please edit this gitignore file to suit your needs. You may
-# look at other .gitignore files in the provided examples for inspiration.
-
 .DS_Store
 node_modules
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Environment variables - Edit if necessary
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+frontend/*.local
+
+backend/dist
+
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
 .env
 .env.*
 !.env.example

@@ -19,7 +19,7 @@ import './Wheelpage.css';
 // CONSTANTS
 // ============================================================
 const socket = io(import.meta.env.VITE_API_BASE_URL);
-const DURATION = 30 // seconds - duration for voting
+const DURATION = 10 // seconds - duration for voting
 
 // Later replace options with api
 const options = [
@@ -251,27 +251,27 @@ export default function Wheelpage() {
     // ============================================================
     // TEST UI - TODO: remove when API is ready
     // ============================================================
-    if (!userid) {
-        return (
-            <div style={{ padding: "20px" }}>
-            <p>Enter your test user ID:</p>
-            <input 
-                value={inputId} 
-                onChange={(e) => setInputId(e.target.value)} 
-                placeholder="e.g. 1, 2, 3"
-            />
-            <button onClick={() => setUserid(inputId)}>Join</button>
-            </div>
-        );
-    }
+    // if (!userid) {
+    //     return (
+    //         <div style={{ padding: "20px" }}>
+    //         <p>Enter your test user ID:</p>
+    //         <input 
+    //             value={inputId} 
+    //             onChange={(e) => setInputId(e.target.value)} 
+    //             placeholder="e.g. 1, 2, 3"
+    //         />
+    //         <button onClick={() => setUserid(inputId)}>Join</button>
+    //         </div>
+    //     );
+    // }
     
 
     // ============================================================
     // RENDER
     // ============================================================
-    return (
+    return ( 
         <div className="wp-page">
-
+        
             <div className="wp-button-n-text">
                 {/* Top Buttons */}
                 <div className="wp-top-buttons">
