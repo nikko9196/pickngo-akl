@@ -23,7 +23,37 @@ const participantSchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { _id: false }
+  { _id: false },
+);
+
+const wheelItemSchema = new mongoose.Schema(
+  {
+    recommendationSetId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    placeId: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+  },
+  { _id: false },
+);
+
+const wheelResultSchema = new mongoose.Schema(
+  {
+    recommendationSetId: {
+      type: String,
+      trim: true,
+    },
+    placeId: {
+      type: String,
+      trim: true,
+    },
+  },
+  { _id: false },
 );
 
 const sessionSchema = new mongoose.Schema(
@@ -49,7 +79,15 @@ const sessionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["waiting", "questioning", "generating", "selecting", "spinning", "voting", "completed"],
+      enum: [
+        "waiting",
+        "questioning",
+        "generating",
+        "selecting",
+        "spinning",
+        "voting",
+        "completed",
+      ],
       default: "waiting",
     },
     maxParticipants: {
@@ -69,8 +107,46 @@ const sessionSchema = new mongoose.Schema(
       type: [participantSchema],
       default: [],
     },
+    wheelItems: {
+      type: [wheelItemSchema],
+      default: [],
+    },
+    currentWheelResult: {
+      type: wheelResultSchema,
+      default: null,
+    },
+    finalWheelResult: {
+      type: wheelResultSchema,
+      default: null,
+    },
+    voteSummary: {
+      type: new mongoose.Schema(
+        {
+          acceptCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          respinCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          votedUserIds: {
+            type: [String],
+            default: [],
+          },
+        },
+        { _id: false },
+      ),
+      default: () => ({
+        acceptCount: 0,
+        respinCount: 0,
+        votedUserIds: [],
+      }),
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Session", sessionSchema);

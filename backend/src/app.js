@@ -11,6 +11,8 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const questionRoutes = require("./routes/questionRoutes");
 const sessionRoutes = require("./routes/sessionRoutes");
+const wheelRoutes = require("./routes/wheelRoutes");
+const voteRoutes = require("./routes/voteRoutes");
 
 // --- Paige test ----
 // const userdecision = require("./mock-api/userdecisionRoutes");
@@ -36,6 +38,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/questions", questionRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/sessions", wheelRoutes);
+app.use("/api/sessions", voteRoutes);
 
 // --- Paige test ----
 // app.use('/api/decision', userdecision);
