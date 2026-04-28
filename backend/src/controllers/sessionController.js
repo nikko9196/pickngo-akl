@@ -8,6 +8,9 @@ const SESSION_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_DISPLAY_NAME_MAX_LENGTH = 30;
 const MAX_SELECTIONS_PER_USER_DEFAULT = 3;
 const MAX_SELECTIONS_PER_USER_LIMIT = 10;
+const LOCATION_RADIUS_DEFAULT = 3000;
+const LOCATION_RADIUS_MIN = 100;
+const LOCATION_RADIUS_MAX = 50000;
 const SESSION_STATUSES = [
   "waiting",
   "questioning",
@@ -68,6 +71,17 @@ function parseRoomDisplayName(rawValue) {
   return roomDisplayName;
 }
 
+function serializeLocation(location = {}) {
+  return {
+    source: location.source || "map",
+    label: location.label || "",
+    lat: typeof location.lat === "number" ? location.lat : null,
+    lng: typeof location.lng === "number" ? location.lng : null,
+    radiusMeters:
+      typeof location.radiusMeters === "number" ? location.radiusMeters : LOCATION_RADIUS_DEFAULT,
+  };
+}
+
 function serializeSession(session, currentUserId) {
   const sessionObject = session.toObject();
   const participantCount = sessionObject.participants.length;
@@ -83,6 +97,7 @@ function serializeSession(session, currentUserId) {
     status: sessionObject.status,
     maxParticipants: sessionObject.maxParticipants,
     maxSelectionsPerUser: sessionObject.maxSelectionsPerUser,
+    location: serializeLocation(sessionObject.location),
     participantCount,
     currentUserRole: currentParticipant?.role || null,
     currentUserRoomDisplayName: currentParticipant?.roomDisplayName || "",
@@ -114,8 +129,10 @@ async function fetchSessionById(sessionId) {
 }
 
 async function getActiveQuestionCount() {
-  const questionLists = await QuestionList.find({ isActive: true }).select("questionList");
-  return questionLists.reduce((total, questionList) => total + questionList.questionList.length, 0);
+  return QuestionList.countDocuments({
+    isActive: true,
+    "questionList.0": { $exists: true },
+  });
 }
 
 function parseCapacity(rawValue) {
@@ -142,6 +159,51 @@ function parseMaxSelectionsPerUser(rawValue) {
   return maxSelectionsPerUser;
 }
 
+function parseLocation(rawValue) {
+  if (rawValue === undefined || rawValue === null) {
+    return {};
+  }
+
+  if (typeof rawValue !== "object") {
+    return null;
+  }
+
+  const source = typeof rawValue.source === "string" ? rawValue.source.trim().toLowerCase() : "map";
+  const lat = Number(rawValue.lat);
+  const lng = Number(rawValue.lng);
+  const radiusMeters =
+    rawValue.radiusMeters === undefined ? LOCATION_RADIUS_DEFAULT : Number(rawValue.radiusMeters);
+  const label = typeof rawValue.label === "string" ? rawValue.label.trim() : "";
+
+  if (!["current", "map"].includes(source)) {
+    return null;
+  }
+
+  if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
+    return null;
+  }
+
+  if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
+    return null;
+  }
+
+  if (
+    !Number.isInteger(radiusMeters) ||
+    radiusMeters < LOCATION_RADIUS_MIN ||
+    radiusMeters > LOCATION_RADIUS_MAX
+  ) {
+    return null;
+  }
+
+  return {
+    source,
+    label,
+    lat,
+    lng,
+    radiusMeters,
+  };
+}
+
 function parseSessionStatus(rawValue) {
   if (typeof rawValue !== "string") {
     return null;
@@ -163,6 +225,7 @@ async function createSession(req, res) {
       ? MAX_SELECTIONS_PER_USER_DEFAULT
       : parseMaxSelectionsPerUser(req.body.maxSelectionsPerUser);
   const roomDisplayName = parseRoomDisplayName(req.body.roomDisplayName);
+  const location = parseLocation(req.body.location);
 
   if (!maxParticipants) {
     return res.status(400).json({ message: "Max participants must be an integer between 2 and 50." });
@@ -180,6 +243,12 @@ async function createSession(req, res) {
     });
   }
 
+  if (!location) {
+    return res.status(400).json({
+      message: `Location must include a valid source, latitude, longitude, and radius between ${LOCATION_RADIUS_MIN} and ${LOCATION_RADIUS_MAX} meters.`,
+    });
+  }
+
   try {
     const sessionCode = await createUniqueSessionCode();
     const joinUrl = `${APP_BASE_URL}/join/${sessionCode}`;
@@ -189,6 +258,7 @@ async function createSession(req, res) {
       joinUrl,
       maxParticipants,
       maxSelectionsPerUser,
+      location,
       participants: [
         {
           userId: req.userId,

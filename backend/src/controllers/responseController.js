@@ -11,8 +11,10 @@ function parseAnswer(rawValue) {
 }
 
 async function getActiveQuestionCount() {
-  const questionLists = await QuestionList.find({ isActive: true }).select("questionList");
-  return questionLists.reduce((total, questionList) => total + questionList.questionList.length, 0);
+  return QuestionList.countDocuments({
+    isActive: true,
+    "questionList.0": { $exists: true },
+  });
 }
 
 async function updateSessionStatusIfComplete(sessionId) {

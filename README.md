@@ -80,6 +80,7 @@ Create a `.env` file in the `frontend/` directory:
 VITE_PORT=5173
 VITE_API_BASE_URL=http://localhost:5001
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
 Variable notes:
@@ -87,6 +88,7 @@ Variable notes:
 - `VITE_PORT`: frontend development server port
 - `VITE_API_BASE_URL`: backend base URL used by the frontend
 - `VITE_GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
+- `VITE_GOOGLE_MAPS_API_KEY`: required for the create-room map picker
 
 ### Running the Application
 
@@ -191,6 +193,7 @@ Notes:
 
 - `POST /api/sessions`
   - Creates a new session for the host.
+  - The request body includes room settings and a `location` object selected from current browser location or the map picker.
 - `POST /api/sessions/join`
   - Joins a session using a public `sessionCode`.
 - `GET /api/sessions/mine`
@@ -328,6 +331,12 @@ Collection: `sessions`
 - `status`: current workflow state
 - `maxParticipants`: participant limit for the session
 - `maxSelectionsPerUser`: how many recommended restaurants each participant can shortlist later
+- `location`: location context used for restaurant recommendations
+  - `source`: how the location was selected, either `current` or `map`
+  - `label`: display label for the selected location
+  - `lat`: selected latitude
+  - `lng`: selected longitude
+  - `radiusMeters`: search radius around the selected location
 - `participants`: users currently in the room
   - `userId`
   - `role`
