@@ -5,6 +5,7 @@ const {
   checkValidParticipant,
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
+const { getUniquePlaceIds } = require("../utils/wheelUtils");
 
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
@@ -118,13 +119,21 @@ async function spinWheel(req, res) {
       placeId: selectedItem.placeId,
     };
 
-    session.status = "voting";
+    const uniquePlaceIds = getUniquePlaceIds(session.wheelItems);
+    const isFinalSpin = uniquePlaceIds.length <= 2;
 
-    session.voteSummary = {
-      acceptCount: 0,
-      respinCount: 0,
-      votedUserIds: [],
-    };
+    if (isFinalSpin) {
+      session.finalWheelResult = session.currentWheelResult;
+      session.status = "completed";
+    } else {
+      session.status = "voting";
+
+      session.voteSummary = {
+        acceptCount: 0,
+        respinCount: 0,
+        votedUserIds: [],
+      };
+    }
 
     await session.save();
 
@@ -132,6 +141,8 @@ async function spinWheel(req, res) {
       session: {
         id: session._id.toString(),
         currentWheelResult: detailedResult,
+        finalSpin: isFinalSpin,
+        status: session.status,
       },
     });
   } catch (error) {
