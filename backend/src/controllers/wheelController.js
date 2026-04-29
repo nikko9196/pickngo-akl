@@ -30,6 +30,11 @@ async function buildWheel(req, res) {
       selection.selectedItems.map((item) => ({
         recommendationSetId: selection.recommendationSetId,
         placeId: item.placeId,
+        userId: selection.userId,
+        roomDisplayName: getParticipantRoomDisplayName(
+          session,
+          selection.userId,
+        ),
       })),
     );
 
@@ -64,7 +69,7 @@ async function buildWheel(req, res) {
 
     const snapshot = await getLatestRecommendationSnapshot(sessionId);
 
-    const detailedWheelItems = session.wheelItems.map((item) =>
+    const detailedWheelItems = wheelItems.map((item) =>
       getRestaurantDetails(snapshot, item),
     );
 
@@ -161,6 +166,8 @@ function getRestaurantDetails(snapshot, item) {
   const restaurant = getRestaurantByPlaceId(snapshot, item.placeId);
 
   return {
+    userId: item.userId || "",
+    roomDisplayName: item.roomDisplayName || "",
     recommendationSetId: item.recommendationSetId,
     placeId: item.placeId,
     name: restaurant?.name || "",
@@ -173,6 +180,14 @@ function getRestaurantDetails(snapshot, item) {
     distance: restaurant?.distance ?? null,
     openNow: restaurant?.openNow ?? false,
   };
+}
+
+function getParticipantRoomDisplayName(session, userId) {
+  const participant = session.participants.find(
+    (participant) => participant.userId.toString() === userId,
+  );
+
+  return participant?.roomDisplayName || "";
 }
 
 module.exports = {
