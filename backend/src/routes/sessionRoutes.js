@@ -9,6 +9,7 @@ const {
   joinSession,
   updateSessionStatus,
   updateSession,
+  checkIsHost
 } = require("../controllers/sessionController");
 const {
   generateSessionRecommendations,
@@ -24,6 +25,7 @@ router.get("/mine", getMySessions);
 router.get("/:sessionId/progress", getSessionProgress);
 router.get("/:sessionId/recommendations/latest", getLatestSessionRecommendations);
 router.get("/code/:sessionCode", getSessionByCode);
+router.get("/:sessionId/host", checkIsHost);
 router.post("/:sessionId/recommendations", generateSessionRecommendations);
 router.post("/:sessionId/responses", upsertResponse);
 router.post("/", createSession);
