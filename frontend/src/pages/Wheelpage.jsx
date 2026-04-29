@@ -275,7 +275,9 @@ export default function Wheelpage() {
             <div className="wp-button-n-text">
                 {/* Top Buttons */}
                 <div className="wp-top-buttons">
-                    <button className="wp-black-button wp-black-button--left">
+                    <button className="wp-black-button wp-black-button--left"
+                    onClick={() => navigate(`/sessions/${sessionCode}/wheel`)}
+                    > 
                         My Picks
                     </button>
                     <button className="wp-black-button wp-black-button--right">
