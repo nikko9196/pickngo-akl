@@ -3,15 +3,8 @@ const {
   checkValidParticipant,
   checkSessionStatus,
 } = require("../services/sessionService");
-
-const {
-  applyVote,
-  calculateVoteResult,
-} = require("../services/voteService");
-
-function getErrorStatus(error) {
-  return error.statusCode || 500;
-}
+const { applyVote, calculateVoteResult } = require("../services/voteService");
+const { getErrorStatus } = require("../utils/errorUtils");
 
 // USER VOTE: ACCEPT OR RESPIN:
 async function submitVote(req, res) {

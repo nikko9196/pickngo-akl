@@ -5,6 +5,7 @@ const {
   findSessionById,
   checkValidParticipant,
 } = require("../services/sessionService");
+const { getErrorStatus } = require("../utils/errorUtils");
 
 const APP_BASE_URL = process.env.CLIENT_BASE_URL || "http://localhost:5173";
 const SESSION_CODE_LENGTH = 6;
@@ -452,10 +453,6 @@ async function getSessionProgress(req, res) {
     const message = error instanceof Error ? error.message : "Failed to fetch room progress.";
     return res.status(500).json({ message });
   }
-}
-
-function getErrorStatus(error) {
-  return error.statusCode || 500;
 }
 
 async function checkIsHost(req, res) {

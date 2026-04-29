@@ -1,14 +1,10 @@
 const UserSelection = require("../models/UserSelection");
 const RecommendationSnapshot = require("../models/RecommendationSnapshot");
-
 const {
   findSessionById,
   checkValidParticipant,
 } = require("../services/sessionService");
-
-function getErrorStatus(error) {
-  return error.statusCode || 500;
-}
+const { getErrorStatus } = require("../utils/errorUtils");
 
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
