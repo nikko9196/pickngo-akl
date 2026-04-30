@@ -12,8 +12,8 @@ const initSocket = (io) => {
           io.to(sessionCode).emit("wheel_built");
         });
 
-        socket.on("spin", async ({ sessionCode, prizeNumber }) => {
-            io.to(sessionCode).emit("spin", { prizeNumber });
+        socket.on("spin", async ({ sessionCode, prizeNumber, finalSpin }) => {
+            io.to(sessionCode).emit("spin", { prizeNumber, finalSpin });
         });
 
         socket.on("vote", async ({ sessionCode, sessionId }) => {
@@ -30,8 +30,8 @@ const initSocket = (io) => {
             }
         });
 
-        socket.on("respin", ({ sessionCode, isrespin }) => {
-            io.to(sessionCode).emit("respin_update", isrespin);
+        socket.on("respin", ({ sessionCode, isrespin, finalSpin }) => {
+            io.to(sessionCode).emit("respin_update", {isrespin, finalSpin});
         });
 
         socket.on("reload_wheel", ({ sessionCode }) => {
@@ -40,6 +40,46 @@ const initSocket = (io) => {
 
         socket.on("disconnect", () => {
             console.log(`user ${socket.userid} disconnected`);
+        });
+
+        socket.on("ready", async ({ sessionCode, sessionId }) => {
+          try {
+              const session = await findSessionById(sessionId);
+      
+              const participants = session.participants;
+      
+              const readyCount = participants.filter(p => p.isReady).length;
+              const totalParticipants = participants.length;
+      
+              const allReady = readyCount === totalParticipants;
+      
+              io.to(sessionCode).emit("ready_update", {
+                  readyCount,
+                  totalParticipants,
+                  allReady,
+                  participants
+              });
+      
+          } catch (error) {
+              console.error("Failed to get ready status:", error);
+          }
+        });
+
+        socket.on("send_reminder", async ({ sessionCode, sessionId }) => {
+            try {
+                const session = await findSessionById(sessionId);
+        
+                const remindedUserIds = session.participants
+                    .filter(p => !p.isReady)
+                    .map(p => p.userId);
+        
+                io.to(sessionCode).emit("reminder_sent", {
+                    remindedUserIds
+                });
+        
+            } catch (error) {
+                console.error("Failed to send reminder:", error);
+            }
         });
     });
 };

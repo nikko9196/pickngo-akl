@@ -81,10 +81,12 @@
 
 .wp-black-button--left {
     font-size: 16px;
+    margin-right: auto;  
 }
 
 .wp-black-button--right {
     font-size: 14px;
+    margin-left: auto;
 }
 
 /* --- Status Container --- */
@@ -262,20 +264,24 @@
 
 .wp-popup-text {
     font-family: 'Suez One', serif;
-    font-size: 20px;
-    color: #081D70;
-    margin-bottom: 20px;
+    font-size: 30px;
+    color: #F27533;
+    margin-bottom: 10px;
 }
 
 .wp-popup-subtitle {
-    /* inherits base styles */
+    color: #081D70;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    margin-bottom: 20px;
+    
 }
 
 .wp-popup-vote-buttons {
     display: flex;
     gap: 10px;
-    justify-content: center;
-    margin-top: 15px;
+    margin-bottom: 10px;
 }
 
 .wp-popup-waiting {
@@ -288,11 +294,146 @@
     font-size: 13px;
 }
 
-/* --- Yes / Respin Buttons --- */
-.wp-yes-button {
-    /* add your existing yesbutton styles here */
+.wp-yes-button,
+.wp-no-button {
+    flex: 1;
+    padding: 10px;
+    background-color: #081D70;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    gap: 6px;
 }
 
-.wp-no-button {
-    /* add your existing nobutton styles here */
+.wp-yes-button:hover,
+.wp-no-button:hover {
+    background-color: #F27533;
+}
+
+.wp-vote-count-card {
+    flex: 1;
+    background-color: #CFF9FC;
+    border-radius: 20px;
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.wp-vote-count-label {
+    margin: 0;
+    font-size: 11px;
+    color: #0F6E56;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+}
+
+.wp-vote-count-number {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #0F6E56;
+    font-family: 'Inter', sans-serif;
+}
+
+.ready-dropdown, .picks-dropdown {
+    position: absolute;
+    top: 100px;
+    left: 50px;
+    right: 50px;
+    width: auto;
+    background: white;
+    color:#081D70;
+    padding: 20px;
+    z-index: 1000;
+    box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+
+.ready-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    color: #081D70;
+    font-weight: 400;
+    font-family: 'Suez One', serif;
+    font-size: 20px;
+}
+
+.ready-roomDisplayName {
+    color: #081D70;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+}
+
+.ready-isReady {
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    width: 90px; 
+    text-align: center;
+}
+
+/* READY state */
+.ready-isReady.ready {
+    background-color: #F5A220;
+    color: white;
+    padding: 10px;
+    border-radius: 20px;
+}
+
+/* WAITING state */
+.ready-isReady.waiting {
+    background-color: #CFF9FC;
+    color: #1b1b1b;
+    padding: 10px;
+    border-radius: 20px;
+}
+
+.ready-isReady.reminded {
+    background-color: #CFF9FC;
+    color: red;
+    padding: 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.ready-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.ready-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 14px;
+}
+
+.reminder-button {
+    width: 100%;
+    padding: 8px;
+    background: #F27533;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    color: white;
+}
+
+.pick-option {
+    max-width: 150px;        /* 👈 required */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

@@ -7,50 +7,22 @@ import '@fontsource/inter/700.css';
 import { FiUser } from "react-icons/fi";
 import { Wheel } from 'react-custom-roulette';
 import { useEffect, useState, useRef } from "react";
-// import wheelframe from "../assets/wheelframe.png"
 import cropped_wheel from "../assets/cropped_wheel.png"
 import spinner from "../assets/spinner.png"
-// import { ifRespin } from '../services/wheelService';
 import { useParams, useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import './Wheelpage.css';
 import { getSessionByCode } from "../api/sessions";
-import { buildWheelApi, spinWheel, getHost, submitVoteApi, ifRespin, countVote} from "../api/userselections";
+import { buildWheelApi, spinWheel, getHost, submitVoteApi, ifRespin, reloadWheel,
+sendReady, sendRemind} from "../api/userselections";
 import { useAuth } from "../context/useAuth";
+import { getCurrentUser } from "../api/auth";
 
 // ============================================================
 // CONSTANTS
 // ============================================================
 const socket = io(import.meta.env.VITE_API_BASE_URL);
 const DURATION = 10 // seconds - duration for voting
-
-// Later replace options with api
-// const options = [
-//     'Golden Bamboo Kitchen',
-//     'Urban Spice House',
-//     'The Velvet Fork',
-//     'Midnight Noodle Bar',
-//     'Salt & Ember',
-//     'Blue Harbor Grill',
-//     'The Hungry Lantern',
-//     'Olive & Thyme Bistro',
-//     'Crimson Plate',
-//     'Driftwood Café',
-//     'The Rustic Fig',
-//     'Neon Tiger Eatery',
-//     'Maple Street Kitchen',
-//     'The Saffron Table',
-//     'Cloud Nine Diner'
-//     ];
-
-// const { session } = await getSessionByCode(token, sessionCode);
-// const { session: wheelData } = await buildWheelApi(token, session.id);
-// const displayData = wheelData.wheelItems.map(item => ({
-//     roomDisplayName: item.roomDisplayName,
-//     name: item.name,
-//     }));
-
-// const options = displayData.map(item => item.name);
 
 const wheelcolors = [
     '#2D4A8A', // deep blue
@@ -69,11 +41,6 @@ const wheelcolors = [
     '#5A2D8A', // violet
     '#4A4A9A', // periwinkle
     ];
-
-// const data = options.map((option, i) => ({
-//   option,
-//   style: { backgroundColor: wheelcolors[i % wheelcolors.length], textColor: '#ffffff' }
-// }));
     
 // ============================================================
 // COMPONENT
@@ -85,7 +52,6 @@ export default function Wheelpage() {
     const { sessionCode } = useParams();
     const { token } = useAuth();
 
-    // const spin_no = 2; // TODO: replace with API when available
     // const [spin_no, setSpinNo] = useState(0); // enable this when api is available
 
     // --- Wheel State ---
@@ -94,14 +60,21 @@ export default function Wheelpage() {
     const [result, setResult] = useState(null);
     const [spinactivate, spinActivate] = useState(false);
     const [hovered, setHovered] = useState(false);
-    const [options, setOptions] = useState([]);
     const [data, setData] = useState(null);         // ✅ add this
     const [sessionId, setSessionId] = useState(null);
+    const sessionIdRef = useRef(null);              // for socket listeners and timeouts
+    const [finalSpin, setFinalSpin] = useState(null);
+    // const finalSpinRef = useRef(null); // ✅ add with other refs
 
     // --- User State ---
     const [getready, setReady] = useState(false);
     const [isHost, setIsHost] = useState(true); // get this from API/session
-    const [spinready, spinReady] = useState(false); // TODO: to pass value to spinReady from API
+    const [spinready, setSpinReady] = useState(false); // TODO: to pass value to spinReady from API
+    const [readyCount, setReadyCount] = useState(0);
+    const [totalParticipants, setTotalParticipants] = useState(0);
+    const [participants, setParticipants] = useState([]);
+    const [sentReminders, setReminders] = useState({remindedUserIds: []});
+    const [currentUserId, setCurrentUserId] = useState(null);
 
     // --- Vote State ---
     const [voted, setVoted] = useState(false);
@@ -113,20 +86,24 @@ export default function Wheelpage() {
     // --- Refs (to capture latest values in async callbacks) ---
     const resultRef = useRef(result); // Use refs to capture the latest values
     const votesRef = useRef(votes); // Use refs to capture the latest values
-
-    // --- Test State (TODO: remove when API is ready) ---
-    const [userid, setUserid] = useState(null);
-    const [inputId, setInputId] = useState("");
-  
+    
+    // --- Dropdown State ---
+    const [showReadyDropdown, setShowReadyDropdown] = useState(false);
+    const [showGroupPicks, setShowGroupPicks] = useState(false);
+    const [showReminderPopup, setShowReminderPopup] = useState(false);
+    
 
     // ============================================================
     // HANDLERS
     // ============================================================
     const handleSpin = async () => {
         try {
-            const { session: spinResult } = await spinWheel(token, sessionId);
-            const restaurantName = spinResult.currentWheelResult.name;
-    
+            // const { session: spinResult } = await spinWheel(token, sessionId);
+            const response = await spinWheel(token, sessionId);
+            const restaurantName = response.session.currentWheelResult.name;
+            const ifFinalSpin = response.session?.finalSpin;
+            setFinalSpin(ifFinalSpin);
+            
             // find the index in data that matches the backend result
             const newPrize = data.findIndex(item => item.option === restaurantName);
     
@@ -138,7 +115,8 @@ export default function Wheelpage() {
             setVoted(false);
     
             // notify all users in the session to spin
-            socket.emit("spin", { sessionCode, prizeNumber: newPrize });
+            socket.emit("spin", { sessionCode, prizeNumber: newPrize, finalSpin: ifFinalSpin });
+
         } catch (error) {
             console.error("Failed to spin wheel:", error);
         }
@@ -148,6 +126,15 @@ export default function Wheelpage() {
         setMustSpin(false);
         setResult(data[prizeNumber].option);
         setHovered(false);
+
+        // ✅ navigate after wheel stops if final spin
+        if (finalSpin) {
+            setTimeout(() => {
+                navigate(`/sessions/${sessionCode}/result`, {
+                    state: { votes: { yes: 0, respin: 0 }, result: resultRef.current }
+                });
+            }, 3000); // ✅ small delay so user sees the result before navigating
+        }
     };
 
     const handleVote = async (choice) => {
@@ -163,10 +150,47 @@ export default function Wheelpage() {
         // broadcast vote to all users in the session
         // socket.emit("vote", { sessionCode, sessionId });
     };
+
+    const handleReady = async () => {
+        try {
+            setReady(true);
+    
+            await sendReady(token, sessionId);
+    
+            socket.emit("ready", {sessionCode,sessionId});
+    
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const isCurrentUserReminded = () => {
+        if (!currentUserId) return false;
+        return sentReminders?.remindedUserIds?.includes(currentUserId);
+    };
     
     // ============================================================
     // EFFECTS
     // ============================================================
+
+    // keep sessionIdRef and sessionId in sync
+    useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
+
+    // featch current user
+    useEffect(() => {
+        const fetchMe = async () => {
+            try {
+                const res = await getCurrentUser(token);
+                setCurrentUserId(res.user.id);
+            } catch (err) {
+                console.error("Failed to fetch current user:", err);
+            }
+        };
+    
+        if (token) {
+            fetchMe();
+        }
+    }, [token]);
 
     // ✅ fetch wheel data inside useEffect
     useEffect(() => {
@@ -190,6 +214,7 @@ export default function Wheelpage() {
     
                 const fetchedData = wheelData.wheelItems.map((item, i) => ({
                     option: item.name,
+                    roomDisplayName: item.roomDisplayName, // 👈 keep this
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -211,13 +236,6 @@ export default function Wheelpage() {
     useEffect(() => { votesRef.current = votes; }, [votes]);
     useEffect(() => { resultRef.current = result; }, [result]);
 
-    // Log socket connection
-    useEffect(() => {
-        socket.on("connect", () => {
-          console.log("my socket id:", socket.id);
-        });
-    }, []);
-
     // Check if user is host (runs after userid is set)
     useEffect(() => {
         if (!token || !sessionId) return;
@@ -237,16 +255,15 @@ export default function Wheelpage() {
 
     // Socket listeners (runs after userid is set)
     useEffect(() => {
-        // if (!userid) return; // wait for userid
-
         if (!token || !sessionCode) return; // ✅ use token instead of userid
 
         // join the session
-        socket.emit("join_session", {sessionCode, userId: token });
+        socket.emit("join_session", {sessionCode, userid: token });
 
         // listen for spin from host
         socket.on("spin", (data) => {
             setPrizeNumber(data.prizeNumber);
+            setFinalSpin(data.finalSpin); // ✅ non-host users get it here
             setResult(null);
             setMustSpin(true);
             spinActivate(true);
@@ -254,29 +271,21 @@ export default function Wheelpage() {
             setVoted(false);
         });
 
-        // listen for vote updates
-        // socket.on("vote_update", (counts) => {
-        //     // console.log(counts);
-        //     const countMap = Object.fromEntries(
-        //         counts.map(item => [item.decision, Number(item.count)])
-        //       );
-        //     // console.log("checkVote", countMap);
-        //     setVotes({ respin: countMap.respin || 0, yes: countMap.happy || 0 });
-        // });
         socket.on("vote_update", (counts) => {
             setVotes({ yes: counts.acceptCount || 0, respin: counts.respinCount || 0 });
         });
 
         // listen for respin decision
-        socket.on("respin_update", (isrespin) => {
+        socket.on("respin_update", ({ isrespin, finalSpin }) => {
+            console.log("respin_update received, finalSpinRef.current:", finalSpin);
             setRespin(isrespin);
-            if (!isrespin) {
+            if (!isrespin || finalSpin === true) {
                 navigate(`/sessions/${sessionCode}/result`, {
                     state: {votes: votesRef.current, result: resultRef.current}
                 });
               }
             
-            if (isrespin) {
+            if (isrespin  && !finalSpin) {
                 setLastResult({ result: resultRef.current, votes: votesRef.current }); // ✅ all users
             }
         });
@@ -288,6 +297,7 @@ export default function Wheelpage() {
                 const { session: wheelData } = await buildWheelApi(token, session.id);
                 const fetchedData = wheelData.wheelItems.map((item, i) => ({
                     option: item.name,
+                    roomDisplayName: item.roomDisplayName, // 👈 keep this
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -295,6 +305,12 @@ export default function Wheelpage() {
                 }));
                 setSessionId(session.id);
                 setData(fetchedData);
+
+                setParticipants(session.participants || []);
+                setTotalParticipants(session.participants?.length || 0);
+                setReadyCount(
+                    session.participants?.filter(p => p.isReady).length || 0
+                );
             } catch (error) {
                 console.error("Failed to load wheel on wheel_built event:", error);
             }
@@ -303,10 +319,10 @@ export default function Wheelpage() {
         // listen for wheel reload when respin
         socket.on("wheel_reloaded", async () => {
             try {
-                const { session } = await getSessionByCode(token, sessionCode);
-                const { session: wheelData } = await buildWheelApi(token, session.id);
-                const fetchedData = wheelData.wheelItems.map((item, i) => ({
+                const { session } = await reloadWheel(token, sessionIdRef.current); // ✅ use ref
+                const fetchedData = session.wheelItems.map((item, i) => ({
                     option: item.name,
+                    roomDisplayName: item.roomDisplayName, // 👈 keep this
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -318,12 +334,34 @@ export default function Wheelpage() {
             }
         });
 
+        socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
+            setReadyCount(readyCount);
+            setTotalParticipants(totalParticipants);
+            setSpinReady(allReady);
+            setParticipants(participants);
+        });
+
+        socket.on("reminder_sent", ({ remindedUserIds }) => {
+            console.log("REMINDER RECEIVED:", { remindedUserIds });
+            setReminders({ remindedUserIds });
+        
+            if (!currentUserId) return; // wait until loaded
+        
+            const shouldShow = remindedUserIds.includes(currentUserId);
+        
+            if (shouldShow) {
+                setShowReminderPopup(true);
+            }
+        });
+        
         return () => {
             socket.off("spin");
             socket.off("vote_update");
             socket.off("respin_update");
             socket.off("wheel_built"); 
             socket.off("wheel_reloaded"); 
+            socket.off("ready_update");
+            socket.off("reminder_sent")
         };
     }, [sessionCode, token]);
 
@@ -333,6 +371,12 @@ export default function Wheelpage() {
         if (!result) return;
       
         setTimeLeft(DURATION);
+
+        // ✅ if final spin, no need for voting timer
+        if (finalSpin) {
+            spinActivate(false);
+            return;
+        }
       
         const countdown = setInterval(async () => {
           setTimeLeft(prev => {
@@ -346,10 +390,10 @@ export default function Wheelpage() {
         }, 1000);
       
         const timer = setTimeout(async () => {
-            const shouldRespin = await ifRespin(token, sessionId);
+            const shouldRespin = await ifRespin(token, sessionIdRef.current);
             setRespin(shouldRespin);
             // broadcast respin decision to all users
-            socket.emit("respin", { sessionCode, isrespin: shouldRespin });
+            socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin });
 
             // navigate to result page if majority is happy
             if (!shouldRespin) {
@@ -372,24 +416,67 @@ export default function Wheelpage() {
           clearInterval(countdown);
         };
     }, [result]);
+
+    useEffect(() => {
+        const handleClickOutside1 = (e) => {
+            if (!e.target.closest(".ready-dropdown") &&
+                !e.target.closest(".wp-black-button--right")) {
+                setShowReadyDropdown(false);
+            }
+        };
     
-    // ============================================================
-    // TEST UI - TODO: remove when API is ready
-    // ============================================================
-    // if (!userid) {
-    //     return (
-    //         <div style={{ padding: "20px" }}>
-    //         <p>Enter your test user ID:</p>
-    //         <input 
-    //             value={inputId} 
-    //             onChange={(e) => setInputId(e.target.value)} 
-    //             placeholder="e.g. 1, 2, 3"
-    //         />
-    //         <button onClick={() => setUserid(inputId)}>Join</button>
-    //         </div>
-    //     );
-    // }
+        document.addEventListener("click", handleClickOutside1);
+        return () => document.removeEventListener("click", handleClickOutside1);
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside2 = (e) => {
+            if (!e.target.closest(".picks-dropdown") &&
+                !e.target.closest(".wp-black-button--left")) {
+                setShowGroupPicks(false);
+            }
+        };
     
+        document.addEventListener("click", handleClickOutside2);
+        return () => document.removeEventListener("click", handleClickOutside2);
+    }, []);
+
+    useEffect(() => {
+        if (!currentUserId) return;
+        if (!sentReminders?.remindedUserIds) return;
+    
+        setShowReminderPopup(
+            sentReminders.remindedUserIds.includes(currentUserId)
+        );
+    }, [currentUserId, sentReminders]);
+
+    const isUserReminded = (userId) => {
+        return sentReminders?.remindedUserIds?.includes(userId);
+    };
+
+    // Small Reminder Text Message  
+    let message = "Lock your picks. Let the wheel decide.";
+
+    if (result) {
+        message = "";
+    } 
+    else if (spinactivate) {
+        message = "The wheel is deciding ...";
+    }
+    else if (respin) {
+        message = isHost
+            ? "Everyone is waiting for you to spin"
+            : "Waiting for host to spin";
+    }
+    else if (!isHost && spinready) {
+        message = "Waiting for host to spin";
+    }
+    else if (isHost && spinready) {
+        message = "Everyone is waiting for you to spin";
+    }
+    else if (getready) {
+        message = "Waiting for others to get ready...";
+    }
 
     // ============================================================
     // RENDER
@@ -400,14 +487,96 @@ export default function Wheelpage() {
             <div className="wp-button-n-text">
                 {/* Top Buttons */}
                 <div className="wp-top-buttons">
-                    <button className="wp-black-button wp-black-button--left"
+                    {!getready &&
+                    (<button className="wp-black-button wp-black-button--left"
+                    disabled={spinactivate}
                     onClick={() => navigate(`/sessions/${sessionCode}/recommendation`)}
                     > 
                         My Picks
+                    </button>)
+                    }
+                    {getready &&
+                    (<button className="wp-black-button wp-black-button--left"
+                    disabled={spinactivate}
+                    onClick={() => setShowGroupPicks(prev => !prev)}
+                    > 
+                        Group Picks
+                    </button>)
+                    }
+
+                    <button className="wp-black-button wp-black-button--right"
+                    disabled={spinactivate}
+                    onClick={() => setShowReadyDropdown(prev => !prev)}
+                    >
+                        <FiUser /> {readyCount}/{totalParticipants} ready
                     </button>
-                    <button className="wp-black-button wp-black-button--right">
-                        <FiUser /> 2/6 ready
-                    </button>
+                    { showReadyDropdown && (
+                        <div className="ready-dropdown">
+                            
+                            <div className="ready-list">
+                                <span className="ready-header">MEMBERS</span>
+                                {participants.map((p, i) => (
+                                    <div key={i} className="ready-item">
+                                        <span className="ready-roomDisplayName">{p.roomDisplayName}</span>
+
+                                        <span
+                                            className={`ready-isReady ${
+                                                p.isReady
+                                                    ? "ready"
+                                                    : isUserReminded(p.userId)
+                                                        ? "reminded"
+                                                        : "waiting"
+                                            }`}
+                                        >
+                                            {p.isReady
+                                                ? "READY"
+                                                : isUserReminded(p.userId)
+                                                    ? "REMINDED"
+                                                    : "WAITING"}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {isHost && !spinready && sentReminders?.remindedUserIds?.length === 0 &&
+                            (
+                            <button
+                                className="reminder-button"
+                                onClick={() => {
+                                    try {
+                                        socket.emit("send_reminder", {
+                                            sessionCode,
+                                            sessionId
+                                        });
+                            
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                            >
+                                Send Reminder
+                            </button>
+                            )}
+                        </div>
+                    )}
+                    { showGroupPicks ? (
+                        <div className="picks-dropdown">
+                            <div className="ready-list">
+                            <span className="ready-header">MEMBERS PICKS</span>
+                                {data?.map((item, i) => (
+                                    <div key={i} className="ready-item">
+                                        <span className="ready-roomDisplayName">{item.roomDisplayName}</span>
+                                        <span className="pick-option">{item.option}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="my-picks">
+                            {/* your existing My Picks UI */}
+                        </div>
+                    )}
+
                 </div>
     
                 {/* Status Text */}
@@ -419,13 +588,7 @@ export default function Wheelpage() {
                         getready ? "YOU'RE READY 👍" : "READY"}
                     </p>
                     <p className="wp-text2">
-                        {isHost && respin ? "Everyone is waiting for you to spin" :
-                        respin ? "Waiting for host to spin" :
-                        result ? "" :
-                        spinactivate ? "The wheel is deciding ..." :
-                        spinready ? "Waiting for host to spin" :
-                        getready ? "Waiting for others to get ready..." :
-                        "Lock your picks. Let the wheel decide."}
+                        {message}
                     </p>
         
                     {/* Last Result */}
@@ -439,7 +602,7 @@ export default function Wheelpage() {
                     <button 
                         className="wp-orange-button"
                         style={{ visibility: getready ? "hidden" : "visible" }} 
-                        onClick={!getready ? () => setReady(true) : undefined}
+                        onClick={handleReady}
                     >
                         READY
                     </button>
@@ -507,22 +670,77 @@ export default function Wheelpage() {
             {!respin && result && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
-                        <p className="wp-popup-text">🎉 {result}</p>
-                        {!voted && <p className="wp-popup-subtitle">Happy with the result?</p>}
-                        {!voted ? (
+                        
+                        {!finalSpin && (
+                        <h1 className="wp-popup-text"> {result}</h1>
+                        )}
+
+                        {!voted && !finalSpin && (
+                            <>  
+                                <p className="wp-popup-subtitle">Happy with the result?</p>
+                                <div className="wp-popup-vote-buttons">
+                                    <button className="wp-yes-button" onClick={() => handleVote('accept')}>👍 Yes!</button>
+                                    <button className="wp-no-button" onClick={() => handleVote('respin')}>🔄 Respin</button>
+                                </div>
+                            </>
+                        )}
+
+                        {voted && !finalSpin && (
+                            <div className="wp-popup-waiting">
+                            <p className="wp-popup-subtitle">Waiting for others...</p>
                             <div className="wp-popup-vote-buttons">
-                                <button className="wp-yes-button" onClick={() => handleVote('accept')}>👍 Yes!</button>
-                                <button className="wp-no-button" onClick={() => handleVote('respin')}>🔄 Respin</button>
+                                <div className="wp-vote-count-card">
+                                    <p className="wp-vote-count-label">YES</p>
+                                    <p className="wp-vote-count-number">{votes.yes}</p>
+                                </div>
+                                <div className="wp-vote-count-card">
+                                    <p className="wp-vote-count-label">RESPIN</p>
+                                    <p className="wp-vote-count-number">{votes.respin}</p>
+                                </div>
                             </div>
-                        ) : (
-                            <p className="wp-popup-waiting">
-                                Waiting for others: {votes.yes} yes / {votes.respin} respin
+                            </div>
+                        )}
+
+                        {finalSpin && (
+                            <p className="wp-popup-text">
+                                🎉 Final result: {result}
                             </p>
                         )}
+
                         <br />
-                        <span className="wp-popup-timer">
-                            Deciding in {timeLeft}s...
-                        </span>
+
+                        {!finalSpin && (
+                            <span className="wp-popup-timer">
+                                Deciding in {timeLeft}s...
+                            </span>
+                        )}
+                        
+                    </div>
+                </div>
+            )}
+            {/* Reminder Popup */}
+            {showReminderPopup && (
+                <div className="wp-overlay">
+                    <div className="wp-popup">
+                        <p className="wp-popup-text">🔔 REMINDER</p>
+                        <p className="wp-popup-subtitle">
+                            You have been reminded to get ready!
+                        </p>
+
+                        <button
+                            className="reminder-button"
+                            onClick={() => {
+                                setShowReminderPopup(false);
+                            
+                                setReminders(prev => ({
+                                    remindedUserIds: prev.remindedUserIds.filter(
+                                        id => id !== currentUserId
+                                    )
+                                }));
+                            }}
+                        >
+                            GOT IT
+                        </button>
                     </div>
                 </div>
             )}

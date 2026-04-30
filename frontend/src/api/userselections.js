@@ -62,8 +62,34 @@ export const ifRespin = async (token, sessionId) => {
     return (respinCount || 0) >= (acceptCount || 0);
 };
 
+export const ifFinalSpin = async (token, sessionId) => {
+  const result = await resolveVoteApi(token, sessionId);
+  const { acceptCount, respinCount } = result.voteSummary;
+  return (respinCount || 0) >= (acceptCount || 0);
+};
+
 export const countVote = async (token, sessionId) => {
     const result = await resolveVoteApi(token, sessionId);
     const { acceptCount, respinCount } = result.voteSummary;
     return [respinCount || 0, acceptCount || 0];
 };
+
+export function reloadWheel(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel`, token);
+}
+
+export function sendReady(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/ready`, token, {
+      method: "POST",
+  });
+}
+
+export function sendRemind(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/reminder`, token, {
+      method: "POST",
+  });
+}
+
+export function collectReadyStatus(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/ready`, token);
+}

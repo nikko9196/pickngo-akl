@@ -12,6 +12,7 @@ export default function ResultPage() {
 
     const location = useLocation();
     const { votes, result } = location.state;
+
     console.log("location.state:", location.state);
 
     const restaurant = {
@@ -48,16 +49,19 @@ export default function ResultPage() {
                         <p className="result-restaurant-type">{restaurant.type}</p>
                         <p className="result-restaurant-address">📍 {restaurant.address}</p>
 
-                        <div className="result-vote-row">
-                            <div className="result-vote-box">
-                                <p className="result-vote-count">{restaurant.votes.yes}</p>
-                                <p className="result-vote-label">👍 Happy</p>
+                        {(votes.yes > 0 || votes.respin > 0) && (
+                            <div className="result-vote-row">
+                                <div className="result-vote-box">
+                                    <p className="result-vote-count">{votes.yes}</p>
+                                    <p className="result-vote-label">👍 Happy</p>
+                                </div>
+
+                                <div className="result-vote-box">
+                                    <p className="result-vote-count">{votes.respin}</p>
+                                    <p className="result-vote-label">🔄 Respin</p>
+                                </div>
                             </div>
-                            <div className="result-vote-box">
-                                <p className="result-vote-count">{restaurant.votes.respin}</p>
-                                <p className="result-vote-label">🔄 Respin</p>
-                            </div>
-                        </div>
+                        )}
 
                         <p className="result-quote">{quote}</p>
                     </div>
