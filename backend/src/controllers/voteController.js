@@ -53,7 +53,31 @@ async function resolveVote(req, res) {
   }
 }
 
+async function getVoteSummary(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    return res.status(200).json({
+      voteSummary: {
+        acceptCount: session.voteSummary.acceptCount,
+        respinCount: session.voteSummary.respinCount,
+        votedUserIds: session.voteSummary.votedUserIds,
+        votedCount: session.voteSummary.votedUserIds.length,
+        totalParticipants: session.participants.length,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch vote summary.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 module.exports = {
   submitVote,
   resolveVote,
+  getVoteSummary,
 };
