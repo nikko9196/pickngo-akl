@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   generateRecommendations,
   getRecommendations,
+  saveMySelections,
 } from "../api/recommendations";
 import { getSessionByCode } from "../api/sessions";
 import logoPointer from "../assets/Polygon 1.svg";
@@ -236,24 +237,25 @@ function RecommendationPage() {
   }
 
   async function handleClose() {
-    if (selectedPlaceIds.length === 0) {
-      setPageError("Please select at least one restaurant before closing.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setPageError("");
-
-    try {
-      // TODO: Call selections API when it is ready.
-      console.log("Submitting selections:", selectedPlaceIds);
-      navigate(`/sessions/${sessionCode}/wheel`);
-    } catch (error) {
-      setPageError(error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (selectedPlaceIds.length === 0) {
+    setPageError("Please select at least one restaurant before closing.");
+    return;
   }
+
+  setIsSubmitting(true);
+  setPageError("");
+
+  try {
+    if (!USE_MOCK) {
+      await saveMySelections(token, session.id, selectedPlaceIds);
+    }
+    navigate(`/sessions/${sessionCode}/wheel`);
+  } catch (error) {
+    setPageError(error.message);
+  } finally {
+    setIsSubmitting(false);
+  }
+}
 
   return (
     <main className="recommendation-shell">
