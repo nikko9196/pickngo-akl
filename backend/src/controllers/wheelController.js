@@ -163,7 +163,27 @@ async function getCurrentWheel(req, res) {
 
     const snapshot = await getLatestRecommendationSnapshot(sessionId);
 
-    const detailedWheelItems = session.wheelItems.map((item) =>
+    const userSelections = await UserSelection.find({ sessionId });
+
+    const remainingPlaceIds = new Set(
+      session.wheelItems.map((item) => item.placeId),
+    );
+
+    const currentWheelItems = userSelections.flatMap((selection) =>
+      selection.selectedItems
+        .filter((item) => remainingPlaceIds.has(item.placeId))
+        .map((item) => ({
+          recommendationSetId: selection.recommendationSetId,
+          placeId: item.placeId,
+          userId: selection.userId,
+          roomDisplayName: getParticipantRoomDisplayName(
+            session,
+            selection.userId,
+          ),
+        })),
+    );
+
+    const detailedWheelItems = currentWheelItems.map((item) =>
       getRestaurantDetails(snapshot, item),
     );
 
