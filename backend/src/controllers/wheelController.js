@@ -154,6 +154,33 @@ async function spinWheel(req, res) {
   }
 }
 
+async function getCurrentWheel(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+
+    const detailedWheelItems = session.wheelItems.map((item) =>
+      getRestaurantDetails(snapshot, item),
+    );
+
+    return res.status(200).json({
+      session: {
+        id: session._id.toString(),
+        status: session.status,
+        wheelItems: detailedWheelItems,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch current wheel.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 async function getLatestRecommendationSnapshot(sessionId) {
   return RecommendationSnapshot.findOne({ sessionId }).sort({
     generatedAt: -1,
@@ -202,4 +229,5 @@ function getParticipantRoomDisplayName(session, userId) {
 module.exports = {
   buildWheel,
   spinWheel,
+  getCurrentWheel,
 };
