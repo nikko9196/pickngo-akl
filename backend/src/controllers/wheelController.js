@@ -198,6 +198,41 @@ async function getCurrentWheel(req, res) {
   }
 }
 
+async function getFinalWheelResult(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    if (!session.finalWheelResult?.placeId) {
+      return res.status(404).json({
+        message: "No final wheel result found.",
+      });
+    }
+
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+    const finalResult = getRestaurantDetails(
+      snapshot,
+      session.finalWheelResult,
+    );
+
+    return res.status(200).json({
+      session: {
+        id: session._id.toString(),
+        status: session.status,
+        finalWheelResult: finalResult,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch final wheel result.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 async function getLatestRecommendationSnapshot(sessionId) {
   return RecommendationSnapshot.findOne({ sessionId }).sort({
     generatedAt: -1,
@@ -247,4 +282,5 @@ module.exports = {
   buildWheel,
   spinWheel,
   getCurrentWheel,
+  getFinalWheelResult,
 };
