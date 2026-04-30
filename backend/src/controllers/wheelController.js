@@ -3,6 +3,7 @@ const RecommendationSnapshot = require("../models/RecommendationSnapshot");
 const {
   findSessionById,
   checkValidParticipant,
+  checkSessionStatus,
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
@@ -53,7 +54,6 @@ async function buildWheel(req, res) {
     }
 
     session.wheelItems = wheelItems;
-    session.status = "spinning";
     session.currentWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
@@ -106,6 +106,8 @@ async function spinWheel(req, res) {
         message: "Wheel has already been spun.",
       });
     }
+
+    checkSessionStatus(session, "spinning");
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
 
