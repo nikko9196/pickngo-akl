@@ -34,6 +34,10 @@ const initSocket = (io) => {
             io.to(sessionCode).emit("respin_update", isrespin);
         });
 
+        socket.on("reload_wheel", ({ sessionCode }) => {
+          io.to(sessionCode).emit("wheel_reloaded");
+        });
+
         socket.on("disconnect", () => {
             console.log(`user ${socket.userid} disconnected`);
         });

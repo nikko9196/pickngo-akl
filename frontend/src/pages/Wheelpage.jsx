@@ -300,11 +300,30 @@ export default function Wheelpage() {
             }
         });
 
+        // listen for wheel reload when respin
+        socket.on("wheel_reloaded", async () => {
+            try {
+                const { session } = await getSessionByCode(token, sessionCode);
+                const { session: wheelData } = await buildWheelApi(token, session.id);
+                const fetchedData = wheelData.wheelItems.map((item, i) => ({
+                    option: item.name,
+                    style: {
+                        backgroundColor: wheelcolors[i % wheelcolors.length],
+                        textColor: '#ffffff'
+                    }
+                }));
+                setData(fetchedData);
+            } catch (error) {
+                console.error("Failed to reload wheel:", error);
+            }
+        });
+
         return () => {
             socket.off("spin");
             socket.off("vote_update");
             socket.off("respin_update");
-            socket.off("wheel_built"); // ✅ add this
+            socket.off("wheel_built"); 
+            socket.off("wheel_reloaded"); 
         };
     }, [sessionCode, token]);
 
@@ -337,6 +356,11 @@ export default function Wheelpage() {
                 navigate(`/sessions/${sessionCode}/result`, {
                     state: {votes: votesRef.current, result: resultRef.current}
                 });
+            }
+
+            // if respin is true, reload the wheel items as it will remove the rejected result from the options
+            if (shouldRespin) {
+                socket.emit("reload_wheel", { sessionCode }); // ✅ notify all users to reload
             }
 
         }, DURATION*1000);
