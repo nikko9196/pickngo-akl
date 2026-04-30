@@ -1,11 +1,9 @@
 const {
   findSessionById,
   checkValidParticipant,
+  checkValidHost,
 } = require("../services/sessionService");
-
-function getErrorStatus(error) {
-  return error.statusCode || 500;
-}
+const { getErrorStatus } = require("../utils/errorUtils");
 
 function getReadySummary(session) {
   const participants = session.participants.map((participant) => ({
@@ -70,11 +68,7 @@ async function sendReminder(req, res) {
   try {
     const session = await findSessionById(sessionId);
 
-    if (session.hostUserId.toString() !== req.userId) {
-      return res
-        .status(403)
-        .json({ message: "Only the host can send reminders." });
-    }
+    checkValidHost(session, req.userId, "Only the host can send reminders.");
 
     const waitingParticipants = session.participants.filter(
       (participant) => !participant.isReady,
@@ -90,6 +84,36 @@ async function sendReminder(req, res) {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to send reminder.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
+// SET READY STATUS FOR ALL:
+async function markAllReady(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+
+    checkValidHost(session, req.userId, "Only the host can mark all users as ready.");
+
+    session.participants.forEach((participant) => {
+      participant.isReady = true;
+    });
+
+    session.status = "spinning";
+
+    await session.save();
+
+    return res.status(200).json({
+      message: "All users are ready.",
+      readySummary: getReadySummary(session),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to mark all users as ready.";
     return res.status(getErrorStatus(error)).json({ message });
   }
 }
@@ -116,4 +140,5 @@ module.exports = {
   markReady,
   sendReminder,
   getReadyStatus,
+  markAllReady,
 };

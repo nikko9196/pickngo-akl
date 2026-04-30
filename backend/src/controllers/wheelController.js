@@ -4,6 +4,7 @@ const {
   findSessionById,
   checkValidParticipant,
   checkSessionStatus,
+  checkValidHost,
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
@@ -89,11 +90,7 @@ async function spinWheel(req, res) {
   try {
     const session = await findSessionById(sessionId);
 
-    if (session.hostUserId.toString() !== req.userId) {
-      return res
-        .status(403)
-        .json({ message: "Only the host can spin the wheel." });
-    }
+    checkValidHost(session, req.userId, "Only the host can spin the wheel.");
 
     if (!session.wheelItems || !session.wheelItems.length) {
       return res.status(400).json({
