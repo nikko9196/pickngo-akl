@@ -52,8 +52,8 @@ async function calculateVoteResult(session) {
     };
   }
 
-  // CASE 2: RESPIN wins:
-  if (respinCount > acceptCount) {
+  // CASE 2: RESPIN wins or Vote is tied:
+  if (respinCount >= acceptCount) {
     const currentPlaceId = session.currentWheelResult?.placeId;
     const rejectedWheelResult = session.currentWheelResult;
 
@@ -96,24 +96,7 @@ async function calculateVoteResult(session) {
       voteSummary: session.voteSummary,
     };
   }
-
-  // CASE 3: Tie or no one votes, restart voting:
-  const previousVoteSummary = {
-    acceptCount: session.voteSummary.acceptCount,
-    respinCount: session.voteSummary.respinCount,
-    votedUserIds: [...session.voteSummary.votedUserIds],
-  };
-
-  session.voteSummary = resetVoteSummary();
-  session.status = "voting";
-
-  await session.save();
-
-  return {
-    result: "The vote resulted in a tie or no votes were submitted.",
-    status: session.status,
-    voteSummary: previousVoteSummary,
-  };
+  throw new Error("Unexpected vote result state.");
 }
 
 module.exports = {
