@@ -1,4 +1,3 @@
-const { calculateVoteResult } = require('../services/voteService'); // adjust path
 const { findSessionById } = require('../services/sessionService');
 
 const initSocket = (io) => {
@@ -20,8 +19,7 @@ const initSocket = (io) => {
         socket.on("vote", async ({ sessionCode, sessionId }) => {
             try {
                 const session = await findSessionById(sessionId); 
-                const result = await calculateVoteResult(session);
-                const { acceptCount, respinCount } = result.voteSummary;
+                const { acceptCount, respinCount } = session.voteSummary;
 
                 io.to(sessionCode).emit("vote_update", {
                     acceptCount: acceptCount || 0,

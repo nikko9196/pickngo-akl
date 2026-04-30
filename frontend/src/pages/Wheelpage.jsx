@@ -155,12 +155,13 @@ export default function Wheelpage() {
     
         try {
             await submitVoteApi(token, sessionId, choice); // call the API
+            socket.emit("vote", { sessionCode, sessionId });
         } catch (error) {
             console.error("Failed to submit vote:", error);
         }
     
         // broadcast vote to all users in the session
-        socket.emit("vote", { sessionCode, sessionId });
+        // socket.emit("vote", { sessionCode, sessionId });
     };
     
     // ============================================================
@@ -274,6 +275,10 @@ export default function Wheelpage() {
                     state: {votes: votesRef.current, result: resultRef.current}
                 });
               }
+            
+            if (isrespin) {
+                setLastResult({ result: resultRef.current, votes: votesRef.current }); // ✅ all users
+            }
         });
 
         // listen for wheel built - loads wheel data for non-host users
@@ -334,9 +339,6 @@ export default function Wheelpage() {
                 });
             }
 
-            if (shouldRespin) {
-                setLastResult({ result: resultRef.current, votes: votesRef.current });
-              }
         }, DURATION*1000);
 
         spinActivate(false);
