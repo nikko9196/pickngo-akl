@@ -6,6 +6,7 @@ import {
   getRecommendations,
 } from "../api/recommendations";
 import { getSessionByCode } from "../api/sessions";
+import { saveSelections } from "../api/userselections";
 import logoPointer from "../assets/Polygon 1.svg";
 import RestaurantCard from "../components/RestaurantCard";
 import { useAuth } from "../context/useAuth";
@@ -246,7 +247,10 @@ function RecommendationPage() {
 
     try {
       // TODO: Call selections API when it is ready.
-      console.log("Submitting selections:", selectedPlaceIds);
+      // console.log("Submitting selections:", selectedPlaceIds);
+      const { session } = await getSessionByCode(token, sessionCode);
+      await saveSelections(token, session.id, selectedPlaceIds);
+
       navigate(`/sessions/${sessionCode}/wheel`);
     } catch (error) {
       setPageError(error.message);

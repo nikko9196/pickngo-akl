@@ -22,6 +22,10 @@ const participantSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isReady: {
+      type: Boolean,
+      default: false,
+    },
   },
   { _id: false },
 );

@@ -13,6 +13,7 @@ const questionRoutes = require("./routes/questionRoutes");
 const sessionRoutes = require("./routes/sessionRoutes");
 const wheelRoutes = require("./routes/wheelRoutes");
 const voteRoutes = require("./routes/voteRoutes");
+const readyRoutes = require("./routes/readyRoutes");
 
 // --- Paige test ----
 // const userdecision = require("./mock-api/userdecisionRoutes");
@@ -35,6 +36,7 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/sessions", wheelRoutes);
 app.use("/api/sessions", voteRoutes);
+app.use("/api/sessions", readyRoutes);
 
 // --- Paige test ----
 // app.use('/api/decision', userdecision);

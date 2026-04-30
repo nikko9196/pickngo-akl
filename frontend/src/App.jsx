@@ -28,7 +28,7 @@ function App() {
           <Route path="/sessions/:sessionCode/question" element={<QuestionPage />} />
           <Route path="/sessions/:sessionCode/recommendation" element={<RecommendationPage />} />
           <Route path="/sessions/:sessionCode/wheel" element={<Wheelpage />} />
-          <Route path="/sessionS/:sessionCode/result" element={<ResultPage />} />
+          <Route path="/sessions/:sessionCode/result" element={<ResultPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

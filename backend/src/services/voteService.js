@@ -1,3 +1,5 @@
+const { getUniquePlaceIds } = require("../utils/wheelUtils");
+
 function resetVoteSummary() {
   return {
     acceptCount: 0,
@@ -53,26 +55,33 @@ async function calculateVoteResult(session) {
   // CASE 2: RESPIN wins:
   if (respinCount > acceptCount) {
     const currentPlaceId = session.currentWheelResult?.placeId;
+    const rejectedWheelResult = session.currentWheelResult;
 
-    // Remove the currentWheelResult from wheelItems (including duplication on the wheel) to avoid it being selected again:
-    session.wheelItems = session.wheelItems.filter(
-      (item) => item.placeId !== currentPlaceId,
-    );
+    const uniquePlaceIds = getUniquePlaceIds(session.wheelItems);
 
-    // Edge case: If no items left:
-    // NOTE: This should be considered as what happens if the wheel items are out of after voting?
-    if (!session.wheelItems.length) {
+    // If only 2 unique restaurants remain, this spin is the final pick.
+    if (uniquePlaceIds.length <= 2) {
+      session.finalWheelResult = session.currentWheelResult;
       session.status = "completed";
-      session.finalWheelResult = null;
+
       await session.save();
 
       return {
-        result: "No items left in the wheel.",
+        result: "Final spin result is selected.",
+        status: session.status,
+        finalSpin: true,
+        finalWheelResult: session.finalWheelResult,
+        voteSummary: session.voteSummary,
       };
     }
 
-    const rejectedWheelResult = session.currentWheelResult;
+    const remainingWheelItems = session.wheelItems.filter(
+      (item) => item.placeId !== currentPlaceId,
+    );
 
+    const remainingUniquePlaceIds = getUniquePlaceIds(remainingWheelItems);
+
+    session.wheelItems = remainingWheelItems;
     session.currentWheelResult = null;
     session.status = "spinning";
 
@@ -81,7 +90,9 @@ async function calculateVoteResult(session) {
     return {
       result: "The result is rejected. Spinning the wheel again.",
       status: session.status,
+      isNextSpinFinal: remainingUniquePlaceIds.length <= 2,
       rejectedWheelResult,
+      remainingUniquePlaceIds,
       voteSummary: session.voteSummary,
     };
   }

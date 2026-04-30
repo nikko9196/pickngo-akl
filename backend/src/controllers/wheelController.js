@@ -1,13 +1,11 @@
 const UserSelection = require("../models/UserSelection");
-
+const RecommendationSnapshot = require("../models/RecommendationSnapshot");
 const {
   findSessionById,
   checkValidParticipant,
 } = require("../services/sessionService");
-
-function getErrorStatus(error) {
-  return error.statusCode || 500;
-}
+const { getErrorStatus } = require("../utils/errorUtils");
+const { getUniquePlaceIds } = require("../utils/wheelUtils");
 
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
@@ -29,6 +27,11 @@ async function buildWheel(req, res) {
       selection.selectedItems.map((item) => ({
         recommendationSetId: selection.recommendationSetId,
         placeId: item.placeId,
+        userId: selection.userId,
+        roomDisplayName: getParticipantRoomDisplayName(
+          session,
+          selection.userId,
+        ),
       })),
     );
 
@@ -50,7 +53,7 @@ async function buildWheel(req, res) {
     }
 
     session.wheelItems = wheelItems;
-    session.status = "spinning";
+    session.status = "selecting";
     session.currentWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
@@ -61,10 +64,16 @@ async function buildWheel(req, res) {
 
     await session.save();
 
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+
+    const detailedWheelItems = wheelItems.map((item) =>
+      getRestaurantDetails(snapshot, item),
+    );
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
-        wheelItems: session.wheelItems,
+        wheelItems: detailedWheelItems,
       },
     });
   } catch (error) {
@@ -102,25 +111,38 @@ async function spinWheel(req, res) {
 
     const selectedItem = session.wheelItems[randomIndex];
 
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+    const detailedResult = getRestaurantDetails(snapshot, selectedItem);
+
     session.currentWheelResult = {
       recommendationSetId: selectedItem.recommendationSetId,
       placeId: selectedItem.placeId,
     };
 
-    session.status = "voting";
+    const uniquePlaceIds = getUniquePlaceIds(session.wheelItems);
+    const isFinalSpin = uniquePlaceIds.length <= 2;
 
-    session.voteSummary = {
-      acceptCount: 0,
-      respinCount: 0,
-      votedUserIds: [],
-    };
+    if (isFinalSpin) {
+      session.finalWheelResult = session.currentWheelResult;
+      session.status = "completed";
+    } else {
+      session.status = "voting";
+
+      session.voteSummary = {
+        acceptCount: 0,
+        respinCount: 0,
+        votedUserIds: [],
+      };
+    }
 
     await session.save();
 
     return res.status(200).json({
       session: {
         id: session._id.toString(),
-        currentWheelResult: session.currentWheelResult,
+        currentWheelResult: detailedResult,
+        finalSpin: isFinalSpin,
+        status: session.status,
       },
     });
   } catch (error) {
@@ -128,6 +150,51 @@ async function spinWheel(req, res) {
       error instanceof Error ? error.message : "Failed to spin the wheel.";
     return res.status(getErrorStatus(error)).json({ message });
   }
+}
+
+async function getLatestRecommendationSnapshot(sessionId) {
+  return RecommendationSnapshot.findOne({ sessionId }).sort({
+    generatedAt: -1,
+  });
+}
+
+function getRestaurantByPlaceId(snapshot, placeId) {
+  if (!snapshot) {
+    return null;
+  }
+
+  return (
+    snapshot.restaurants.find((restaurant) => restaurant.placeId === placeId) ||
+    null
+  );
+}
+
+function getRestaurantDetails(snapshot, item) {
+  const restaurant = getRestaurantByPlaceId(snapshot, item.placeId);
+
+  return {
+    userId: item.userId || "",
+    roomDisplayName: item.roomDisplayName || "",
+    recommendationSetId: item.recommendationSetId,
+    placeId: item.placeId,
+    name: restaurant?.name || "",
+    address: restaurant?.address || "",
+    district: restaurant?.district || "",
+    rating: restaurant?.rating ?? null,
+    priceLevel: restaurant?.priceLevel ?? null,
+    cuisine: restaurant?.cuisine || [],
+    photos: restaurant?.photos || [],
+    distance: restaurant?.distance ?? null,
+    openNow: restaurant?.openNow ?? false,
+  };
+}
+
+function getParticipantRoomDisplayName(session, userId) {
+  const participant = session.participants.find(
+    (participant) => participant.userId.toString() === userId,
+  );
+
+  return participant?.roomDisplayName || "";
 }
 
 module.exports = {

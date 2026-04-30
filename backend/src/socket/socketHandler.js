@@ -1,37 +1,44 @@
-// import { selectUserDecision } from '../mock-api/userspinModels.js'
-const { selectUserDecision } = require('../mock-api/userspinModels.js');
+const { calculateVoteResult } = require('../services/voteService'); // adjust path
+const { findSessionById } = require('../services/sessionService');
 
 const initSocket = (io) => {
     io.on("connection", (socket) => {
-  
-      socket.on("join_session", ({ sessionid, userid }) => {
-        socket.join(sessionid);
-        socket.userid = userid;
-      });
-  
-      socket.on("spin", async ({ sessionid, prizeNumber }) => {
-        io.to(sessionid).emit("spin", { prizeNumber });
-      });
-  
-      socket.on("vote", async ({ sessionid, spin_no, choice }) => {
-        // save to DB here
-        // await pool.query(
-        //     `INSERT INTO pickngo_userspin (sessionid, spin_no, userid, decision) 
-        //     VALUES ($1, $2, $3, $4)`,
-        //     [sessionid, spin_no, socket.userid, choice]
-        // );
 
-        const counts = await selectUserDecision({sessionid, spin_no});
-        io.to(sessionid).emit("vote_update", counts);
-      });
-  
-      socket.on("respin", ({ sessionid, isrespin }) => {
-        io.to(sessionid).emit("respin_update", isrespin);
-      });
-  
-      socket.on("disconnect", () => {
-        console.log(`user ${socket.userid} disconnected`);
-      });
+        socket.on("join_session", ({ sessionCode, userid }) => {
+            socket.join(sessionCode);
+            socket.userid = userid;
+        });
+
+        socket.on("build_wheel", ({ sessionCode }) => {        // ✅ add this
+          io.to(sessionCode).emit("wheel_built");
+        });
+
+        socket.on("spin", async ({ sessionCode, prizeNumber }) => {
+            io.to(sessionCode).emit("spin", { prizeNumber });
+        });
+
+        socket.on("vote", async ({ sessionCode, sessionId }) => {
+            try {
+                const session = await findSessionById(sessionId); 
+                const result = await calculateVoteResult(session);
+                const { acceptCount, respinCount } = result.voteSummary;
+
+                io.to(sessionCode).emit("vote_update", {
+                    acceptCount: acceptCount || 0,
+                    respinCount: respinCount || 0,
+                });
+            } catch (error) {
+                console.error("Failed to get vote counts:", error);
+            }
+        });
+
+        socket.on("respin", ({ sessionCode, isrespin }) => {
+            io.to(sessionCode).emit("respin_update", isrespin);
+        });
+
+        socket.on("disconnect", () => {
+            console.log(`user ${socket.userid} disconnected`);
+        });
     });
 };
 
