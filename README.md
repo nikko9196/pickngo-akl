@@ -11,45 +11,79 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
-## 🚀 Getting Started
+## Tech Stack
 
-### Tech Stack
+### Frontend
+- React 19
+- React Router DOM 7
+- Vite 8
 
-- Frontend: React 19, Vite
-- Backend: Node.js, Express 5
-- Database: MongoDB Atlas, Mongoose
+### Backend
+- Node.js
+- Express 5
+- Mongoose 9
+- JWT authentication
+- native `fetch` for Google Places requests
 
-### Prerequisites
+### Database and External Services
+- MongoDB Atlas
+- Google Places API
 
-- IDE: Visual Studio Code, WebStorm, or IntelliJ IDEA
-- Node.js: v18.x LTS or higher
-- npm: v9.x or higher
-- MongoDB: Atlas account or another valid MongoDB connection string
+## Current Session Flow
 
-Verify installations:
+1. User signs in or continues as a guest
+2. Host creates a room
+3. Participants join with the room code
+4. Host starts the room
+5. Participants answer the active questionnaire
+6. Session moves to `generating`
+7. Recommendation page generates and loads shared restaurant recommendations
+8. Session moves to `selecting`
+9. Each participant can save their shortlisted restaurants
+
+Current session statuses in the app:
+- `waiting`
+- `questioning`
+- `generating`
+- `selecting`
+- `spinning`
+- `voting`
+- `completed`
+
+Note:
+- `spinning`, `voting`, and `completed` are part of the current session model, but the main implemented product flow today is up to saved selections.
+
+## Prerequisites
+
+- Node.js 18 or higher
+- npm 9 or higher
+- MongoDB Atlas connection string
+- Google Places API key
+
+Check your local versions:
 
 ```bash
 node -v
 npm -v
 ```
 
-### Installation
+## Getting Started
 
-#### 1. Clone the Repository
+### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/UOA-CS732-S1-2026/group-project-have-a-byte.git
 cd group-project-have-a-byte
 ```
 
-#### 2. Set Up Backend
+### 2. Install Backend Dependencies
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend/` directory:
+Copy [backend/.env.example](backend/.env.example) to `backend/.env` and fill in the values:
 
 ```env
 PORT=5001
@@ -60,286 +94,346 @@ GOOGLE_PLACES_API_KEY=your-google-places-api-key
 CLIENT_BASE_URL=http://localhost:5173
 ```
 
-Variable notes:
-
+Backend variable notes:
 - `PORT`: backend development server port
 - `MONGODB_URI`: MongoDB connection string
 - `JWT_SECRET`: secret used to sign authentication tokens
-- `GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
-- `GOOGLE_PLACES_API_KEY`: required for session recommendation generation
-- `CLIENT_BASE_URL`: base frontend URL used to generate session join links
+- `GOOGLE_CLIENT_ID`: required only if Google sign-in is enabled
+- `GOOGLE_PLACES_API_KEY`: required for recommendation generation
+- `CLIENT_BASE_URL`: frontend base URL used to generate room join links
 
-#### 3. Set Up Frontend
+### 3. Install Frontend Dependencies
 
 ```bash
 cd ../frontend
 npm install
 ```
 
-Create a `.env` file in the `frontend/` directory:
+Create `frontend/.env`:
 
 ```env
 VITE_PORT=5173
 VITE_API_BASE_URL=http://localhost:5001
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_USE_MOCK_RECOMMENDATIONS=false
 ```
 
-Variable notes:
-
+Frontend variable notes:
 - `VITE_PORT`: frontend development server port
-- `VITE_API_BASE_URL`: backend base URL used by the frontend
-- `VITE_GOOGLE_CLIENT_ID`: required if Google sign-in is enabled
+- `VITE_API_BASE_URL`: backend base URL
+- `VITE_GOOGLE_CLIENT_ID`: required only if Google sign-in is enabled
+- `VITE_USE_MOCK_RECOMMENDATIONS`: optional flag for mock recommendation mode; set to `false` to use the real backend
 
-### Running the Application
+## Running the App
 
-You need two terminal windows to run the current project setup.
+Use two terminals.
 
-#### Terminal 1: Backend Server
+### Terminal 1: Backend
 
 ```bash
 cd backend
 npm run dev
 ```
 
-The backend starts on `http://localhost:5001` by default.
+The backend runs on `http://localhost:5001` by default.
 
-#### Terminal 2: Frontend Server
+### Terminal 2: Frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-The frontend development server runs on the port defined by `VITE_PORT`, usually `http://localhost:5173`.
+The frontend runs on `http://localhost:5173` by default.
 
-If you change the backend port, update `VITE_API_BASE_URL` in `frontend/.env` to match.
-
-Recommendation endpoint setup, sample Postman requests, and a sample JSON response are documented in [docs/RECOMMENDATIONS_API.md](docs/RECOMMENDATIONS_API.md).
+If you change the backend port, update `VITE_API_BASE_URL` in `frontend/.env`.
 
 ## Project Structure
 
 ```text
 group-project-have-a-byte/
-|-- frontend/                    # React + Vite frontend
-|   |-- public/                  # Static assets served directly by Vite
+|-- frontend/
+|   |-- public/
 |   |-- src/
-|   |   |-- api/                 # API request functions
-|   |   |-- assets/              # Images, icons, and static frontend assets
-|   |   |-- components/          # Reusable UI components
-|   |   |-- context/             # Authentication and shared React context
-|   |   |-- pages/               # Page-level React components
-|   |   |-- services/            # Frontend service helpers
-|   |   |-- utils/               # Frontend helper functions
-|   |   |-- App.jsx              # Main frontend app component
-|   |   |-- index.css            # Global frontend styles
-|   |   |-- main.jsx             # Frontend entry point
-|   |-- .env                     # Frontend environment variables
-|   |-- eslint.config.js         # Frontend lint configuration
-|   |-- package.json             # Frontend scripts and dependencies
-|   |-- vite.config.js           # Vite configuration
-|-- backend/                     # Node.js + Express backend
+|   |   |-- api/                 # frontend API helpers
+|   |   |-- components/          # reusable UI components
+|   |   |-- context/             # auth and shared state
+|   |   |-- pages/               # page-level UI
+|   |   |-- utils/               # frontend helpers and mocks
+|   |   |-- App.jsx              # frontend route definitions
+|   |   |-- main.jsx             # frontend entry point
+|   |-- package.json
+|   |-- vite.config.js
+|-- backend/
+|   |-- scripts/                 # manual backend scripts
 |   |-- src/
-|   |   |-- config/              # Backend configuration such as MongoDB connection
-|   |   |-- controllers/         # Request handlers and business logic
-|   |   |-- middleware/          # Express middleware
-|   |   |-- models/              # Mongoose models
-|   |   |-- routes/              # Express route definitions
-|   |   |-- services/            # Reusable backend service logic
-|   |   |-- app.js               # Backend entry file
-|   |-- .env                     # Backend environment variables
-|   |-- package.json             # Backend scripts and dependencies
-|-- docs/                        # Supporting project notes and documentation
-|-- README.md                    # Setup guide and project overview
+|   |   |-- config/              # backend config
+|   |   |-- controllers/         # route handlers
+|   |   |-- middleware/          # express middleware
+|   |   |-- models/              # mongoose models
+|   |   |-- routes/              # route definitions
+|   |   |-- services/            # business logic
+|   |   |-- utils/               # shared backend helpers
+|   |   |-- app.js               # backend entry file
+|   |-- .env.example
+|   |-- package.json
+|-- docs/
+|   |-- RECOMMENDATIONS_API.md
+|-- README.md
 ```
 
-### Environment Files
+## Current Frontend Routes
 
-- `backend/.env`: backend environment variables such as `PORT`, `MONGODB_URI`, and `JWT_SECRET`
-- `frontend/.env`: frontend environment variables such as `VITE_PORT` and `VITE_API_BASE_URL`
+Main frontend routes currently implemented:
+- `/`
+- `/auth`
+- `/rooms/create`
+- `/join`
+- `/join/:sessionCode`
+- `/sessions/:sessionCode`
+- `/sessions/:sessionCode/question`
+- `/sessions/:sessionCode/recommendation`
 
-### File Naming Conventions
-
-- Use `.jsx` for React files that render JSX
-- Use `.js` for non-UI logic files such as API helpers, backend files, and utilities
-- Keep React page names descriptive, for example `HomePage.jsx`, `AuthPage.jsx`, and `SessionPage.jsx`
-- Keep reusable component names descriptive, for example `Navbar.jsx`, `QuestionCard.jsx`, or `StatusBadge.jsx`
-- Keep API/helper filenames action-based, for example `auth.js`, `questions.js`, `sessions.js`, or `formatDate.js`
-
-## 🔌 Current API
+## Current API
 
 Notes:
-
-- `sessionCode` is the public room code used to join or fetch a session
-- `sessionId` in API paths refers to the internal MongoDB `_id` of a session
-- All routes except registration and login routes require authentication
+- `sessionCode` is the public room code
+- `sessionId` is the MongoDB `_id` for a session
+- all routes except the public auth routes require authentication
 
 ### Auth
 
 - `POST /api/auth/register`
-  - Registers a local user with email and password.
+  - register a local user
 - `POST /api/auth/login`
-  - Logs in a local user with email and password.
+  - log in a local user
 - `POST /api/auth/google`
-  - Logs in a user with Google Sign-In.
+  - log in with Google Sign-In
 - `POST /api/auth/guest`
-  - Creates and logs in a guest user.
+  - create and log in a guest user
 - `GET /api/auth/me`
-  - Returns the currently authenticated user.
+  - get the currently authenticated user
 
 ### Questions
 
 - `GET /api/questions`
-  - Returns the active question lists used in the questionnaire stage.
+  - return the active question lists for the questionnaire stage
 
 ### Sessions
 
 - `POST /api/sessions`
-  - Creates a new session for the host.
+  - create a new room
 - `POST /api/sessions/join`
-  - Joins a session using a public `sessionCode`.
+  - join a room using `sessionCode`
 - `GET /api/sessions/mine`
-  - Returns the sessions the current user belongs to.
+  - get all rooms for the current user
 - `GET /api/sessions/code/:sessionCode`
-  - Returns session details for a participant using the public room code.
+  - get a room by public code
 - `GET /api/sessions/:sessionId/progress`
-  - Returns questionnaire completion progress for participants in a session.
+  - get questionnaire completion progress
 - `PATCH /api/sessions/:sessionId`
-  - Updates session settings such as `maxParticipants` and `maxSelectionsPerUser`.
+  - update room settings such as `maxParticipants` and `maxSelectionsPerUser`
 - `PATCH /api/sessions/:sessionId/status`
-  - Updates the workflow status of a session.
+  - update the room status
 - `DELETE /api/sessions/:sessionId`
-  - Deletes a session. Only the host can perform this action.
+  - delete a room as host
 
-### User Responses
+### Questionnaire Responses
 
 - `POST /api/sessions/:sessionId/responses`
-  - Submits or updates a participant's answer to a question in a session.
+  - submit or update one participant answer
 
-## 📦 Database Schema (MongoDB)
+### Recommendations
 
-This section is intended as a development reference for the current and planned session-driven workflow.
+- `POST /api/sessions/:sessionId/recommendations`
+  - generate shared recommendations for the room
+- `GET /api/sessions/:sessionId/recommendations/latest`
+  - fetch the latest saved recommendation snapshot
 
-### 🧭 ID Mapping Notes
+### Saved Selections
 
-MongoDB automatically creates an `_id` field for every document. In this project, `_id` is the real database primary key.
+- `PUT /api/sessions/:sessionId/selections/me`
+  - save or update the current user's shortlisted restaurants
+- `GET /api/sessions/:sessionId/selections/me`
+  - fetch the current user's saved shortlist
+- `GET /api/sessions/:sessionId/selections`
+  - fetch all saved shortlists for the room
 
-When these values are exposed to application code or API responses, they may be mapped to business-friendly names:
+## Recommendation and Selection Flow
 
-- `sessions._id` -> `sessionId` in API path parameters, and currently exposed as `id` in serialized session responses
-- `users._id` -> `userId` in participant-related logic, and currently exposed as `id` in serialized user responses
-- `responses._id` -> internal response identifier unless a separate response field is introduced later
-- `recommendationSets._id` -> recommendation set identifier in future workflow stages
-- `userSelections._id` -> selection identifier in future workflow stages
-- `wheelRounds._id` -> wheel round identifier in future workflow stages
-- `votes._id` -> vote identifier in future workflow stages
+### Recommendation generation
 
-Recommendation for ongoing development:
+The backend recommendation flow currently:
+1. loads questionnaire responses from `responses`
+2. parses them into participant preferences
+3. combines them into shared group preferences
+4. calls Google Places Text Search
+5. normalizes and ranks returned restaurants
+6. saves a `RecommendationSnapshot`
+7. returns the final restaurant list
 
-- Keep MongoDB `_id` as the real primary key
-- Only introduce custom public identifiers when there is a clear product or integration need
+Important behavior:
+- recommendation generation only works when the room status is `generating`
+- if recommendations are generated successfully, the room moves to `selecting`
+- the frontend recommendation page uses the real backend flow by default
 
-### 1. 🧑‍💻 Users
+### Selection saving
 
-Collection: `users`
+The frontend saves shortlisted restaurants by sending only `placeIds`.
 
-- `_id`: MongoDB primary key
-- `displayName`: public name shown to other participants
-- `email`: registered email address
-- `avatarUrl`: URL to the user's profile picture
-- `authProviders`: list of authentication methods
-- `isAdmin`: administrative privilege flag
-- `lastLoginAt`: last login time
-- `createdAt`: creation time
-- `updatedAt`: last update time
+The backend:
+- validates the user is a room participant
+- validates the room is in `selecting`
+- validates the requested place IDs exist in the latest recommendation snapshot
+- saves a trusted shortlist into `sessionSelections`
 
-### 2. ❓ Question Lists
+## Database Collections
 
-Collection: `questionLists`
+The app currently uses these main MongoDB collections.
 
-- `_id`: MongoDB primary key
-- `questionListId`: application-level question list identifier
-- `category`: question category
-- `isActive`: indicates whether the list is currently active
-- `questionList`: list of questions
+### `users`
+
+Defined by [backend/src/models/User.js](backend/src/models/User.js).
+
+Key fields:
+- `_id`
+- `displayName`
+- `email`
+- `avatarUrl`
+- `authProviders`
+- `isAdmin`
+- `lastLoginAt`
+- `createdAt`
+- `updatedAt`
+
+### `questionLists`
+
+Defined by [backend/src/models/QuestionList.js](backend/src/models/QuestionList.js).
+
+Key fields:
+- `_id`
+- `questionListId`
+- `category`
+- `isActive`
+- `questionList`
   - `questionId`
   - `questionType`
   - `questionText`
   - `questionValue`
 
-### 3. 📝 Responses
+### `responses`
 
-Collection: `responses`
+Defined by [backend/src/models/Response.js](backend/src/models/Response.js).
 
-- `_id`: MongoDB primary key
-- `sessionId`: associated session identifier
-- `userId`: user who provided the answer
-- `questionId`: associated question identifier
-- `answer`: submitted answer text
-- `skipped`: whether the question was skipped
-- `createdAt`: creation time
+Key fields:
+- `_id`
+- `sessionId`
+- `userId`
+- `questionId`
+- `answer`
+- `skipped`
+- `createdAt`
 
-### 4. 🤖 Recommendation Sets
+Important note:
+- `Response.sessionId` and `Response.userId` are currently stored as strings
 
-Collection: `recommendationSets`
+### `sessions`
 
-- `_id`: MongoDB primary key
-- `sessionId`: associated session identifier
-- `generatedBy`: AI provider used to create recommendations
-- `items`: list of recommended restaurants
-- `createdAt`: creation time
+Defined by [backend/src/models/Session.js](backend/src/models/Session.js).
 
-### 5. ❤️ User Selections
-
-Collection: `userSelections`
-
-- `_id`: MongoDB primary key
-- `sessionId`: associated session identifier
-- `userId`: associated user identifier
-- `recommendationSetId`: associated recommendation set identifier
-- `selectedItems`: shortlisted restaurants
-- `createdAt`: creation time
-
-### 6. 🎡 Wheel Rounds
-
-Collection: `wheelRounds`
-
-- `_id`: MongoDB primary key
-- `sessionId`: associated session identifier
-- `wheelItems`: restaurants included in the wheel round
-- `resultPlaceId`: final result restaurant identifier
-- `status`: wheel round status
-- `createdAt`: creation time
-
-### 7. 🗳️ Votes
-
-Collection: `votes`
-
-- `_id`: MongoDB primary key
-- `sessionId`: associated session identifier
-- `wheelRoundId`: associated wheel round identifier
-- `userId`: associated user identifier
-- `vote`: final decision vote
-- `createdAt`: creation time
-
-### 8. 🧩 Sessions
-
-Collection: `sessions`
-
-- `_id`: MongoDB primary key
-- `hostUserId`: ID of the session creator
-- `sessionCode`: unique public room code
-- `joinUrl`: direct link used to join the session
-- `status`: current workflow state
-- `maxParticipants`: participant limit for the session
-- `maxSelectionsPerUser`: how many recommended restaurants each participant can shortlist later
-- `participants`: users currently in the room
+Key fields:
+- `_id`
+- `hostUserId`
+- `sessionCode`
+- `joinUrl`
+- `status`
+- `maxParticipants`
+- `maxSelectionsPerUser`
+- `participants`
   - `userId`
   - `role`
   - `roomDisplayName`
   - `joinedAt`
-- `generationList`: history of recommendation sets planned for later workflow stages
-- `wheelRoundList`: history of wheel rounds planned for later workflow stages
-- `createdAt`: creation time
-- `updatedAt`: last update time
+- `createdAt`
+- `updatedAt`
+
+### `recommendationSnapshots`
+
+Defined by [backend/src/models/RecommendationSnapshot.js](backend/src/models/RecommendationSnapshot.js).
+
+Key fields:
+- `_id`
+- `sessionId`
+- `generatedAt`
+- `groupPrefs`
+- `restaurants`
+
+Each saved restaurant currently includes frontend-facing fields such as:
+- `placeId`
+- `name`
+- `address`
+- `district`
+- `location`
+- `rating`
+- `priceLevel`
+- `cuisine`
+- `photos`
+- `distance`
+- `openNow`
+
+### `sessionSelections`
+
+Defined by [backend/src/models/SessionSelection.js](backend/src/models/SessionSelection.js).
+
+Key fields:
+- `_id`
+- `sessionId`
+- `userId`
+- `recommendationSnapshotId`
+- `selections`
+  - `placeId`
+  - `name`
+  - `address`
+  - `district`
+  - `location`
+  - `rating`
+  - `priceLevel`
+  - `cuisine`
+  - `distance`
+  - `openNow`
+- `submittedAt`
+- `updatedAt`
+
+## ID Notes
+
+MongoDB `_id` is the real primary key everywhere.
+
+In API usage:
+- session responses usually expose session `_id` as `id`
+- `sessionId` in route params refers to the MongoDB session `_id`
+- user responses usually expose user `_id` as `id`
+
+Because the project evolved over time:
+- newer collections like `sessions`, `recommendationSnapshots`, and `sessionSelections` use `ObjectId`
+- `responses` still stores session and user IDs as strings
+
+## Manual Testing Helpers
+
+### Test Google Places API key
+
+```bash
+cd backend
+node scripts/test-google-places-api.js
+```
+
+You can also pass a custom query:
+
+```bash
+node scripts/test-google-places-api.js "japanese restaurant auckland cbd"
+```
+
+## Additional Documentation
+
+- Recommendation and selection API details: [docs/RECOMMENDATIONS_API.md](docs/RECOMMENDATIONS_API.md)
 
 ![Have A Byte](./Have%20A%20Byte.png)
