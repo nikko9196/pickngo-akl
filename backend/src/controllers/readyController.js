@@ -42,6 +42,14 @@ async function markReady(req, res) {
 
     participant.isReady = true;
 
+    const allReady = session.participants.every(
+      (participant) => participant.isReady,
+    );
+
+    if (allReady) {
+      session.status = "spinning";
+    }
+
     await session.save();
 
     return res.status(200).json({
