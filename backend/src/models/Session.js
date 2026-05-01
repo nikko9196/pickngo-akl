@@ -32,7 +32,7 @@ const participantSchema = new mongoose.Schema(
 
 const wheelItemSchema = new mongoose.Schema(
   {
-    recommendationSetId: {
+    recommendationSnapshotId: {
       type: String,
       required: true,
       trim: true,
@@ -42,13 +42,23 @@ const wheelItemSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    userId: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    roomDisplayName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
   },
   { _id: false },
 );
 
 const wheelResultSchema = new mongoose.Schema(
   {
-    recommendationSetId: {
+    recommendationSnapshotId: {
       type: String,
       trim: true,
     },

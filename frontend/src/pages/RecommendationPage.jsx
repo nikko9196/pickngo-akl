@@ -4,10 +4,10 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   generateRecommendations,
   getRecommendations,
+  getMySelections,
   saveMySelections,
 } from "../api/recommendations";
 import { getSessionByCode } from "../api/sessions";
-import { saveSelections } from "../api/userselections";
 import logoPointer from "../assets/Polygon 1.svg";
 import RestaurantCard from "../components/RestaurantCard";
 import { useAuth } from "../context/useAuth";
@@ -19,6 +19,8 @@ import "./RecommendationPage.css";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
 const NO_SNAPSHOT_MESSAGE = "No recommendation snapshot has been generated yet.";
+const NO_SELECTIONS_MESSAGE =
+  "You have not saved any restaurant selections for this room yet.";
 
 function RecommendationPage() {
   const navigate = useNavigate();
@@ -127,6 +129,33 @@ function RecommendationPage() {
 
           setItems(nextItems);
           setHasSnapshot(true);
+
+          if (!USE_MOCK) {
+            try {
+              const selectionsResponse = await getMySelections(token, nextSession.id);
+
+              if (ignore) {
+                return;
+              }
+
+              const validPlaceIds = new Set(nextItems.map((item) => item.placeId));
+              const savedPlaceIds = (selectionsResponse.selection?.selections || [])
+                .map((selection) => selection.placeId)
+                .filter((placeId) => validPlaceIds.has(placeId));
+
+              setSelectedPlaceIds(savedPlaceIds);
+            } catch (error) {
+              if (ignore) {
+                return;
+              }
+
+              if (error.message === NO_SELECTIONS_MESSAGE) {
+                setSelectedPlaceIds([]);
+              } else {
+                throw error;
+              }
+            }
+          }
         } catch (error) {
           if (ignore) {
             return;
@@ -135,6 +164,7 @@ function RecommendationPage() {
           if (error.message === NO_SNAPSHOT_MESSAGE) {
             setItems([]);
             setHasSnapshot(false);
+            setSelectedPlaceIds([]);
             return;
           }
 
@@ -198,6 +228,11 @@ function RecommendationPage() {
 
       setItems(nextItems);
       setHasSnapshot(true);
+      setSelectedPlaceIds((current) =>
+        current.filter((placeId) =>
+          nextItems.some((item) => item.placeId === placeId)
+        )
+      );
       setSession((currentSession) =>
         currentSession
           ? { ...currentSession, status: nextSessionStatus }
@@ -238,6 +273,10 @@ function RecommendationPage() {
   }
 
   async function handleClose() {
+    if (!session || !token) {
+      return;
+    }
+
     if (selectedPlaceIds.length === 0) {
       setPageError("Please select at least one restaurant before closing.");
       return;
@@ -247,10 +286,7 @@ function RecommendationPage() {
     setPageError("");
 
     try {
-      // TODO: Call selections API when it is ready.
-      // console.log("Submitting selections:", selectedPlaceIds);
-      const { session } = await getSessionByCode(token, sessionCode);
-      await saveSelections(token, session.id, selectedPlaceIds);
+      await saveMySelections(token, session.id, selectedPlaceIds);
 
       navigate(`/sessions/${sessionCode}/wheel`);
     } catch (error) {
@@ -259,21 +295,6 @@ function RecommendationPage() {
       setIsSubmitting(false);
     }
   }
-
-  // setIsSubmitting(true);
-  // setPageError("");
-
-//   try {
-//     if (!USE_MOCK) {
-//       await saveMySelections(token, session.id, selectedPlaceIds);
-//     }
-//     navigate(`/sessions/${sessionCode}/wheel`);
-//   } catch (error) {
-//     setPageError(error.message);
-//   } finally {
-//     setIsSubmitting(false);
-//   }
-// }
 
   return (
     <main className="recommendation-shell">

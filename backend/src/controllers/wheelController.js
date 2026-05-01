@@ -1,5 +1,5 @@
-const UserSelection = require("../models/UserSelection");
 const RecommendationSnapshot = require("../models/RecommendationSnapshot");
+const SessionSelection = require("../models/SessionSelection");
 const {
   findSessionById,
   checkValidParticipant,
@@ -9,6 +9,198 @@ const {
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
 
+function getStringValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  return value.toString();
+}
+
+function getWheelSnapshotId(item) {
+  return getStringValue(
+    item?.recommendationSnapshotId || item?.recommendationSetId || "",
+  );
+}
+
+function getWheelItemKey(snapshotId, placeId) {
+  return `${snapshotId}::${placeId}`;
+}
+
+async function getSessionSelections(sessionId) {
+  return SessionSelection.find({ sessionId }).lean();
+}
+
+async function getSnapshotsByIds(snapshotIds) {
+  if (!snapshotIds.length) {
+    return [];
+  }
+
+  return RecommendationSnapshot.find({
+    _id: { $in: snapshotIds },
+  }).lean();
+}
+
+function collectSnapshotIdsFromSession(session) {
+  const snapshotIds = new Set();
+
+  for (const item of session.wheelItems || []) {
+    const snapshotId = getWheelSnapshotId(item);
+
+    if (snapshotId) {
+      snapshotIds.add(snapshotId);
+    }
+  }
+
+  for (const item of [session.currentWheelResult, session.finalWheelResult]) {
+    const snapshotId = getWheelSnapshotId(item);
+
+    if (snapshotId) {
+      snapshotIds.add(snapshotId);
+    }
+  }
+
+  return snapshotIds;
+}
+
+function getParticipantRoomDisplayName(session, userId) {
+  const participant = session.participants.find(
+    (entry) => entry.userId.toString() === userId,
+  );
+
+  return participant?.roomDisplayName || "";
+}
+
+function buildSelectionEntries(session, sessionSelections) {
+  return sessionSelections.flatMap((selection) => {
+    const userId = getStringValue(selection.userId);
+    const recommendationSnapshotId = getStringValue(
+      selection.recommendationSnapshotId,
+    );
+    const roomDisplayName = getParticipantRoomDisplayName(session, userId);
+
+    return (selection.selections || [])
+      .filter((restaurant) => restaurant?.placeId)
+      .map((restaurant) => ({
+        recommendationSnapshotId,
+        placeId: restaurant.placeId,
+        userId,
+        roomDisplayName,
+        restaurant,
+      }));
+  });
+}
+
+function buildSelectionLookup(entries) {
+  const lookup = new Map();
+
+  for (const entry of entries) {
+    const key = getWheelItemKey(
+      entry.recommendationSnapshotId,
+      entry.placeId,
+    );
+
+    if (!lookup.has(key)) {
+      lookup.set(key, entry);
+    }
+  }
+
+  return lookup;
+}
+
+function buildSnapshotLookup(snapshots) {
+  return new Map(
+    snapshots.map((snapshot) => [getStringValue(snapshot._id), snapshot]),
+  );
+}
+
+function getSnapshotRestaurant(snapshotLookup, snapshotId, placeId) {
+  const snapshot = snapshotLookup.get(snapshotId);
+
+  if (!snapshot) {
+    return null;
+  }
+
+  return (
+    snapshot.restaurants.find((restaurant) => restaurant.placeId === placeId) ||
+    null
+  );
+}
+
+async function buildWheelContext(session) {
+  const sessionSelections = await getSessionSelections(session._id);
+  const selectionEntries = buildSelectionEntries(session, sessionSelections);
+  const snapshotIds = new Set(
+    selectionEntries
+      .map((entry) => entry.recommendationSnapshotId)
+      .filter(Boolean),
+  );
+
+  for (const snapshotId of collectSnapshotIdsFromSession(session)) {
+    snapshotIds.add(snapshotId);
+  }
+
+  const snapshots = await getSnapshotsByIds([...snapshotIds]);
+
+  return {
+    selectionEntries,
+    selectionLookup: buildSelectionLookup(selectionEntries),
+    snapshotLookup: buildSnapshotLookup(snapshots),
+  };
+}
+
+function getRestaurantDetails({ selectionLookup, snapshotLookup, item }) {
+  const recommendationSnapshotId = getWheelSnapshotId(item);
+  const key = getWheelItemKey(recommendationSnapshotId, item.placeId);
+  const selectionEntry = item.restaurant ? item : selectionLookup.get(key);
+  const baseRestaurant = selectionEntry?.restaurant || {};
+  const snapshotRestaurant = getSnapshotRestaurant(
+    snapshotLookup,
+    recommendationSnapshotId,
+    item.placeId,
+  );
+
+  return {
+    userId: item.userId || selectionEntry?.userId || "",
+    roomDisplayName: item.roomDisplayName || selectionEntry?.roomDisplayName || "",
+    recommendationSnapshotId,
+    placeId: item.placeId,
+    name: baseRestaurant.name || snapshotRestaurant?.name || "",
+    address: baseRestaurant.address || snapshotRestaurant?.address || "",
+    district: baseRestaurant.district || snapshotRestaurant?.district || "",
+    location: {
+      lat:
+        baseRestaurant.location?.lat ??
+        snapshotRestaurant?.location?.lat ??
+        snapshotRestaurant?.latitude ??
+        null,
+      lng:
+        baseRestaurant.location?.lng ??
+        snapshotRestaurant?.location?.lng ??
+        snapshotRestaurant?.longitude ??
+        null,
+    },
+    rating: baseRestaurant.rating ?? snapshotRestaurant?.rating ?? null,
+    priceLevel:
+      baseRestaurant.priceLevel ?? snapshotRestaurant?.priceLevel ?? null,
+    cuisine: baseRestaurant.cuisine || snapshotRestaurant?.cuisine || [],
+    photos: snapshotRestaurant?.photos || [],
+    distance:
+      baseRestaurant.distance ??
+      snapshotRestaurant?.distance ??
+      snapshotRestaurant?.distanceKm ??
+      null,
+    openNow:
+      typeof baseRestaurant.openNow === "boolean"
+        ? baseRestaurant.openNow
+        : Boolean(snapshotRestaurant?.openNow),
+  };
+}
+
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -16,33 +208,23 @@ async function buildWheel(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const userSelections = await UserSelection.find({ sessionId });
+    const { selectionEntries, selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
 
-    if (!userSelections.length) {
+    if (!selectionEntries.length) {
       return res.status(404).json({
         message:
-          "No user selections found for this session to build the wheel.",
+          "No saved restaurant selections found for this session to build the wheel.",
       });
     }
 
-    const wheelItems = userSelections.flatMap((selection) =>
-      selection.selectedItems.map((item) => ({
-        recommendationSetId: selection.recommendationSetId,
-        placeId: item.placeId,
-        userId: selection.userId,
-        roomDisplayName: getParticipantRoomDisplayName(
-          session,
-          selection.userId,
-        ),
-      })),
-    );
-
-    if (!wheelItems.length) {
-      return res.status(400).json({
-        message:
-          "No wheel items available for this session to build the wheel.",
-      });
-    }
+    const wheelItems = selectionEntries.map((entry) => ({
+      recommendationSnapshotId: entry.recommendationSnapshotId,
+      placeId: entry.placeId,
+      userId: entry.userId,
+      roomDisplayName: entry.roomDisplayName,
+      restaurant: entry.restaurant,
+    }));
 
     const maxPossibleWheelItems =
       session.participants.length * session.maxSelectionsPerUser;
@@ -54,7 +236,12 @@ async function buildWheel(req, res) {
       });
     }
 
-    session.wheelItems = wheelItems;
+    session.wheelItems = wheelItems.map((item) => ({
+      recommendationSnapshotId: item.recommendationSnapshotId,
+      placeId: item.placeId,
+      userId: item.userId,
+      roomDisplayName: item.roomDisplayName,
+    }));
     session.currentWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
@@ -65,10 +252,8 @@ async function buildWheel(req, res) {
 
     await session.save();
 
-    const snapshot = await getLatestRecommendationSnapshot(sessionId);
-
     const detailedWheelItems = wheelItems.map((item) =>
-      getRestaurantDetails(snapshot, item),
+      getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
     );
 
     return res.status(200).json({
@@ -107,14 +292,16 @@ async function spinWheel(req, res) {
     checkSessionStatus(session, "spinning");
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
-
     const selectedItem = session.wheelItems[randomIndex];
-
-    const snapshot = await getLatestRecommendationSnapshot(sessionId);
-    const detailedResult = getRestaurantDetails(snapshot, selectedItem);
+    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const detailedResult = getRestaurantDetails({
+      selectionLookup,
+      snapshotLookup,
+      item: selectedItem,
+    });
 
     session.currentWheelResult = {
-      recommendationSetId: selectedItem.recommendationSetId,
+      recommendationSnapshotId: getWheelSnapshotId(selectedItem),
       placeId: selectedItem.placeId,
     };
 
@@ -126,7 +313,6 @@ async function spinWheel(req, res) {
       session.status = "completed";
     } else {
       session.status = "voting";
-
       session.voteSummary = {
         acceptCount: 0,
         respinCount: 0,
@@ -158,30 +344,11 @@ async function getCurrentWheel(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const snapshot = await getLatestRecommendationSnapshot(sessionId);
-
-    const userSelections = await UserSelection.find({ sessionId });
-
-    const remainingPlaceIds = new Set(
-      session.wheelItems.map((item) => item.placeId),
-    );
-
-    const currentWheelItems = userSelections.flatMap((selection) =>
-      selection.selectedItems
-        .filter((item) => remainingPlaceIds.has(item.placeId))
-        .map((item) => ({
-          recommendationSetId: selection.recommendationSetId,
-          placeId: item.placeId,
-          userId: selection.userId,
-          roomDisplayName: getParticipantRoomDisplayName(
-            session,
-            selection.userId,
-          ),
-        })),
-    );
+    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const currentWheelItems = session.wheelItems || [];
 
     const detailedWheelItems = currentWheelItems.map((item) =>
-      getRestaurantDetails(snapshot, item),
+      getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
     );
 
     return res.status(200).json({
@@ -211,11 +378,12 @@ async function getFinalWheelResult(req, res) {
       });
     }
 
-    const snapshot = await getLatestRecommendationSnapshot(sessionId);
-    const finalResult = getRestaurantDetails(
-      snapshot,
-      session.finalWheelResult,
-    );
+    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const finalResult = getRestaurantDetails({
+      selectionLookup,
+      snapshotLookup,
+      item: session.finalWheelResult,
+    });
 
     return res.status(200).json({
       session: {
@@ -231,51 +399,6 @@ async function getFinalWheelResult(req, res) {
         : "Failed to fetch final wheel result.";
     return res.status(getErrorStatus(error)).json({ message });
   }
-}
-
-async function getLatestRecommendationSnapshot(sessionId) {
-  return RecommendationSnapshot.findOne({ sessionId }).sort({
-    generatedAt: -1,
-  });
-}
-
-function getRestaurantByPlaceId(snapshot, placeId) {
-  if (!snapshot) {
-    return null;
-  }
-
-  return (
-    snapshot.restaurants.find((restaurant) => restaurant.placeId === placeId) ||
-    null
-  );
-}
-
-function getRestaurantDetails(snapshot, item) {
-  const restaurant = getRestaurantByPlaceId(snapshot, item.placeId);
-
-  return {
-    userId: item.userId || "",
-    roomDisplayName: item.roomDisplayName || "",
-    recommendationSetId: item.recommendationSetId,
-    placeId: item.placeId,
-    name: restaurant?.name || "",
-    address: restaurant?.address || "",
-    district: restaurant?.district || "",
-    rating: restaurant?.rating ?? null,
-    priceLevel: restaurant?.priceLevel ?? null,
-    cuisine: restaurant?.cuisine || [],
-    photos: restaurant?.photos || [],
-    distance: restaurant?.distance ?? null,
-    openNow: restaurant?.openNow ?? false,
-  };
-}
-
-function getParticipantRoomDisplayName(session, userId) {
-  const participant = session.participants.find(
-    (participant) => participant.userId.toString() === userId,
-  );
-
-  return participant?.roomDisplayName || "";
 }
 
 module.exports = {
