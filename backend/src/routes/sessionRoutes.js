@@ -9,6 +9,7 @@ const {
   joinSession,
   updateSessionStatus,
   updateSession,
+  checkIsHost
 } = require("../controllers/sessionController");
 const {
   generateSessionRecommendations,
@@ -20,6 +21,7 @@ const {
   saveMySessionSelections,
 } = require("../controllers/selectionController");
 const { upsertResponse } = require("../controllers/responseController");
+const { saveUserSelections } = require("../controllers/userSelectionController");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -31,8 +33,10 @@ router.get("/:sessionId/recommendations/latest", getLatestSessionRecommendations
 router.get("/:sessionId/selections/me", getMySessionSelections);
 router.get("/:sessionId/selections", getSessionSelections);
 router.get("/code/:sessionCode", getSessionByCode);
+router.get("/:sessionId/host", checkIsHost);
 router.post("/:sessionId/recommendations", generateSessionRecommendations);
 router.post("/:sessionId/responses", upsertResponse);
+router.post("/:sessionId/selections", saveUserSelections);
 router.put("/:sessionId/selections/me", saveMySessionSelections);
 router.post("/", createSession);
 router.post("/join", joinSession);

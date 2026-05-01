@@ -225,7 +225,7 @@
 
 .landing-pattern {
   position: absolute;
-  top: 88px;
+  /* top: 88px; */
   left: 0;
   width: 390px;
   height: calc(844px - 88px);

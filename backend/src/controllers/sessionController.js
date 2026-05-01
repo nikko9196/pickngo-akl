@@ -1,6 +1,11 @@
 const Session = require("../models/Session");
 const Response = require("../models/Response");
 const QuestionList = require("../models/QuestionList");
+const {
+  findSessionById,
+  checkValidParticipant,
+} = require("../services/sessionService");
+const { getErrorStatus } = require("../utils/errorUtils");
 
 const APP_BASE_URL = process.env.CLIENT_BASE_URL || "http://localhost:5173";
 const SESSION_CODE_LENGTH = 6;
@@ -450,11 +455,29 @@ async function getSessionProgress(req, res) {
   }
 }
 
+async function checkIsHost(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    return res.status(200).json({
+      isHost: session.hostUserId.toString() === req.userId,
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to check host status.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 module.exports = {
   createSession,
   deleteSession,
   getMySessions,
   getSessionProgress,
+  checkIsHost,
   getSessionByCode,
   joinSession,
   updateSessionStatus,
