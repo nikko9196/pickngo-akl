@@ -4,6 +4,7 @@ const {
   findSessionById,
   checkValidParticipant,
   checkSessionStatus,
+  checkValidHost,
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
@@ -89,11 +90,7 @@ async function spinWheel(req, res) {
   try {
     const session = await findSessionById(sessionId);
 
-    if (session.hostUserId.toString() !== req.userId) {
-      return res
-        .status(403)
-        .json({ message: "Only the host can spin the wheel." });
-    }
+    checkValidHost(session, req.userId, "Only the host can spin the wheel.");
 
     if (!session.wheelItems || !session.wheelItems.length) {
       return res.status(400).json({
@@ -201,6 +198,41 @@ async function getCurrentWheel(req, res) {
   }
 }
 
+async function getFinalWheelResult(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    if (!session.finalWheelResult?.placeId) {
+      return res.status(404).json({
+        message: "No final wheel result found.",
+      });
+    }
+
+    const snapshot = await getLatestRecommendationSnapshot(sessionId);
+    const finalResult = getRestaurantDetails(
+      snapshot,
+      session.finalWheelResult,
+    );
+
+    return res.status(200).json({
+      session: {
+        id: session._id.toString(),
+        status: session.status,
+        finalWheelResult: finalResult,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Failed to fetch final wheel result.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 async function getLatestRecommendationSnapshot(sessionId) {
   return RecommendationSnapshot.findOne({ sessionId }).sort({
     generatedAt: -1,
@@ -250,4 +282,5 @@ module.exports = {
   buildWheel,
   spinWheel,
   getCurrentWheel,
+  getFinalWheelResult,
 };

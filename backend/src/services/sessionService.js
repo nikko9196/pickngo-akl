@@ -38,8 +38,21 @@ function checkSessionStatus(session, expectedStatus) {
   }
 }
 
+function checkValidHost(
+  session,
+  userId,
+  message = "Only the host can perform this action.",
+) {
+  if (session.hostUserId.toString() !== userId) {
+    const error = new Error(message);
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
 module.exports = {
   findSessionById,
   checkValidParticipant,
   checkSessionStatus,
+  checkValidHost,
 };
