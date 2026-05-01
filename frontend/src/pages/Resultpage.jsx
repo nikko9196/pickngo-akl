@@ -5,23 +5,45 @@ import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
 import { useLocation } from "react-router-dom";
 import './ResultPage.css';
+import { getFinalWheelResult } from "../api/userselections";
+import { useAuth } from "../context/useAuth";
+import { getSessionByCode } from "../api/sessions";
+import { useParams } from "react-router-dom";
 
 const quote = "\"People who love to eat are always the best people.\" — Julia Child";
 
 export default function ResultPage() {
 
     const location = useLocation();
-    const { votes, result } = location.state;
+    const { votes,  } = location.state;
+    const { sessionCode } = useParams();
+    const { token } = useAuth();
 
     console.log("location.state:", location.state);
 
-    const restaurant = {
-        name: result,
-        address: "123 Queen Street, Auckland CBD, Auckland 1010",
-        type: "Chinese • Asian Fusion • Dim Sum",
-        photo: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400",
-        votes: votes,
-    };
+    const [restaurantData, setRestaurantData] = useState(null);
+
+    useEffect(() => {
+        const fetchResult = async () => {
+            try {
+                const { session: sessionInfo } = await getSessionByCode(token, sessionCode);
+                const { session } = await getFinalWheelResult(token, sessionInfo.id);
+                const { name, address, cuisine, rating, priceLevel, photos } = session.finalWheelResult;
+                setRestaurantData({
+                    name,
+                    address,
+                    cuisine: cuisine.join(" • "),
+                    rating,
+                    priceLevel,
+                    photo: photos[0],
+                });
+            } catch (err) {
+                console.error("Failed to fetch final result:", err);
+            }
+        };
+
+        if (token && sessionCode) fetchResult();
+    }, [token, sessionCode]);
 
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
@@ -35,6 +57,7 @@ export default function ResultPage() {
         });
     }, []);
 
+    if (!restaurantData) return <p>Loading...</p>; // ✅ add this line here
     return (
         <div className="result-page">
 
@@ -45,9 +68,9 @@ export default function ResultPage() {
                 {/* Left: Card + Rating */}
                 <div className="result-left">
                     <div className="result-card">
-                        <p className="result-restaurant-name">{restaurant.name}</p>
-                        <p className="result-restaurant-type">{restaurant.type}</p>
-                        <p className="result-restaurant-address">📍 {restaurant.address}</p>
+                        <p className="result-restaurant-name">{restaurantData.name}</p>
+                        <p className="result-restaurant-type">{restaurantData.cuisine} • {"$".repeat(restaurantData.priceLevel)} • ⭐ {restaurantData.rating}</p>
+                        <p className="result-restaurant-address">📍 {restaurantData.address}</p>
 
                         {(votes.yes > 0 || votes.respin > 0) && (
                             <div className="result-vote-row">
@@ -93,7 +116,7 @@ export default function ResultPage() {
 
                 {/* Right: Photo */}
                 <div className="result-photo-container">
-                    <img src={restaurant.photo} alt={restaurant.name} className="result-photo" />
+                    <img src={restaurantData.photo} alt={restaurantData.name} className="result-photo" />
                     <div className="result-photo-overlay" />
                 </div>
 

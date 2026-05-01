@@ -128,13 +128,13 @@ export default function Wheelpage() {
         setResult(data[prizeNumber].option);
         setHovered(false);
 
-        // ✅ navigate after wheel stops if final spin
+        // navigate after wheel stops if final spin
         if (finalSpin) {
             setTimeout(() => {
                 navigate(`/sessions/${sessionCode}/result`, {
                     state: { votes: { yes: 0, respin: 0 }, result: resultRef.current }
                 });
-            }, 3000); // ✅ small delay so user sees the result before navigating
+            }, 3000); // small delay so user sees the result before navigating
         }
     };
 
@@ -189,12 +189,12 @@ export default function Wheelpage() {
         }
     }, [token]);
 
-    const isLoadingRef = useRef(false); // ✅ add with other refs
+    const isLoadingRef = useRef(false); // add with other refs
 
-    // ✅ fetch wheel data inside useEffect
+    // fetch wheel data inside useEffect
     useEffect(() => {
         async function loadWheelData() {
-        if (isLoadingRef.current) return; // ✅ prevent duplicate calls
+        if (isLoadingRef.current) return; // prevent duplicate calls
         isLoadingRef.current = true;
 
         try {
@@ -230,7 +230,7 @@ export default function Wheelpage() {
                 wheelData = built;
                 socket.emit("build_wheel", { sessionCode });
             } else {
-                // ✅ already built, skip buildWheelApi
+                // already built, skip buildWheelApi
                 wheelData = session;
             }
 
@@ -244,10 +244,10 @@ export default function Wheelpage() {
             }));
             setData(fetchedData);
             console.log("6. loadWheelData complete");
-            isLoadingRef.current = false; // ✅ reset on error to allow retry
+            isLoadingRef.current = false; // reset on error to allow retry
         } catch (error) {
             console.error("Failed to load wheel data:", error);
-            isLoadingRef.current = false; // ✅ reset on error to allow retry
+            isLoadingRef.current = false; // reset on error to allow retry
         }
     }
 
@@ -280,7 +280,7 @@ export default function Wheelpage() {
 
     // Socket listeners (runs after userid is set)
     useEffect(() => {
-        if (!token || !sessionCode) return; // ✅ use token instead of userid
+        if (!token || !sessionCode) return; // use token instead of userid
 
         // join the session
         socket.emit("join_session", {sessionCode, userid: token });
@@ -288,7 +288,7 @@ export default function Wheelpage() {
         // listen for spin from host
         socket.on("spin", (data) => {
             setPrizeNumber(data.prizeNumber);
-            setFinalSpin(data.finalSpin); // ✅ non-host users get it here
+            setFinalSpin(data.finalSpin); // non-host users get it here
             setResult(null);
             setMustSpin(true);
             spinActivate(true);
@@ -311,7 +311,7 @@ export default function Wheelpage() {
               }
             
             if (isrespin  && !finalSpin) {
-                setLastResult({ result: resultRef.current, votes: votesRef.current }); // ✅ all users
+                setLastResult({ result: resultRef.current, votes: votesRef.current }); // all users
             }
         });
 
@@ -321,12 +321,12 @@ export default function Wheelpage() {
                 const { session } = await getSessionByCode(token, sessionCode);
                 // const { session: wheelData } = await buildWheelApi(token, session.id);
 
-                // ✅ use reloadWheel instead of buildWheelApi
+                // use reloadWheel instead of buildWheelApi
                 const { session: wheelData } = await reloadWheel(token, session.id);
 
                 const fetchedData = wheelData.wheelItems.map((item, i) => ({
                     option: item.name,
-                    roomDisplayName: item.roomDisplayName, // 👈 keep this
+                    roomDisplayName: item.roomDisplayName, 
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -346,10 +346,10 @@ export default function Wheelpage() {
         // listen for wheel reload when respin
         socket.on("wheel_reloaded", async () => {
             try {
-                const { session } = await reloadWheel(token, sessionIdRef.current); // ✅ use ref
+                const { session } = await reloadWheel(token, sessionIdRef.current); // use ref
                 const fetchedData = session.wheelItems.map((item, i) => ({
                     option: item.name,
-                    roomDisplayName: item.roomDisplayName, // 👈 keep this
+                    roomDisplayName: item.roomDisplayName, 
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -417,8 +417,8 @@ export default function Wheelpage() {
         }, 1000);
       
         const timer = setTimeout(async () => {
-            // if (!isHost) return; // ✅ only host resolves the vote
-            if (!isHostRef.current) return; // ✅ use ref not state
+            // if (!isHost) return; // only host resolves the vote
+            if (!isHostRef.current) return; // use ref not state
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
                 setRespin(shouldRespin);
@@ -507,7 +507,7 @@ export default function Wheelpage() {
         message = "Waiting for others to get ready...";
     }
 
-    // ✅ check if Host is the only one who is not ready
+    // check if Host is the only one who is not ready
     const allNonHostReady = participants
     .filter(p => p.role !== "host")
     .every(p => p.isReady);
@@ -660,7 +660,7 @@ export default function Wheelpage() {
                 {/* Wheel */}
                 <div className="wp-spinning-wheel">
                     <div className="wp-wheel-container">
-                        {data ? (  // ✅ only render when data is ready
+                        {data ? (  // only render when data is ready
                             <>
                                 <div style={{ transform: "rotate(-47deg)", width: "100%" }}>
                                     <Wheel

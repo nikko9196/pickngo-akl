@@ -93,3 +93,7 @@ export function sendRemind(token, sessionId) {
 export function collectReadyStatus(token, sessionId) {
   return request(`/api/sessions/${encodeURIComponent(sessionId)}/ready`, token);
 }
+
+export function getFinalWheelResult(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/result`, token);
+}
