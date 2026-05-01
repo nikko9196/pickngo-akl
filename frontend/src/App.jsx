@@ -17,7 +17,6 @@ function App() {
     <BrowserRouter>
       {/* </div> */}
       <AuthProvider>
-      {/* <Navbar /> */}
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/auth" element={<AuthPage />} />
@@ -27,8 +26,8 @@ function App() {
           <Route path="/sessions/:sessionCode" element={<SessionPage />} />
           <Route path="/sessions/:sessionCode/question" element={<QuestionPage />} />
           <Route path="/sessions/:sessionCode/recommendation" element={<RecommendationPage />} />
-          <Route path="/sessions/:sessionCode/wheel" element={<Wheelpage />} />
-          <Route path="/sessions/:sessionCode/result" element={<ResultPage />} />
+          <Route path="/sessions/:sessionCode/wheel" element={<><Navbar /><Wheelpage /></>} />
+          <Route path="/sessions/:sessionCode/result" element={<><Navbar /><ResultPage /></>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

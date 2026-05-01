@@ -14,7 +14,7 @@ import { io } from "socket.io-client";
 import './Wheelpage.css';
 import { getSessionByCode } from "../api/sessions";
 import { buildWheelApi, spinWheel, getHost, submitVoteApi, ifRespin, reloadWheel,
-sendReady, sendRemind} from "../api/userselections";
+sendReady, sendRemind, collectReadyStatus} from "../api/userselections";
 import { useAuth } from "../context/useAuth";
 import { getCurrentUser } from "../api/auth";
 
@@ -86,7 +86,8 @@ export default function Wheelpage() {
     // --- Refs (to capture latest values in async callbacks) ---
     const resultRef = useRef(result); // Use refs to capture the latest values
     const votesRef = useRef(votes); // Use refs to capture the latest values
-    
+    const isHostRef = useRef(true); // ✅ add here
+
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
     const [showGroupPicks, setShowGroupPicks] = useState(false);
@@ -164,10 +165,6 @@ export default function Wheelpage() {
         }
     };
 
-    const isCurrentUserReminded = () => {
-        if (!currentUserId) return false;
-        return sentReminders?.remindedUserIds?.includes(currentUserId);
-    };
     
     // ============================================================
     // EFFECTS
@@ -192,49 +189,77 @@ export default function Wheelpage() {
         }
     }, [token]);
 
+    const isLoadingRef = useRef(false); // ✅ add with other refs
+
     // ✅ fetch wheel data inside useEffect
     useEffect(() => {
         async function loadWheelData() {
-            try {
-                const { session } = await getSessionByCode(token, sessionCode);
-                const id = session.id;
-                setSessionId(id);
-    
-                let wheelData;
-    
-                if (session.status === "selecting" || !session.wheelItems?.length) {
-                    // ✅ only build if not already built
-                    const { session: built } = await buildWheelApi(token, id);
-                    wheelData = built;
-                    socket.emit("build_wheel", { sessionCode });
-                } else {
-                    // ✅ already built, use existing wheelItems
-                    wheelData = session;
-                }
-    
-                const fetchedData = wheelData.wheelItems.map((item, i) => ({
-                    option: item.name,
-                    roomDisplayName: item.roomDisplayName, // 👈 keep this
-                    style: {
-                        backgroundColor: wheelcolors[i % wheelcolors.length],
-                        textColor: '#ffffff'
-                    }
-                }));
-                setData(fetchedData);
-    
-            } catch (error) {
-                console.error("Failed to load wheel data:", error);
+        if (isLoadingRef.current) return; // ✅ prevent duplicate calls
+        isLoadingRef.current = true;
+
+        try {
+            console.log("1. starting loadWheelData");
+            const { session } = await getSessionByCode(token, sessionCode);
+            console.log("2. got session", session.status);
+            const id = session.id;
+            setSessionId(id);
+
+            const { readySummary } = await collectReadyStatus(token, id);
+            console.log("3. got ready summary");
+
+            setReadyCount(readySummary.readyCount);
+            setTotalParticipants(readySummary.totalParticipants);
+            setParticipants(readySummary.participants);
+            setSpinReady(readySummary.allReady);
+
+            const { user } = await getCurrentUser(token);
+            console.log("4. got current user");
+            console.log("5. wheel items length:", session.wheelItems?.length);
+            setCurrentUserId(user.id);
+            const currentParticipant = readySummary.participants.find(
+                p => p.userId === user.id
+            );
+            if (currentParticipant) {
+                setReady(currentParticipant.isReady);
             }
+
+            let wheelData;
+
+            if (!session.wheelItems?.length) {
+                const { session: built } = await buildWheelApi(token, id);
+                wheelData = built;
+                socket.emit("build_wheel", { sessionCode });
+            } else {
+                // ✅ already built, skip buildWheelApi
+                wheelData = session;
+            }
+
+            const fetchedData = wheelData.wheelItems.map((item, i) => ({
+                option: item.name,
+                roomDisplayName: item.roomDisplayName,
+                style: {
+                    backgroundColor: wheelcolors[i % wheelcolors.length],
+                    textColor: '#ffffff'
+                }
+            }));
+            setData(fetchedData);
+            console.log("6. loadWheelData complete");
+            isLoadingRef.current = false; // ✅ reset on error to allow retry
+        } catch (error) {
+            console.error("Failed to load wheel data:", error);
+            isLoadingRef.current = false; // ✅ reset on error to allow retry
         }
-    
-        if (token && sessionCode) {
-            loadWheelData();
-        }
+    }
+
+    if (token && sessionCode) {
+        loadWheelData();
+    }
     }, [token, sessionCode]);
 
     // Keep refs updated with latest state values
     useEffect(() => { votesRef.current = votes; }, [votes]);
     useEffect(() => { resultRef.current = result; }, [result]);
+    useEffect(() => { isHostRef.current = isHost; }, [isHost]);
 
     // Check if user is host (runs after userid is set)
     useEffect(() => {
@@ -294,7 +319,11 @@ export default function Wheelpage() {
         socket.on("wheel_built", async () => {
             try {
                 const { session } = await getSessionByCode(token, sessionCode);
-                const { session: wheelData } = await buildWheelApi(token, session.id);
+                // const { session: wheelData } = await buildWheelApi(token, session.id);
+
+                // ✅ use reloadWheel instead of buildWheelApi
+                const { session: wheelData } = await reloadWheel(token, session.id);
+
                 const fetchedData = wheelData.wheelItems.map((item, i) => ({
                     option: item.name,
                     roomDisplayName: item.roomDisplayName, // 👈 keep this
@@ -308,9 +337,7 @@ export default function Wheelpage() {
 
                 setParticipants(session.participants || []);
                 setTotalParticipants(session.participants?.length || 0);
-                setReadyCount(
-                    session.participants?.filter(p => p.isReady).length || 0
-                );
+                
             } catch (error) {
                 console.error("Failed to load wheel on wheel_built event:", error);
             }
@@ -390,24 +417,26 @@ export default function Wheelpage() {
         }, 1000);
       
         const timer = setTimeout(async () => {
-            const shouldRespin = await ifRespin(token, sessionIdRef.current);
-            setRespin(shouldRespin);
-            // broadcast respin decision to all users
-            socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin });
-
-            // navigate to result page if majority is happy
-            if (!shouldRespin) {
-                navigate(`/sessions/${sessionCode}/result`, {
-                    state: {votes: votesRef.current, result: resultRef.current}
-                });
+            // if (!isHost) return; // ✅ only host resolves the vote
+            if (!isHostRef.current) return; // ✅ use ref not state
+            try {
+                const shouldRespin = await ifRespin(token, sessionIdRef.current);
+                setRespin(shouldRespin);
+                socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin });
+        
+                if (!shouldRespin) {
+                    navigate(`/sessions/${sessionCode}/result`, {
+                        state: { votes: votesRef.current, result: resultRef.current }
+                    });
+                }
+        
+                if (shouldRespin) {
+                    socket.emit("reload_wheel", { sessionCode });
+                }
+            } catch (error) {
+                console.error("Vote resolution error:", error.message);
             }
-
-            // if respin is true, reload the wheel items as it will remove the rejected result from the options
-            if (shouldRespin) {
-                socket.emit("reload_wheel", { sessionCode }); // ✅ notify all users to reload
-            }
-
-        }, DURATION*1000);
+        }, DURATION * 1000);
 
         spinActivate(false);
       
@@ -478,6 +507,10 @@ export default function Wheelpage() {
         message = "Waiting for others to get ready...";
     }
 
+    // ✅ check if Host is the only one who is not ready
+    const allNonHostReady = participants
+    .filter(p => p.role !== "host")
+    .every(p => p.isReady);
     // ============================================================
     // RENDER
     // ============================================================
@@ -542,6 +575,7 @@ export default function Wheelpage() {
                             (
                             <button
                                 className="reminder-button"
+                                disabled={allNonHostReady}
                                 onClick={() => {
                                     try {
                                         socket.emit("send_reminder", {
@@ -719,7 +753,7 @@ export default function Wheelpage() {
                 </div>
             )}
             {/* Reminder Popup */}
-            {showReminderPopup && (
+            {!isHost && showReminderPopup && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
                         <p className="wp-popup-text">🔔 REMINDER</p>
