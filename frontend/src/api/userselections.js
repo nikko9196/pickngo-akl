@@ -20,13 +20,6 @@ async function request(path, token, options = {}) {
   return data;
 }
 
-export function saveSelections(token, sessionId, selectedItems) {
-    return request(`/api/sessions/${encodeURIComponent(sessionId)}/selections`, token, {
-      method: "POST",
-      body: JSON.stringify({ selectedItems }),
-    });
-}
-
 export function buildWheelApi(token, sessionId) {
     return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/build`, token, {
       method: "POST",
