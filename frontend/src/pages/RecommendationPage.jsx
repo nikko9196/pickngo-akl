@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   generateRecommendations,
   getRecommendations,
+  saveMySelections,
 } from "../api/recommendations";
 import { getSessionByCode } from "../api/sessions";
 import { saveSelections } from "../api/userselections";
@@ -258,6 +259,21 @@ function RecommendationPage() {
       setIsSubmitting(false);
     }
   }
+
+  // setIsSubmitting(true);
+  // setPageError("");
+
+//   try {
+//     if (!USE_MOCK) {
+//       await saveMySelections(token, session.id, selectedPlaceIds);
+//     }
+//     navigate(`/sessions/${sessionCode}/wheel`);
+//   } catch (error) {
+//     setPageError(error.message);
+//   } finally {
+//     setIsSubmitting(false);
+//   }
+// }
 
   return (
     <main className="recommendation-shell">

@@ -31,3 +31,14 @@ export function generateRecommendations(token, sessionId, options = {}) {
 export function getRecommendations(token, sessionId) {
   return request(`/api/sessions/${sessionId}/recommendations/latest`, token);
 }
+
+export function saveMySelections(token, sessionId, placeIds) {
+  return request(`/api/sessions/${sessionId}/selections/me`, token, {
+    method: "PUT",
+    body: JSON.stringify({ placeIds }),
+  });
+}
+
+export function getMySelections(token, sessionId) {
+  return request(`/api/sessions/${sessionId}/selections/me`, token);
+}
