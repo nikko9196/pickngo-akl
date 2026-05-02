@@ -45,6 +45,7 @@ function RecommendationPage() {
   );
 
   const maxSelections = session?.maxSelectionsPerUser ?? 3;
+  const effectiveMax = Math.min(maxSelections, items.length);
   const isHost = session?.currentUserRole === "host";
   const hasRecommendations = items.length > 0;
   const shouldAutoGenerate =
@@ -264,7 +265,7 @@ function RecommendationPage() {
         return current.filter((id) => id !== placeId);
       }
 
-      if (current.length >= maxSelections) {
+      if (current.length >= effectiveMax) {
         return current;
       }
 
@@ -384,7 +385,7 @@ function RecommendationPage() {
             <section className="recommendation-intro">
               <h2>Picks for your group</h2>
               <p className="recommendation-intro-sub">
-                Selected: {selectedPlaceIds.length}/{maxSelections} places
+                Selected: {selectedPlaceIds.length}/{effectiveMax} places
               </p>
             </section>
 
@@ -398,7 +399,7 @@ function RecommendationPage() {
               {items.map((item) => {
                 const isSelected = selectedSet.has(item.placeId);
                 const isDisabled =
-                  !isSelected && selectedPlaceIds.length >= maxSelections;
+                  !isSelected && selectedPlaceIds.length >= effectiveMax;
 
                 return (
                   <RestaurantCard
