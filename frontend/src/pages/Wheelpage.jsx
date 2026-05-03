@@ -100,8 +100,10 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             // const { session: spinResult } = await spinWheel(token, sessionId);
+            console.log("token", token);
             const response = await spinWheel(token, sessionId);
             const restaurantName = response.session.currentWheelResult.name;
+            console.log("restaurant name:", restaurantName);
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
             
@@ -214,7 +216,6 @@ export default function Wheelpage() {
 
             const { user } = await getCurrentUser(token);
             console.log("4. got current user");
-            console.log("5. wheel items length:", session.wheelItems?.length);
             setCurrentUserId(user.id);
             const currentParticipant = readySummary.participants.find(
                 p => p.userId === user.id
@@ -227,6 +228,7 @@ export default function Wheelpage() {
 
             if (!session.wheelItems?.length) {
                 const { session: built } = await buildWheelApi(token, id);
+                console.log("built session:", JSON.stringify(built, null, 2));
                 wheelData = built;
                 socket.emit("build_wheel", { sessionCode });
             } else {
@@ -243,6 +245,7 @@ export default function Wheelpage() {
                 }
             }));
             setData(fetchedData);
+            console.log("5. wheel items:", data.length);
             console.log("6. loadWheelData complete");
             isLoadingRef.current = false; // reset on error to allow retry
         } catch (error) {
