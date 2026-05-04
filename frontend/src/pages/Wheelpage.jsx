@@ -52,24 +52,21 @@ export default function Wheelpage() {
     const { sessionCode } = useParams();
     const { token } = useAuth();
 
-    // const [spin_no, setSpinNo] = useState(0); // enable this when api is available
-
     // --- Wheel State ---
     const [mustSpin, setMustSpin] = useState(false);
     const [prizeNumber, setPrizeNumber] = useState(0);
     const [result, setResult] = useState(null);
     const [spinactivate, spinActivate] = useState(false);
     const [hovered, setHovered] = useState(false);
-    const [data, setData] = useState(null);         // ✅ add this
+    const [data, setData] = useState(null);       
     const [sessionId, setSessionId] = useState(null);
-    const sessionIdRef = useRef(null);              // for socket listeners and timeouts
+    const sessionIdRef = useRef(null); // for socket listeners and timeouts
     const [finalSpin, setFinalSpin] = useState(null);
-    // const finalSpinRef = useRef(null); // ✅ add with other refs
 
     // --- User State ---
     const [getready, setReady] = useState(false);
-    const [isHost, setIsHost] = useState(false); // get this from API/session
-    const [spinready, setSpinReady] = useState(false); // TODO: to pass value to spinReady from API
+    const [isHost, setIsHost] = useState(false); 
+    const [spinready, setSpinReady] = useState(false); 
     const [readyCount, setReadyCount] = useState(0);
     const [totalParticipants, setTotalParticipants] = useState(0);
     const [participants, setParticipants] = useState([]);
@@ -86,7 +83,7 @@ export default function Wheelpage() {
     // --- Refs (to capture latest values in async callbacks) ---
     const resultRef = useRef(result); // Use refs to capture the latest values
     const votesRef = useRef(votes); // Use refs to capture the latest values
-    const isHostRef = useRef(false); // ✅ add here
+    const isHostRef = useRef(false); // check if player is the host
     const dataRef = useRef(null);
 
     // --- Dropdown State ---
@@ -100,11 +97,9 @@ export default function Wheelpage() {
     // ============================================================
     const handleSpin = async () => {
         try {
-            // const { session: spinResult } = await spinWheel(token, sessionId);
             console.log(new Date().toLocaleTimeString(),"token", token);
             const response = await spinWheel(token, sessionId);
             const restaurantName = response.session.currentWheelResult.name;
-            console.log(new Date().toLocaleTimeString(),"restaurant name:", restaurantName);
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
             
@@ -151,24 +146,18 @@ export default function Wheelpage() {
         setVoted(true);
     
         try {
-            await submitVoteApi(token, sessionId, choice); // call the API
+            await submitVoteApi(token, sessionId, choice); 
             socket.emit("vote", { sessionCode, sessionId });
         } catch (error) {
             console.error("Failed to submit vote:", error);
         }
     
-        // broadcast vote to all users in the session
-        // socket.emit("vote", { sessionCode, sessionId });
     };
 
     const handleReady = async () => {
         try {
             setReady(true);
-            
-            // 1. MUST update DB first
             await sendReady(token, sessionId);
-            
-            // 2. THEN notify server
             socket.emit("ready", {sessionCode,sessionId});
     
         } catch (err) {
@@ -176,6 +165,13 @@ export default function Wheelpage() {
         }
     };
 
+    const resetRoundState = () => {
+        setResult(null);
+        setVoted(false);
+        setRespin(null);
+        setVotes({ yes: 0, respin: 0 });
+        setTimeLeft(DURATION);
+    };
     
     // ============================================================
     // EFFECTS
@@ -211,9 +207,7 @@ export default function Wheelpage() {
         isLoadingRef.current = true;
 
         try {
-            console.log(new Date().toLocaleTimeString(),"1. starting loadWheelData");
             const { session } = await getSessionByCode(token, sessionCode);
-            console.log(new Date().toLocaleTimeString(),"2. got session status:", session.status);
             const id = session.id;
             setSessionId(id);
 
@@ -223,9 +217,6 @@ export default function Wheelpage() {
             setTotalParticipants(readySummary.totalParticipants);
             setParticipants(readySummary.participants);
             setSpinReady(readySummary.allReady);
-            console.log("readyCount",readySummary.readyCount);
-            console.log("check Participants",readySummary.participants);
-            console.log(new Date().toLocaleTimeString(),"3. got ready summary:", readySummary.allReady);
 
             const { user } = await getCurrentUser(token);
             setCurrentUserId(user.id);
@@ -237,18 +228,14 @@ export default function Wheelpage() {
             if (currentParticipant) {
                 setReady(currentParticipant.isReady);
             }
-
-            console.log(new Date().toLocaleTimeString(),"4. got current user_id:", user.id);
             
             // ✅ restore voting state if user rejoined mid-session
             const wheelState = await getWheelState(token, id);
-            // console.log("wheelState full:", JSON.stringify(wheelState, null, 2)); // 👈
             const currentResult = wheelState.session?.currentWheelResult;
             console.log("currentResult", currentResult);
             const sessionStatus = wheelState.session?.status;
             const sessionData = wheelState.session ?? wheelState;
             const wheelItems = sessionData.wheelItems || [];
-            // const currentWheelResult = sessionData.currentWheelResult?.placeId || [];
             
             console.log("currentWheelResult", wheelItems);
 
@@ -285,9 +272,6 @@ export default function Wheelpage() {
                     spinActivate(false);
                 }
             } 
-
-            console.log(new Date().toLocaleTimeString(),"5. wheel items:", fetchedData.length);
-            console.log(new Date().toLocaleTimeString(),"6. loadWheelData complete");
 
             // Re-emit join_session so backend can send current spin state
             socket.emit("join_session", { sessionCode, userId: user.id });
@@ -342,7 +326,7 @@ export default function Wheelpage() {
         
             setPrizeNumber(resolvedPrize);
             setFinalSpin(finalSpin);
-            setResult(null);
+            resetRoundState(); 
         
             setTimeout(() => {
                 setMustSpin(true);
@@ -360,7 +344,7 @@ export default function Wheelpage() {
             const currentVotes = votesRef.current;
         
             setRespin(isrespin);
-        
+            console.log("respin", isrespin);
             if (!isrespin || finalSpin === true) {
                 navigate(`/sessions/${sessionCode}/result`, {
                     state: { votes: currentVotes, result: current }
@@ -396,8 +380,6 @@ export default function Wheelpage() {
                 }));
                 setSessionId(session.id);
                 setData(fetchedData);
-
-                setParticipants(session.participants || []);
                 setTotalParticipants(session.participants?.length || 0);
                 
             } catch (error) {
@@ -423,19 +405,14 @@ export default function Wheelpage() {
             }
         });
 
-        // socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
-        //     setReadyCount(readyCount);
-        //     setTotalParticipants(totalParticipants);
-        //     setSpinReady(allReady);
-        //     setParticipants(participants);
-        // });
-
-        socket.on("ready_update", async () => {
-            await refreshReadyStatus();
+        socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
+            setReadyCount(readyCount);
+            setTotalParticipants(totalParticipants);
+            setSpinReady(allReady);
+            setParticipants(participants);
         });
 
         socket.on("reminder_sent", ({ remindedUserIds }) => {
-            console.log(new Date().toLocaleTimeString(),"REMINDER RECEIVED:", { remindedUserIds });
             setReminders({ remindedUserIds });
         
             if (!currentUserId) return; // wait until loaded
@@ -483,11 +460,7 @@ export default function Wheelpage() {
         }, 1000);
       
         const timer = setTimeout(async () => {
-            // if (!isHost) return; // only host resolves the vote
             if (!isHostRef.current) return; // use ref not state
-            console.log("timer fired, isHost:", isHostRef.current); // 👈
-            console.log("resultRef.current:", resultRef.current); // 👈
-            console.log("sessionIdRef.current:", sessionIdRef.current); // 👈
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
                 console.log("shouldRespin:", shouldRespin); // 👈
@@ -696,7 +669,9 @@ export default function Wheelpage() {
                     </p>
         
                     {/* Last Result */}
-                    {lastResult && (
+                    {
+                    // lastResult 
+                    result && (
                         <p className="wp-text3">
                             {/* Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin}) */}
                             Last Pick: {result} (👍 {votesRef.current.yes} / 🔄 {votesRef.current.respin})
@@ -715,10 +690,7 @@ export default function Wheelpage() {
             </div>
     
             {/* Wheel */}
-            
             <div className="wp-wheelntitle">
-                {/* <p className="wp-result-title">Let Fate Pick the Table</p> */}
-
                 <svg className="curvy-text" width="400" height="120">
                 <path id="curve" d="M 10 120 Q 230 20 400 130" fill="transparent" />
                 <text>
