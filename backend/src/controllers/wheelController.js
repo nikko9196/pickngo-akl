@@ -283,13 +283,17 @@ async function buildWheel(req, res) {
       userId: item.userId,
       roomDisplayName: item.roomDisplayName,
     }));
-    session.currentWheelResult = null;
-    session.finalWheelResult = null;
-    session.voteSummary = {
-      acceptCount: 0,
-      respinCount: 0,
-      votedUserIds: [],
-    };
+
+    // ✅ only reset these if session hasn't been spun yet
+    if (session.status !== "voting" && session.status !== "completed") {
+      session.currentWheelResult = null;
+      session.finalWheelResult = null;
+      session.voteSummary = {
+          acceptCount: 0,
+          respinCount: 0,
+          votedUserIds: [],
+      };
+    }
 
     await session.save();
 
