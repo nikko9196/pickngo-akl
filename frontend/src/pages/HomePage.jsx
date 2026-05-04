@@ -22,6 +22,7 @@ function HomePage() {
   const [isRoomsLoading, setIsRoomsLoading] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
   const [roomPendingDelete, setRoomPendingDelete] = useState(null);
+  const [brokenAccountAvatarUrl, setBrokenAccountAvatarUrl] = useState("");
   const { isAuthenticated, logout, token, user } = useAuth();
 
   useEffect(() => {
@@ -46,7 +47,10 @@ function HomePage() {
         setRooms(sessions);
         setRoomDrafts(
           sessions.reduce((drafts, room) => {
-            drafts[room.id] = room.maxParticipants;
+            drafts[room.id] = {
+              maxParticipants: String(room.maxParticipants),
+              maxSelectionsPerUser: String(room.maxSelectionsPerUser ?? 3),
+            };
             return drafts;
           }, {})
         );
@@ -70,6 +74,9 @@ function HomePage() {
 
   const welcomeName = user?.displayName || user?.email || "Friend";
   const avatarLabel = welcomeName.trim().charAt(0).toUpperCase() || "U";
+  const showAccountAvatar = Boolean(
+    user?.avatarUrl && user.avatarUrl !== brokenAccountAvatarUrl
+  );
   const roomsById = useMemo(
     () =>
       rooms.reduce((lookup, room) => {
@@ -79,8 +86,15 @@ function HomePage() {
     [rooms]
   );
 
-  function handleRoomDraftChange(roomId, value) {
-    setRoomDrafts((current) => ({ ...current, [roomId]: value }));
+  function handleRoomDraftChange(roomId, field, value) {
+    setRoomDrafts((current) => ({
+      ...current,
+      [roomId]: {
+        maxParticipants: current[roomId]?.maxParticipants ?? "",
+        maxSelectionsPerUser: current[roomId]?.maxSelectionsPerUser ?? "",
+        [field]: value,
+      },
+    }));
   }
 
   async function handleRoomUpdate(roomId) {
@@ -89,11 +103,19 @@ function HomePage() {
     setActiveRoomId(roomId);
 
     try {
+      const roomDraft = roomDrafts[roomId] || {};
       const { session } = await updateSession(token, roomId, {
-        maxParticipants: Number(roomDrafts[roomId]),
+        maxParticipants: Number(roomDraft.maxParticipants),
+        maxSelectionsPerUser: Number(roomDraft.maxSelectionsPerUser),
       });
       setRooms((current) => current.map((room) => (room.id === roomId ? session : room)));
-      setRoomDrafts((current) => ({ ...current, [roomId]: session.maxParticipants }));
+      setRoomDrafts((current) => ({
+        ...current,
+        [roomId]: {
+          maxParticipants: String(session.maxParticipants),
+          maxSelectionsPerUser: String(session.maxSelectionsPerUser ?? 3),
+        },
+      }));
       setRoomMessage(`Room ${session.sessionCode} updated.`);
     } catch (error) {
       setRoomError(error.message);
@@ -163,8 +185,14 @@ function HomePage() {
               type="button"
               onClick={() => setIsMenuOpen((current) => !current)}
             >
-              {user?.avatarUrl ? (
-                <img className="account-avatar" src={user.avatarUrl} alt={welcomeName} />
+              {showAccountAvatar ? (
+                <img
+                  className="account-avatar"
+                  src={user.avatarUrl}
+                  alt={welcomeName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setBrokenAccountAvatarUrl(user.avatarUrl)}
+                />
               ) : (
                 <div className="account-avatar account-avatar-fallback" aria-hidden="true">
                   {avatarLabel}
@@ -202,15 +230,40 @@ function HomePage() {
                         <p>
                           {room.participantCount}/{room.maxParticipants} participants
                         </p>
+                        <p>Selection limit: {room.maxSelectionsPerUser ?? 3} per user</p>
                         {isHost ? (
                           <div className="room-card-actions">
-                            <input
-                              type="number"
-                              min="2"
-                              max="50"
-                              value={roomDrafts[room.id] ?? room.maxParticipants}
-                              onChange={(event) => handleRoomDraftChange(room.id, event.target.value)}
-                            />
+                            <label className="room-card-field">
+                              <span>Max participants</span>
+                              <input
+                                type="number"
+                                min="2"
+                                max="50"
+                                value={roomDrafts[room.id]?.maxParticipants ?? String(room.maxParticipants)}
+                                onChange={(event) =>
+                                  handleRoomDraftChange(room.id, "maxParticipants", event.target.value)
+                                }
+                              />
+                            </label>
+                            <label className="room-card-field">
+                              <span>Selections per user</span>
+                              <input
+                                type="number"
+                                min="1"
+                                max="10"
+                                value={
+                                  roomDrafts[room.id]?.maxSelectionsPerUser ??
+                                  String(room.maxSelectionsPerUser ?? 3)
+                                }
+                                onChange={(event) =>
+                                  handleRoomDraftChange(
+                                    room.id,
+                                    "maxSelectionsPerUser",
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </label>
                             <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
                               Save
                             </button>
@@ -251,25 +304,28 @@ function HomePage() {
         )}
 
         <section className="landing-hero">
-          <div className="hero-text">
-            <img className="hero-tagline-image" src={taglineImage} alt="Let Fate Pick the Table" />
-            <p>
-              Pick a place to eat together in the most fun way possible.
-            </p>
+          <div className="hero-copy">
+            <div className="hero-text">
+              <img className="hero-tagline-image" src={taglineImage} alt="Let Fate Pick the Table" />
+              <p>
+                Pick a place to eat together in the most fun way possible.
+              </p>
+            </div>
+
+            <div className="hero-actions">
+              <button className="cta-button" type="button" onClick={() => navigate("/join")}>
+                Join Room
+              </button>
+              <button
+                className="cta-button secondary"
+                type="button"
+                onClick={() => navigate(isAuthenticated ? "/rooms/create" : "/auth")}
+              >
+                Create Room
+              </button>
+            </div>
           </div>
 
-          <div className="hero-actions">
-            <button className="cta-button" type="button" onClick={() => navigate("/join")}>
-              Join Room
-            </button>
-            <button
-              className="cta-button secondary"
-              type="button"
-              onClick={() => navigate(isAuthenticated ? "/rooms/create" : "/auth")}
-            >
-              Create Room
-            </button>
-          </div>
         </section>
 
       </section>

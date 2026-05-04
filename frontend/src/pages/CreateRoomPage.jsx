@@ -12,6 +12,7 @@ function CreateRoomPage() {
   const location = useLocation();
   const { isAuthenticated, isAuthReady, token } = useAuth();
   const [maxParticipantsInput, setMaxParticipantsInput] = useState("4");
+  const [maxSelectionsPerUserInput, setMaxSelectionsPerUserInput] = useState("3");
   const [roomDisplayName, setRoomDisplayName] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -34,8 +35,10 @@ function CreateRoomPage() {
 
     try {
       const maxParticipants = Number(maxParticipantsInput);
+      const maxSelectionsPerUser = Number(maxSelectionsPerUserInput);
       const { session } = await createSession(token, {
         maxParticipants,
+        maxSelectionsPerUser,
         roomDisplayName: roomDisplayName.trim(),
       });
       navigate(`/sessions/${session.sessionCode}`, {
@@ -75,6 +78,34 @@ function CreateRoomPage() {
     }
 
     setMaxParticipantsInput(String(normalizedValue));
+  }
+
+  function handleSelectionLimitChange(event) {
+    const digitsOnly = event.target.value.replace(/\D/g, "");
+
+    if (!digitsOnly) {
+      setMaxSelectionsPerUserInput("");
+      return;
+    }
+
+    const normalizedValue = String(Number(digitsOnly));
+    setMaxSelectionsPerUserInput(normalizedValue);
+  }
+
+  function handleSelectionLimitBlur() {
+    const normalizedValue = Number(maxSelectionsPerUserInput);
+
+    if (!Number.isInteger(normalizedValue) || normalizedValue < 1) {
+      setMaxSelectionsPerUserInput("1");
+      return;
+    }
+
+    if (normalizedValue > 10) {
+      setMaxSelectionsPerUserInput("10");
+      return;
+    }
+
+    setMaxSelectionsPerUserInput(String(normalizedValue));
   }
 
   if (!isAuthReady) {
@@ -132,6 +163,21 @@ function CreateRoomPage() {
                   onChange={handleCapacityChange}
                   onBlur={handleCapacityBlur}
                 />
+              </label>
+
+              <label>
+                <span>Selections per user later</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={maxSelectionsPerUserInput}
+                  onChange={handleSelectionLimitChange}
+                  onBlur={handleSelectionLimitBlur}
+                />
+                <small className="room-field-hint">
+                  How many recommended restaurants each person can shortlist later.
+                </small>
               </label>
 
               <button className="cta-button auth-submit" type="submit" disabled={isSubmitting}>

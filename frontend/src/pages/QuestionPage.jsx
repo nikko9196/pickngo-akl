@@ -130,6 +130,17 @@ function QuestionPage() {
   }, [navigate, session]);
 
   useEffect(() => {
+    if (!session || !["generating", "selecting"].includes(session.status)) {
+      return;
+    }
+
+    navigate(`/sessions/${session.sessionCode}/recommendation`, {
+      replace: true,
+      state: { inviteSession: session },
+    });
+  }, [navigate, session]);
+
+  useEffect(() => {
     setSelectedOptionId("");
     setSelectedOptionIds([]);
     setTextAnswer("");
@@ -235,14 +246,14 @@ function QuestionPage() {
   }
 
   if (!isAuthReady) {
-    return <main className="room-page-shell room-page-status">Restoring session...</main>;
+    return <main className="question-page-shell question-page-status">Restoring session...</main>;
   }
 
   return (
-    <main className="session-shell create-room-shell">
-      <section className="room-page-frame session-page-frame question-screen-frame">
+    <main className="question-page-shell">
+      <section className="question-screen-frame">
         <div
-          className="create-room-background question-page-background"
+          className="question-page-background"
           aria-hidden="true"
           style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
         />

@@ -79,13 +79,26 @@ function SessionPage() {
   }, [initialSession, isAuthReady, isAuthenticated, sessionCode, token]);
 
   useEffect(() => {
-    if (session && session.status !== "waiting") {
-      navigate(`/sessions/${session.sessionCode}/question`, {
+    if (!session || session.status === "waiting") {
+      return;
+    }
+
+    const nextPath =
+      session.status === "questioning"
+        ? `/sessions/${session.sessionCode}/question`
+        : `/sessions/${session.sessionCode}/recommendation`;
+
+    if (location.pathname === nextPath) {
+      return;
+    }
+
+    if (session) {
+      navigate(nextPath, {
         replace: true,
         state: { inviteSession: session },
       });
     }
-  }, [navigate, session]);
+  }, [location.pathname, navigate, session]);
 
   const qrCodeUrl = useMemo(() => {
     if (!session?.joinUrl) {
@@ -147,9 +160,9 @@ function SessionPage() {
 
   return (
     <main className="session-shell create-room-shell">
-      <section className="room-page-frame session-page-frame">
+      <section className="session-page-frame">
         <div
-          className="create-room-background session-page-background"
+          className="session-page-background"
           aria-hidden="true"
           style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
         />
@@ -173,7 +186,7 @@ function SessionPage() {
             <p>Loading room...</p>
           </section>
         ) : (
-          <section className="session-layout create-room-page-layout session-page-layout">
+          <section className="session-layout session-page-layout">
             <section className="session-panel session-page-panel">
               <div className="session-panel-head">
                 <h2>People in this room</h2>
@@ -186,6 +199,13 @@ function SessionPage() {
                   </p>
                 ) : null}
               </div>
+
+              {session?.maxSelectionsPerUser ? (
+                <p className="session-config-note">
+                  Each person can shortlist up to <strong>{session.maxSelectionsPerUser}</strong>{" "}
+                  recommendation{session.maxSelectionsPerUser === 1 ? "" : "s"} later.
+                </p>
+              ) : null}
 
               {isLoading ? <p className="account-dropdown-state">Loading participants...</p> : null}
               {errorMessage ? <p className="auth-status error">{errorMessage}</p> : null}
@@ -200,12 +220,16 @@ function SessionPage() {
                     participant.avatarUrl && !brokenAvatarUrls[participant.userId];
 
                   return (
-                    <article className="participant-card" key={participant.userId}>
+                    <article
+                      className={`participant-card${isCurrentUser ? " participant-card-current" : ""}`}
+                      key={participant.userId}
+                    >
                       {showAvatarImage ? (
                         <img
                           className="participant-avatar"
                           src={participant.avatarUrl}
                           alt={participant.roomDisplayName}
+                          referrerPolicy="no-referrer"
                           onError={() =>
                             handleParticipantAvatarError(participant.userId, participant.avatarUrl)
                           }
@@ -223,7 +247,6 @@ function SessionPage() {
                         </div>
                       </div>
 
-                      {isCurrentUser ? <span className="participant-you">You</span> : null}
                     </article>
                   );
                 })}

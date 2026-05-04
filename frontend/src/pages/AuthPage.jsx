@@ -95,7 +95,7 @@ function AuthPage() {
         />
 
         <header className="top-banner">
-          <div className="brand-lockup">
+          <button className="brand-lockup brand-lockup-button" type="button" onClick={() => navigate("/")}>
             <div className="brand-name" aria-label="PICK n GO AKL">
               <span className="brand-word brand-word-left">PICK</span>
               <span className="brand-word brand-word-connector">n</span>
@@ -105,7 +105,7 @@ function AuthPage() {
               <span>AKL</span>
               <img src={logoPointer} alt="" aria-hidden="true" />
             </div>
-          </div>
+          </button>
         </header>
 
         <section className="auth-page-layout">
