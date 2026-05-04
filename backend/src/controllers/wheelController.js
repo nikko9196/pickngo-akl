@@ -243,12 +243,14 @@ async function buildWheel(req, res) {
       roomDisplayName: item.roomDisplayName,
     }));
     session.currentWheelResult = null;
+    session.lastWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
       acceptCount: 0,
       respinCount: 0,
       votedUserIds: [],
     };
+    session.lastVoteSummary = null;
 
     await session.save();
 
@@ -351,11 +353,21 @@ async function getCurrentWheel(req, res) {
       getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
     );
 
+    const lastWheelResult = session.lastWheelResult?.placeId
+      ? getRestaurantDetails({
+          selectionLookup,
+          snapshotLookup,
+          item: session.lastWheelResult,
+        })
+      : null;
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
         status: session.status,
         wheelItems: detailedWheelItems,
+        lastWheelResult,
+        lastVoteSummary: session.lastVoteSummary,
       },
     });
   } catch (error) {
