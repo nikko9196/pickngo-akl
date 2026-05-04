@@ -383,6 +383,9 @@ function CreateRoomPage() {
                   onChange={handleSelectionLimitChange}
                   onBlur={handleSelectionLimitBlur}
                 />
+                <small className="room-field-hint">
+                  How many recommended restaurants each person can shortlist later.
+                </small>
               </label>
 
               <div className="room-location-field">

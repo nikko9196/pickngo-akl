@@ -86,8 +86,8 @@ function JoinRoomPage() {
           </button>
         </header>
 
-        <section className="room-page-layout">
-          <aside className="room-panel create-room-panel">
+        <section className="room-page-layout join-room-layout">
+          <aside className="room-panel create-room-panel join-room-panel">
             <div className="auth-copy">
               <h2 className="room-page-title">Join a room</h2>
             </div>

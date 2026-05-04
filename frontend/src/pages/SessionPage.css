@@ -1,8 +1,7 @@
 .session-shell {
   width: 100%;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
+  min-height: 100svh;
+  display: block;
   background: #f7f7f1;
 }
 
@@ -21,30 +20,7 @@
   font-weight: 800;
 }
 
-.room-page-frame {
-  position: relative;
-  width: 390px;
-  height: 844px;
-  overflow: hidden;
-  background: #f7f7f1;
-}
-
-.create-room-background {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 390px;
-  height: 320px;
-  background-image: var(--create-room-background-image);
-  background-position: bottom center;
-  background-repeat: no-repeat;
-  background-size: 100% auto;
-  opacity: 0.7;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.top-banner {
+.session-page-frame .top-banner {
   position: relative;
   display: flex;
   align-items: center;
@@ -222,18 +198,45 @@
 }
 
 .session-page-frame {
-  background: #f7f7f1;
+  position: relative;
+  width: 100%;
+  min-height: 100svh;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, #cfe8ec 0%, rgba(207, 232, 236, 0.8) 20%, rgba(207, 232, 236, 0) 38%, rgba(207, 232, 236, 0) 62%, rgba(207, 232, 236, 0.8) 80%, #cfe8ec 100%),
+    linear-gradient(180deg, #d8eff3 0%, #e9f4ef 42%, #f7f7f1 100%);
+  display: flex;
+  flex-direction: column;
 }
 
 .session-page-background {
-  opacity: 0.7;
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  width: clamp(390px, 42vw, 640px);
+  height: clamp(160px, 14vw, 230px);
+  background-image: var(--create-room-background-image);
+  background-position: bottom center;
+  background-repeat: no-repeat;
+  background-size: 100% auto;
+  opacity: 1;
+  pointer-events: none;
+  transform: translateX(-50%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 8%, #000 22%, #000 78%, rgba(0, 0, 0, 0.2) 92%, transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0%, rgba(0, 0, 0, 0.2) 8%, #000 22%, #000 78%, rgba(0, 0, 0, 0.2) 92%, transparent 100%);
+  z-index: 0;
 }
 
 .session-layout {
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 24px;
-  padding: 18px 20px 32px;
+  flex: 1;
+  align-content: center;
+  min-height: calc(100svh - 115px);
+  padding: 48px 20px 120px;
 }
 
 .session-loading-state {
@@ -248,8 +251,7 @@
 }
 
 .session-page-layout {
-  align-content: start;
-  padding-top: 36px;
+  align-content: center;
 }
 
 .session-panel {
@@ -263,19 +265,24 @@
 .session-panel h2 {
   color: #173189;
   font-family: var(--display-font);
+  font-size: clamp(1.55rem, 3.5vw, 1.9rem);
+  line-height: 1.05;
+  white-space: normal;
 }
 
 .session-page-panel {
-  width: 100%;
-  max-width: 340px;
+  width: clamp(340px, 30vw, 480px);
+  max-width: calc(100vw - 32px);
   justify-self: center;
 }
 
 .session-panel-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
 }
 
 .session-panel-head p {
@@ -295,6 +302,8 @@
 }
 
 .session-waiting-badge {
+  justify-self: end;
+  max-width: 100%;
   margin: 0;
   padding: 6px 10px;
   border-radius: 999px;
@@ -323,8 +332,8 @@
   display: grid;
   justify-items: center;
   justify-self: center;
-  width: 100%;
-  max-width: 340px;
+  width: clamp(340px, 30vw, 480px);
+  max-width: calc(100vw - 32px);
 }
 
 .participant-list {
@@ -340,8 +349,15 @@
   gap: 14px;
   align-items: center;
   padding: 14px;
+  border: 2px solid transparent;
   border-radius: 22px;
   background: rgba(23, 49, 137, 0.06);
+}
+
+.participant-card-current {
+  border-color: #ffd14b;
+  background: rgba(255, 209, 75, 0.16);
+  box-shadow: 0 0 0 4px rgba(255, 209, 75, 0.16);
 }
 
 .participant-avatar {
@@ -370,8 +386,7 @@
   font-size: 1.05rem;
 }
 
-.participant-name-row span,
-.participant-you {
+.participant-name-row span {
   padding: 5px 10px;
   border-radius: 999px;
   font-size: 0.76rem;
@@ -388,16 +403,11 @@
   color: rgba(23, 49, 137, 0.72);
 }
 
-.participant-you {
-  background: rgba(23, 49, 137, 0.12);
-  color: #173189;
-}
-
 .session-share-floating {
   position: absolute;
   right: 18px;
   bottom: 18px;
-  z-index: 2;
+  z-index: 3;
   width: 52px;
   height: 52px;
   border: 0;
@@ -527,25 +537,41 @@
 }
 
 @media (min-width: 900px) {
-  .top-banner {
+  .session-page-frame .top-banner {
     min-height: 128px;
     padding: 28px 24px 20px;
+  }
+
+  .session-panel {
+    padding: clamp(24px, 2vw, 34px);
+  }
+
+  .session-panel h2 {
+    font-size: clamp(1.7rem, 1.35vw, 1.9rem);
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 900px) and (max-width: 1599px) {
+  .session-panel h2 {
+    white-space: normal;
   }
 }
 
 @media (max-width: 640px) {
-  .top-banner {
+  .session-page-frame .top-banner {
     min-height: 115px;
     padding: 22px 16px 18px;
   }
 
-  .create-room-background {
-    width: 390px;
-    height: 320px;
+  .session-layout {
+    min-height: calc(100svh - 115px);
+    padding: 32px 14px 96px;
   }
 
-  .session-layout {
-    padding: 16px 14px 24px;
+  .session-page-background {
+    width: min(100%, 390px);
+    height: 190px;
   }
 
   .session-panel {
@@ -555,26 +581,23 @@
 
   .session-page-panel,
   .session-start-actions {
-    max-width: none;
+    width: min(100%, 360px);
+    max-width: calc(100vw - 28px);
   }
 
   .session-panel-head {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
   }
 
   .session-waiting-badge {
+    justify-self: start;
     text-align: left;
     white-space: normal;
   }
 
   .participant-card {
     grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .participant-you {
-    grid-column: 1 / -1;
-    justify-self: start;
   }
 
   .room-modal {

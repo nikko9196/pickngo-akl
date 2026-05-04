@@ -22,6 +22,7 @@ function HomePage() {
   const [isRoomsLoading, setIsRoomsLoading] = useState(false);
   const [activeRoomId, setActiveRoomId] = useState("");
   const [roomPendingDelete, setRoomPendingDelete] = useState(null);
+  const [brokenAccountAvatarUrl, setBrokenAccountAvatarUrl] = useState("");
   const { isAuthenticated, logout, token, user } = useAuth();
 
   useEffect(() => {
@@ -73,6 +74,9 @@ function HomePage() {
 
   const welcomeName = user?.displayName || user?.email || "Friend";
   const avatarLabel = welcomeName.trim().charAt(0).toUpperCase() || "U";
+  const showAccountAvatar = Boolean(
+    user?.avatarUrl && user.avatarUrl !== brokenAccountAvatarUrl
+  );
   const roomsById = useMemo(
     () =>
       rooms.reduce((lookup, room) => {
@@ -181,8 +185,14 @@ function HomePage() {
               type="button"
               onClick={() => setIsMenuOpen((current) => !current)}
             >
-              {user?.avatarUrl ? (
-                <img className="account-avatar" src={user.avatarUrl} alt={welcomeName} />
+              {showAccountAvatar ? (
+                <img
+                  className="account-avatar"
+                  src={user.avatarUrl}
+                  alt={welcomeName}
+                  referrerPolicy="no-referrer"
+                  onError={() => setBrokenAccountAvatarUrl(user.avatarUrl)}
+                />
               ) : (
                 <div className="account-avatar account-avatar-fallback" aria-hidden="true">
                   {avatarLabel}
@@ -294,25 +304,28 @@ function HomePage() {
         )}
 
         <section className="landing-hero">
-          <div className="hero-text">
-            <img className="hero-tagline-image" src={taglineImage} alt="Let Fate Pick the Table" />
-            <p>
-              Pick a place to eat together in the most fun way possible.
-            </p>
+          <div className="hero-copy">
+            <div className="hero-text">
+              <img className="hero-tagline-image" src={taglineImage} alt="Let Fate Pick the Table" />
+              <p>
+                Pick a place to eat together in the most fun way possible.
+              </p>
+            </div>
+
+            <div className="hero-actions">
+              <button className="cta-button" type="button" onClick={() => navigate("/join")}>
+                Join Room
+              </button>
+              <button
+                className="cta-button secondary"
+                type="button"
+                onClick={() => navigate(isAuthenticated ? "/rooms/create" : "/auth")}
+              >
+                Create Room
+              </button>
+            </div>
           </div>
 
-          <div className="hero-actions">
-            <button className="cta-button" type="button" onClick={() => navigate("/join")}>
-              Join Room
-            </button>
-            <button
-              className="cta-button secondary"
-              type="button"
-              onClick={() => navigate(isAuthenticated ? "/rooms/create" : "/auth")}
-            >
-              Create Room
-            </button>
-          </div>
         </section>
 
       </section>
