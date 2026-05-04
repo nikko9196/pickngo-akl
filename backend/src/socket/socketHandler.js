@@ -1,19 +1,65 @@
-const { findSessionById } = require('../services/sessionService');
+const { findSessionById, findSessionByCode } = require('../services/sessionService');
+const jwt = require("jsonwebtoken");
+
+// Helper to check if a userId is the host of a session
+async function isSessionHost(sessionId, userId) {
+    const session = await findSessionById(sessionId);
+    if (!session) return false;
+    console.log("isHost:", session.hostUserId.toString() === userId);
+    return session.hostUserId.toString() === userId;
+}
 
 const initSocket = (io) => {
     io.on("connection", (socket) => {
 
-        socket.on("join_session", ({ sessionCode, userid }) => {
+        socket.on("join_session", async ({ sessionCode, userId }) => {
+            if (!userId) {
+                console.warn("join_session missing userId");
+                return;
+            }
+
             socket.join(sessionCode);
-            socket.userid = userid;
+            socket.userId = userId;
+        
+            try {
+                const session = await findSessionByCode(sessionCode);
+                if (!session) return;
+        
+                // ✅ if wheel is mid-spin, send current spin state to the rejoining user
+                if (session.status === "voting" && session.currentWheelResult?.placeId) {
+                    socket.emit("spin", {
+                        prizeNumber: null, // they'll need to match by placeId instead
+                        placeId: session.currentWheelResult.placeId,
+                        finalSpin: session.finalSpin || false,
+                    });
+                }
+            } catch (error) {
+                console.error("Failed to send session state on join:", error);
+            }
         });
 
         socket.on("build_wheel", ({ sessionCode }) => {        // ✅ add this
           io.to(sessionCode).emit("wheel_built");
         });
 
-        socket.on("spin", async ({ sessionCode, prizeNumber, finalSpin }) => {
-            io.to(sessionCode).emit("spin", { prizeNumber, finalSpin });
+        // ✅ Host-only: spin
+        socket.on("spin", async ({ sessionCode, prizeNumber, finalSpin, sessionId }) => {
+            try {
+                const hostCheck = await isSessionHost(sessionId, socket.userId);
+                if (!hostCheck) {
+                    console.warn(`Unauthorized spin attempt by userId: ${socket.userId}`);
+                    return;
+                }
+        
+                io.to(sessionCode).emit("spin", {
+                    prizeNumber,
+                    finalSpin,
+                    startAt: Date.now() + 500 // for start-time sync of spinning time
+                });
+        
+            } catch (error) {
+                console.error("Failed to verify host for spin:", error);
+            }
         });
 
         socket.on("vote", async ({ sessionCode, sessionId }) => {
@@ -30,8 +76,18 @@ const initSocket = (io) => {
             }
         });
 
-        socket.on("respin", ({ sessionCode, isrespin, finalSpin }) => {
-            io.to(sessionCode).emit("respin_update", {isrespin, finalSpin});
+        // ✅ Host-only: respin decision
+        socket.on("respin", async ({ sessionCode, isrespin, finalSpin, sessionId }) => {
+            try {
+                const hostCheck = await isSessionHost(sessionId, socket.userId);
+                if (!hostCheck) {
+                    console.warn(`Unauthorized respin attempt by userId: ${socket.userId}`);
+                    return;
+                }
+                io.to(sessionCode).emit("respin_update", { isrespin, finalSpin });
+            } catch (error) {
+                console.error("Failed to verify host for respin:", error);
+            }
         });
 
         socket.on("reload_wheel", ({ sessionCode }) => {
@@ -39,7 +95,7 @@ const initSocket = (io) => {
         });
 
         socket.on("disconnect", () => {
-            console.log(`user ${socket.userid} disconnected`);
+            console.log(`user ${socket.userId} disconnected`);
         });
 
         socket.on("ready", async ({ sessionCode, sessionId }) => {
@@ -65,18 +121,21 @@ const initSocket = (io) => {
           }
         });
 
+        // ✅ Host-only: send reminder
         socket.on("send_reminder", async ({ sessionCode, sessionId }) => {
             try {
+                const hostCheck = await isSessionHost(sessionId, socket.userId);
+                if (!hostCheck) {
+                    console.warn(`Unauthorized reminder attempt by userId: ${socket.userId}`);
+                    return;
+                }
+
                 const session = await findSessionById(sessionId);
-        
                 const remindedUserIds = session.participants
                     .filter(p => !p.isReady)
-                    .map(p => p.userId);
-        
-                io.to(sessionCode).emit("reminder_sent", {
-                    remindedUserIds
-                });
-        
+                    .map(p => p.userId.toString());
+
+                io.to(sessionCode).emit("reminder_sent", { remindedUserIds });
             } catch (error) {
                 console.error("Failed to send reminder:", error);
             }
