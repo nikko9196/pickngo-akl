@@ -99,10 +99,7 @@ function buildSelectionLookup(entries) {
   const lookup = new Map();
 
   for (const entry of entries) {
-    const key = getWheelItemKey(
-      entry.recommendationSnapshotId,
-      entry.placeId,
-    );
+    const key = getWheelItemKey(entry.recommendationSnapshotId, entry.placeId);
 
     if (!lookup.has(key)) {
       lookup.set(key, entry);
@@ -166,7 +163,8 @@ function getRestaurantDetails({ selectionLookup, snapshotLookup, item }) {
 
   return {
     userId: item.userId || selectionEntry?.userId || "",
-    roomDisplayName: item.roomDisplayName || selectionEntry?.roomDisplayName || "",
+    roomDisplayName:
+      item.roomDisplayName || selectionEntry?.roomDisplayName || "",
     recommendationSnapshotId,
     placeId: item.placeId,
     name: baseRestaurant.name || snapshotRestaurant?.name || "",
@@ -210,6 +208,20 @@ async function buildWheel(req, res) {
 
     const { selectionEntries, selectionLookup, snapshotLookup } =
       await buildWheelContext(session);
+
+    if (["voting", "completed"].includes(session.status)) {
+      const detailedWheelItems = (session.wheelItems || []).map((item) =>
+        getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
+      );
+
+      return res.status(200).json({
+        session: {
+          id: session._id.toString(),
+          status: session.status,
+          wheelItems: detailedWheelItems,
+        },
+      });
+    }
 
     if (!selectionEntries.length) {
       return res.status(404).json({
@@ -295,7 +307,8 @@ async function spinWheel(req, res) {
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
     const selectedItem = session.wheelItems[randomIndex];
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const detailedResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
@@ -346,7 +359,8 @@ async function getCurrentWheel(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const currentWheelItems = session.wheelItems || [];
 
     const detailedWheelItems = currentWheelItems.map((item) =>
@@ -390,7 +404,8 @@ async function getFinalWheelResult(req, res) {
       });
     }
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const finalResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
