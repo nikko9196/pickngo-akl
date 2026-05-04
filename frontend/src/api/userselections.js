@@ -90,3 +90,7 @@ export function collectReadyStatus(token, sessionId) {
 export function getFinalWheelResult(token, sessionId) {
   return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/result`, token);
 }
+
+export function getWheelState(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/state`, token);
+}
