@@ -14,7 +14,7 @@ import { io } from "socket.io-client";
 import './Wheelpage.css';
 import { getSessionByCode } from "../api/sessions";
 import { buildWheelApi, spinWheel, getHost, submitVoteApi, ifRespin, reloadWheel,
-sendReady, sendRemind, collectReadyStatus} from "../api/userselections";
+sendReady, sendRemind, collectReadyStatus, getWheelState} from "../api/userselections";
 import { useAuth } from "../context/useAuth";
 import { getCurrentUser } from "../api/auth";
 
@@ -68,7 +68,7 @@ export default function Wheelpage() {
 
     // --- User State ---
     const [getready, setReady] = useState(false);
-    const [isHost, setIsHost] = useState(true); // get this from API/session
+    const [isHost, setIsHost] = useState(false); // get this from API/session
     const [spinready, setSpinReady] = useState(false); // TODO: to pass value to spinReady from API
     const [readyCount, setReadyCount] = useState(0);
     const [totalParticipants, setTotalParticipants] = useState(0);
@@ -79,14 +79,15 @@ export default function Wheelpage() {
     // --- Vote State ---
     const [voted, setVoted] = useState(false);
     const [votes, setVotes] = useState({ yes: 0, respin: 0 });
-    const [respin, setRespin] = useState(""); // to pass parameters true as respin and false as happy
+    const [respin, setRespin] = useState(null); // to pass parameters true as respin and false as happy
     const [timeLeft, setTimeLeft] = useState(DURATION);
     const [lastResult, setLastResult] = useState(null);
 
     // --- Refs (to capture latest values in async callbacks) ---
     const resultRef = useRef(result); // Use refs to capture the latest values
     const votesRef = useRef(votes); // Use refs to capture the latest values
-    const isHostRef = useRef(true); // ✅ add here
+    const isHostRef = useRef(false); // ✅ add here
+    const dataRef = useRef(null);
 
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
@@ -100,10 +101,10 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             // const { session: spinResult } = await spinWheel(token, sessionId);
-            console.log("token", token);
+            console.log(new Date().toLocaleTimeString(),"token", token);
             const response = await spinWheel(token, sessionId);
             const restaurantName = response.session.currentWheelResult.name;
-            console.log("restaurant name:", restaurantName);
+            console.log(new Date().toLocaleTimeString(),"restaurant name:", restaurantName);
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
             
@@ -118,7 +119,11 @@ export default function Wheelpage() {
             setVoted(false);
     
             // notify all users in the session to spin
-            socket.emit("spin", { sessionCode, prizeNumber: newPrize, finalSpin: ifFinalSpin });
+            socket.emit("spin", { 
+                sessionCode, 
+                prizeNumber: newPrize, 
+                finalSpin: ifFinalSpin, 
+                sessionId });
 
         } catch (error) {
             console.error("Failed to spin wheel:", error);
@@ -126,15 +131,17 @@ export default function Wheelpage() {
     };
 
     const handleStop = () => {
+        const spinResult = data[prizeNumber].option;
+
         setMustSpin(false);
-        setResult(data[prizeNumber].option);
+        setResult(spinResult);
         setHovered(false);
 
         // navigate after wheel stops if final spin
         if (finalSpin) {
             setTimeout(() => {
                 navigate(`/sessions/${sessionCode}/result`, {
-                    state: { votes: { yes: 0, respin: 0 }, result: resultRef.current }
+                    state: { votes: { yes: 0, respin: 0 }, result: spinResult }
                 });
             }, 3000); // small delay so user sees the result before navigating
         }
@@ -157,9 +164,11 @@ export default function Wheelpage() {
     const handleReady = async () => {
         try {
             setReady(true);
-    
+            
+            // 1. MUST update DB first
             await sendReady(token, sessionId);
-    
+            
+            // 2. THEN notify server
             socket.emit("ready", {sessionCode,sessionId});
     
         } catch (err) {
@@ -171,6 +180,8 @@ export default function Wheelpage() {
     // ============================================================
     // EFFECTS
     // ============================================================
+
+    useEffect(() => { dataRef.current = data; }, [data]);
 
     // keep sessionIdRef and sessionId in sync
     useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
@@ -200,54 +211,89 @@ export default function Wheelpage() {
         isLoadingRef.current = true;
 
         try {
-            console.log("1. starting loadWheelData");
+            console.log(new Date().toLocaleTimeString(),"1. starting loadWheelData");
             const { session } = await getSessionByCode(token, sessionCode);
-            console.log("2. got session", session.status);
+            console.log(new Date().toLocaleTimeString(),"2. got session status:", session.status);
             const id = session.id;
             setSessionId(id);
 
             const { readySummary } = await collectReadyStatus(token, id);
-            console.log("3. got ready summary");
 
             setReadyCount(readySummary.readyCount);
             setTotalParticipants(readySummary.totalParticipants);
             setParticipants(readySummary.participants);
             setSpinReady(readySummary.allReady);
+            console.log("readyCount",readySummary.readyCount);
+            console.log("check Participants",readySummary.participants);
+            console.log(new Date().toLocaleTimeString(),"3. got ready summary:", readySummary.allReady);
 
             const { user } = await getCurrentUser(token);
-            console.log("4. got current user");
             setCurrentUserId(user.id);
+
             const currentParticipant = readySummary.participants.find(
                 p => p.userId === user.id
             );
+
             if (currentParticipant) {
                 setReady(currentParticipant.isReady);
             }
 
-            let wheelData;
+            console.log(new Date().toLocaleTimeString(),"4. got current user_id:", user.id);
+            
+            // ✅ restore voting state if user rejoined mid-session
+            const wheelState = await getWheelState(token, id);
+            // console.log("wheelState full:", JSON.stringify(wheelState, null, 2)); // 👈
+            const currentResult = wheelState.session?.currentWheelResult;
+            console.log("currentResult", currentResult);
+            const sessionStatus = wheelState.session?.status;
+            const sessionData = wheelState.session ?? wheelState;
+            const wheelItems = sessionData.wheelItems || [];
+            // const currentWheelResult = sessionData.currentWheelResult?.placeId || [];
+            
+            console.log("currentWheelResult", wheelItems);
 
-            if (!session.wheelItems?.length) {
-                const { session: built } = await buildWheelApi(token, id);
-                console.log("built session:", JSON.stringify(built, null, 2));
-                wheelData = built;
+            // ✅ Only build wheel if status is selecting
+            let finalWheelItems = wheelItems;
+            if (sessionStatus === 'selecting') {
+                const { session: newBuilt } = await buildWheelApi(token, id);
+                finalWheelItems = newBuilt.wheelItems;
+                console.log("token",token);
                 socket.emit("build_wheel", { sessionCode });
-            } else {
-                // already built, skip buildWheelApi
-                wheelData = session;
             }
 
-            const fetchedData = wheelData.wheelItems.map((item, i) => ({
+            const fetchedData = finalWheelItems.map((item, i) => ({
                 option: item.name,
+                placeId: item.placeId,
                 roomDisplayName: item.roomDisplayName,
                 style: {
                     backgroundColor: wheelcolors[i % wheelcolors.length],
                     textColor: '#ffffff'
                 }
             }));
+
             setData(fetchedData);
-            console.log("5. wheel items:", data.length);
-            console.log("6. loadWheelData complete");
+            dataRef.current = fetchedData;
+
+
+            if (sessionStatus === "voting" && currentResult?.placeId) {
+                // ✅ wheel already stopped, restore voting UI
+                const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
+                if (prize >= 0) {
+                    setPrizeNumber(prize);
+                    setResult(fetchedData[prize].option);
+                    setMustSpin(false);
+                    spinActivate(false);
+                }
+            } 
+
+            console.log(new Date().toLocaleTimeString(),"5. wheel items:", fetchedData.length);
+            console.log(new Date().toLocaleTimeString(),"6. loadWheelData complete");
+
+            // Re-emit join_session so backend can send current spin state
+            socket.emit("join_session", { sessionCode, userId: user.id });
+
             isLoadingRef.current = false; // reset on error to allow retry
+
         } catch (error) {
             console.error("Failed to load wheel data:", error);
             isLoadingRef.current = false; // reset on error to allow retry
@@ -285,18 +331,23 @@ export default function Wheelpage() {
     useEffect(() => {
         if (!token || !sessionCode) return; // use token instead of userid
 
-        // join the session
-        socket.emit("join_session", {sessionCode, userid: token });
-
         // listen for spin from host
-        socket.on("spin", (data) => {
-            setPrizeNumber(data.prizeNumber);
-            setFinalSpin(data.finalSpin); // non-host users get it here
+        socket.on("spin", ({ prizeNumber, placeId, finalSpin, startAt}) => {
+            const resolvedPrize = prizeNumber !== null
+                ? prizeNumber
+                : dataRef.current?.findIndex(item => item.placeId === placeId) ?? 0;
+            
+            // for start-time sync of spinning time accross different players
+            const delay = startAt - Date.now();
+        
+            setPrizeNumber(resolvedPrize);
+            setFinalSpin(finalSpin);
             setResult(null);
-            setMustSpin(true);
-            spinActivate(true);
-            setRespin("");
-            setVoted(false);
+        
+            setTimeout(() => {
+                setMustSpin(true);
+                spinActivate(true);
+            }, Math.max(delay, 0));
         });
 
         socket.on("vote_update", (counts) => {
@@ -305,24 +356,32 @@ export default function Wheelpage() {
 
         // listen for respin decision
         socket.on("respin_update", ({ isrespin, finalSpin }) => {
-            console.log("respin_update received, finalSpinRef.current:", finalSpin);
+            const current = resultRef.current;
+            const currentVotes = votesRef.current;
+        
             setRespin(isrespin);
+        
             if (!isrespin || finalSpin === true) {
                 navigate(`/sessions/${sessionCode}/result`, {
-                    state: {votes: votesRef.current, result: resultRef.current}
+                    state: { votes: currentVotes, result: current }
                 });
-              }
-            
-            if (isrespin  && !finalSpin) {
-                setLastResult({ result: resultRef.current, votes: votesRef.current }); // all users
+                return;
             }
+        
+            // TODO: get from DB
+            // if (isrespin && !finalSpin) {
+            setLastResult({
+                result: current,
+                votes: currentVotes
+            });
+        
+            // }
         });
 
         // listen for wheel built - loads wheel data for non-host users
         socket.on("wheel_built", async () => {
             try {
                 const { session } = await getSessionByCode(token, sessionCode);
-                // const { session: wheelData } = await buildWheelApi(token, session.id);
 
                 // use reloadWheel instead of buildWheelApi
                 const { session: wheelData } = await reloadWheel(token, session.id);
@@ -364,15 +423,19 @@ export default function Wheelpage() {
             }
         });
 
-        socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
-            setReadyCount(readyCount);
-            setTotalParticipants(totalParticipants);
-            setSpinReady(allReady);
-            setParticipants(participants);
+        // socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
+        //     setReadyCount(readyCount);
+        //     setTotalParticipants(totalParticipants);
+        //     setSpinReady(allReady);
+        //     setParticipants(participants);
+        // });
+
+        socket.on("ready_update", async () => {
+            await refreshReadyStatus();
         });
 
         socket.on("reminder_sent", ({ remindedUserIds }) => {
-            console.log("REMINDER RECEIVED:", { remindedUserIds });
+            console.log(new Date().toLocaleTimeString(),"REMINDER RECEIVED:", { remindedUserIds });
             setReminders({ remindedUserIds });
         
             if (!currentUserId) return; // wait until loaded
@@ -422,10 +485,14 @@ export default function Wheelpage() {
         const timer = setTimeout(async () => {
             // if (!isHost) return; // only host resolves the vote
             if (!isHostRef.current) return; // use ref not state
+            console.log("timer fired, isHost:", isHostRef.current); // 👈
+            console.log("resultRef.current:", resultRef.current); // 👈
+            console.log("sessionIdRef.current:", sessionIdRef.current); // 👈
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
+                console.log("shouldRespin:", shouldRespin); // 👈
                 setRespin(shouldRespin);
-                socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin });
+                socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin, sessionId: sessionIdRef.current });
         
                 if (!shouldRespin) {
                     navigate(`/sessions/${sessionCode}/result`, {
@@ -631,7 +698,8 @@ export default function Wheelpage() {
                     {/* Last Result */}
                     {lastResult && (
                         <p className="wp-text3">
-                            Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin})
+                            {/* Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin}) */}
+                            Last Pick: {result} (👍 {votesRef.current.yes} / 🔄 {votesRef.current.respin})
                         </p>
                     )}
         
@@ -670,6 +738,7 @@ export default function Wheelpage() {
                                         mustStartSpinning={mustSpin}
                                         prizeNumber={prizeNumber}
                                         data={data}
+                                        spinDuration={0.5} // 👈 MUST be same for all users
                                         onStopSpinning={handleStop}
                                         fontSize={14}
                                         outerBorderColor="#ffffff"
