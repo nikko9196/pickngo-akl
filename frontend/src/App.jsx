@@ -1,5 +1,7 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
-
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Wheelpage from "./pages/Wheelpage";
+import ResultPage from "./pages/ResultPage";
 import { AuthProvider } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
 import CreateRoomPage from "./pages/CreateRoomPage";
@@ -8,9 +10,12 @@ import JoinRoomPage from "./pages/JoinRoomPage";
 import QuestionPage from "./pages/QuestionPage";
 import SessionPage from "./pages/SessionPage";
 
+import RecommendationPage from "./pages/RecommendationPage";
+
 function App() {
   return (
     <BrowserRouter>
+      {/* </div> */}
       <AuthProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -20,6 +25,9 @@ function App() {
           <Route path="/join/:sessionCode" element={<JoinRoomPage />} />
           <Route path="/sessions/:sessionCode" element={<SessionPage />} />
           <Route path="/sessions/:sessionCode/question" element={<QuestionPage />} />
+          <Route path="/sessions/:sessionCode/recommendation" element={<RecommendationPage />} />
+          <Route path="/sessions/:sessionCode/wheel" element={<><Navbar /><Wheelpage /></>} />
+          <Route path="/sessions/:sessionCode/result" element={<><Navbar /><ResultPage /></>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

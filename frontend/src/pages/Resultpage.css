@@ -1,0 +1,225 @@
+/* --- Result Page --- */
+.result-page {
+    position: relative;
+    width: 100%;
+    margin: 0 auto;
+    background: #F7F7F1;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 115px);
+    padding: 40px 80px;
+    box-sizing: border-box;
+}
+
+.result-title {
+    font-family: 'Suez One', serif;
+    font-size: 40px;
+    color: #081D70;
+    text-align: left;
+    padding: 0 0 20px 0;
+    margin: 0;
+}
+
+/* --- Main Layout (side by side on desktop) --- */
+.result-main {
+    display: flex;
+    flex-direction: row;
+    gap: 40px;
+    align-items: stretch;
+    flex: 1;
+}
+
+/* --- Left: Card + Rating --- */
+.result-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    flex: 1;
+}
+
+/* --- Right: Photo --- */
+.result-photo-container {
+    position: relative;
+    flex: 1;
+    min-height: 500px;
+    overflow: hidden;
+    border-radius: 16px;
+    flex-shrink: 0;
+}
+
+.result-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.result-photo-overlay {
+    display: none;
+}
+
+/* --- Card --- */
+.result-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+    position: relative;
+}
+
+.result-restaurant-name {
+    font-family: 'Suez One', serif;
+    font-size: 32px;
+    color: #081D70;
+    margin: 0 0 8px 0;
+}
+
+.result-restaurant-type {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #F27533;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+
+.result-restaurant-address {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: #555;
+    margin: 0 0 24px 0;
+}
+
+/* --- Vote Row --- */
+.result-vote-row {
+    display: flex;
+    justify-content: flex-start;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.result-vote-box {
+    background: #F7F8FC;
+    border-radius: 8px;
+    padding: 14px 30px;
+    text-align: center;
+}
+
+.result-vote-count {
+    font-family: 'Suez One', serif;
+    font-size: 32px;
+    color: #081D70;
+    margin: 0;
+}
+
+.result-vote-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: #252C37;
+    margin: 0;
+}
+
+/* --- Quote --- */
+.result-quote {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-style: italic;
+    color: #888;
+    text-align: left;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* --- Rating --- */
+.result-rating-container {
+    padding: 24px 30px;
+    background: #ffffff;
+    border-radius: 16px;
+    text-align: left;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.result-rating-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #252C37;
+    margin: 0 0 12px 0;
+}
+
+.result-stars {
+    display: flex;
+    justify-content: flex-start;
+    gap: 10px;
+}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+@media (max-width: 430px) {
+    .result-page {
+        max-width: 390px;
+        padding: 0;
+    }
+
+    .result-title {
+        font-size: 28px;
+        text-align: center;
+        padding: 20px 0 10px;
+    }
+
+    .result-main {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .result-left {
+        gap: 10px;
+        padding: 0 20px 20px 20px;
+    }
+
+    .result-photo-container {
+        width: 100%;
+        min-height: 220px;
+        border-radius: 0;
+        order: -1;
+    }
+
+    .result-photo-overlay {
+        display: block;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: linear-gradient(transparent, #F7F8FC);
+    }
+
+    .result-card {
+        padding: 20px;
+        margin-top: -20px;
+    }
+
+    .result-restaurant-name {
+        font-size: 22px;
+    }
+
+    .result-vote-row {
+        justify-content: center;
+    }
+
+    .result-vote-count {
+        font-size: 28px;
+    }
+
+    .result-quote {
+        text-align: center;
+    }
+
+    .result-rating-container {
+        padding: 20px;
+        text-align: center;
+    }
+
+    .result-stars {
+        justify-content: center;
+    }
+}

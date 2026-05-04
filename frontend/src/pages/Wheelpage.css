@@ -1,0 +1,445 @@
+/* ============================================================
+   WHEELPAGE STYLES
+   Mobile breakpoint: 800px (when you cannot see the spinner), max-width is set as 430px
+   ============================================================ */
+
+/* --- Page Layout --- */
+.wp-page {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    min-height: calc(100vh - 115px);
+    overflow: hidden;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: row;
+    padding: 40px 80px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 800px) {
+    .wp-page {
+        max-width: 430px;
+        flex-direction: column;
+        padding: 50px;
+    }
+}
+
+/* --- Button + Text Section --- */
+.wp-button-n-text {
+    min-height: auto;
+    padding: 30px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+    flex: 1;  /* split space equally with wheel */
+}
+
+@media (max-width: 800px) {
+    .wp-button-n-text {
+        min-height: 220px;
+        padding: unset;
+        background: unset;
+        border-radius: unset;
+        box-shadow: unset;
+    }
+}
+
+/* --- Top Buttons --- */
+.wp-top-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 40px;
+    gap: 10px;
+}
+
+@media (max-width: 800px) {
+    .wp-top-buttons {
+        gap: 0px;
+    }
+}
+
+/* --- Black Buttons (base) --- */
+.wp-black-button {
+    width: 45%;
+    height: 50px;
+    border-radius: 5px;
+    background: #252C37;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    border: none;
+    font-weight: 700;
+    min-width: 200px;
+}
+
+@media (max-width: 800px) {
+    .wp-black-button {
+        min-width: 100px;
+    }
+}
+
+.wp-black-button--left {
+    font-size: 16px;
+    margin-right: auto;  
+}
+
+.wp-black-button--right {
+    font-size: 14px;
+    margin-left: auto;
+}
+
+/* --- Status Container --- */
+.wp-status-container {
+    width: 100%;
+}
+
+/* --- Status Text --- */
+.wp-text1 {
+    font-family: 'Suez One', serif;
+    font-weight: 400;
+    font-size: 28px;
+    color: #081D70;
+    margin: 0 0 5px 0;
+    text-align: left;
+    width: 100%;
+    min-width: 300px;
+}
+
+.wp-text2 {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #081D70;
+    margin: 0 0 10px 0;
+    text-align: left;
+    width: 100%;
+    min-width: 300px;
+}
+
+.wp-text3 {
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    margin: 0 0 0 0;
+    text-align: left;
+    min-width: 300px;
+}
+
+@media (max-width: 800px) {
+    .wp-text1,
+    .wp-text2,
+    .wp-text3 {
+        min-width: unset;
+    }
+}
+
+/* --- Orange (Ready) Button --- */
+.wp-orange-button {
+    width: 150px;
+    height: 50px;
+    border-radius: 5px;
+    background: #F27533;
+    color: white;
+    font-family: 'Inter', sans-serif;
+    font-size: 20px;
+    border: none;
+    font-weight: 700;
+    align-self: flex-start;
+    display: block; /* behaves like a block inside flex */
+    position: relative;
+    z-index: 2; /*make the button not overlayed by wheel div element*/
+}
+
+/* --- Spinning Wheel Section --- */
+.wp-wheelntitle {
+    flex: 1;  /* split space equally with text */
+}
+.curvy-text {
+    margin-left: 7%;
+    font-family: 'Suez One', serif;
+    font-size: 35px;
+    fill: #081D70;
+    font-weight: 400;
+}
+@media (max-width: 800px) {
+    .curvy-text {
+        display: none;
+    }
+}
+.wp-spinning-wheel {
+    /* width: 100%; */
+    display: flex;
+    justify-content: center;
+    margin-top: 60px; /*check with height of svg*/
+}
+
+@media (max-width: 800px) {
+    .wp-spinning-wheel {
+        width: 100%;
+        margin-top: 60%;
+    }
+}
+
+/* --- Wheel Container --- */
+.wp-wheel-container {
+    position: relative;
+    width: 350px;
+    height: 350px;
+    transform: scale(1.2);
+    transform-origin: center center;
+}
+
+@media (max-width: 800px) {
+    .wp-wheel-container {
+        width: 90vw;
+        height: unset;
+        transform: scale(2);
+    }
+}
+
+/* --- Wheel Frame Image --- */
+.wp-wheel-image {
+    position: absolute;
+    top: 10px;
+    left: 30px;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    object-fit: contain;
+    transform: scale(1.3);
+}
+
+@media (max-width: 800px) {
+    .wp-wheel-image {
+        top: 0;
+        left: 0;
+        transform: none;
+    }
+}
+
+/* --- Spinner Button --- */
+.wp-spinner {
+    position: absolute;
+    top: 41%;
+    left: 47%;
+    width: 25%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    transition: transform 0.3s ease;
+}
+
+@media (max-width: 800px) {
+    .wp-spinner {
+        top: 40%;
+        left: 40%;
+        width: 20%;
+    }
+}
+
+/* --- Vote Popup Overlay --- */
+.wp-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- Vote Popup --- */
+.wp-popup {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 30px;
+    width: 80%;
+    max-width: 280px;
+    text-align: center;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.3);
+    animation: bounceIn 0.7s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+.wp-popup-text {
+    font-family: 'Suez One', serif;
+    font-size: 30px;
+    color: #F27533;
+    margin-bottom: 10px;
+}
+
+.wp-popup-subtitle {
+    color: #081D70;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    margin-bottom: 20px;
+    
+}
+
+.wp-popup-vote-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.wp-popup-waiting {
+    margin-top: 15px;
+    font-weight: 600;
+}
+
+.wp-popup-timer {
+    color: #F27533;
+    font-size: 13px;
+}
+
+.wp-yes-button,
+.wp-no-button {
+    flex: 1;
+    padding: 10px;
+    background-color: #081D70;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    gap: 6px;
+}
+
+.wp-yes-button:hover,
+.wp-no-button:hover {
+    background-color: #F27533;
+}
+
+.wp-vote-count-card {
+    flex: 1;
+    background-color: #CFF9FC;
+    border-radius: 20px;
+    padding: 10px 8px;
+    text-align: center;
+}
+
+.wp-vote-count-label {
+    margin: 0;
+    font-size: 11px;
+    color: #0F6E56;
+    font-weight: 500;
+    font-family: 'Inter', sans-serif;
+}
+
+.wp-vote-count-number {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 600;
+    color: #0F6E56;
+    font-family: 'Inter', sans-serif;
+}
+
+.ready-dropdown, .picks-dropdown {
+    position: absolute;
+    top: 100px;
+    left: 50px;
+    right: 50px;
+    width: auto;
+    background: white;
+    color:#081D70;
+    padding: 20px;
+    z-index: 1000;
+    box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+}
+
+.ready-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    color: #081D70;
+    font-weight: 400;
+    font-family: 'Suez One', serif;
+    font-size: 20px;
+}
+
+.ready-roomDisplayName {
+    color: #081D70;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+}
+
+.ready-isReady {
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    width: 90px; 
+    text-align: center;
+}
+
+/* READY state */
+.ready-isReady.ready {
+    background-color: #F5A220;
+    color: white;
+    padding: 10px;
+    border-radius: 20px;
+}
+
+/* WAITING state */
+.ready-isReady.waiting {
+    background-color: #CFF9FC;
+    color: #1b1b1b;
+    padding: 10px;
+    border-radius: 20px;
+}
+
+.ready-isReady.reminded {
+    background-color: #CFF9FC;
+    color: red;
+    padding: 10px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.ready-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 10px;
+}
+
+.ready-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    font-size: 14px;
+}
+
+.reminder-button {
+    width: 100%;
+    padding: 8px;
+    background: #F27533;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: 'Inter', sans-serif;
+    color: white;
+}
+
+.pick-option {
+    max-width: 150px;        /* 👈 required */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.reminder-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
