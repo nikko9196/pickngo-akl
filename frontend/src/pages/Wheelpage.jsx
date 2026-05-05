@@ -116,7 +116,6 @@ export default function Wheelpage() {
     // ============================================================
     const handleSpin = async () => {
         try {
-            console.log(new Date().toLocaleTimeString(),"token", token);
             const response = await spinWheel(token, sessionId);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
@@ -145,7 +144,7 @@ export default function Wheelpage() {
     };
 
     const handleStop = () => {
-        const spinResult = data[prizeNumber].option;
+        const spinResult = data[prizeNumber];
 
         setMustSpin(false);
         setResult(spinResult);
@@ -275,19 +274,15 @@ export default function Wheelpage() {
             // ✅ restore voting state if user rejoined mid-session
             const wheelState = await getWheelState(token, id);
             const currentResult = wheelState.session?.currentWheelResult;
-            console.log("currentResult", currentResult);
             const sessionStatus = wheelState.session?.status;
             const sessionData = wheelState.session ?? wheelState;
             const wheelItems = sessionData.wheelItems || [];
-            
-            console.log("currentWheelResult", wheelItems);
 
             // ✅ Only build wheel if status is selecting
             let finalWheelItems = wheelItems;
             if (sessionStatus === 'selecting') {
                 const { session: newBuilt } = await buildWheelApi(token, id);
                 finalWheelItems = newBuilt.wheelItems;
-                console.log("token",token);
                 socket.emit("build_wheel", { sessionCode });
             }
 
@@ -393,7 +388,6 @@ export default function Wheelpage() {
             const currentVotes = votesRef.current;
         
             setRespin(isrespin);
-            console.log("respin", isrespin);
             if (!isrespin || finalSpin === true) {
                 navigate(`/sessions/${sessionCode}/result`, {
                     state: { votes: currentVotes, result: current }
@@ -524,7 +518,6 @@ export default function Wheelpage() {
             if (!isHostRef.current) return; // use ref not state
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
-                console.log("shouldRespin:", shouldRespin); // 👈
                 setRespin(shouldRespin);
                 socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin, sessionId: sessionIdRef.current });
         
@@ -577,7 +570,6 @@ export default function Wheelpage() {
     useEffect(() => {
         if (!currentUserId) return;
         if (!sentReminders?.remindedUserIds) return;
-        console.log("debug",sentReminders.remindedUserIds.includes(currentUserId))
         setShowReminderPopup(
             sentReminders.remindedUserIds.includes(currentUserId)
         );
@@ -668,10 +660,10 @@ export default function Wheelpage() {
                                             }`}
                                         >
                                             {p.isReady
-                                                ? "✓ READY"
+                                                ? "READY"
                                                 : isUserReminded(p.userId)
-                                                    ? "🔔 REMINDED"
-                                                    : "⏳ WAITING"}
+                                                    ? "REMINDED"
+                                                    : "WAITING"}
                                         </span>
                                     </div>
                                 ))}
@@ -772,7 +764,7 @@ export default function Wheelpage() {
                     result && (
                         <p className="wp-text3">
                             {/* Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin}) */}
-                            Last Pick: {result} (👍 {votesRef.current.yes} / 🔄 {votesRef.current.respin})
+                            Last Pick: {result.option} (👍 {votesRef.current.yes} / 🔄 {votesRef.current.respin})
                         </p>
                     )}
         
@@ -835,7 +827,7 @@ export default function Wheelpage() {
                                 <div key={i} className="wp-ready-panel-item">
                                     <span className="wp-ready-panel-name">{p.roomDisplayName}</span>
                                     <span className={`wp-ready-badge ${p.isReady ? "ready" : isUserReminded(p.userId) ? "reminded" : "waiting"}`}>
-                                        {p.isReady ? "✓ READY" : isUserReminded(p.userId) ? "🔔 REMINDED" : "⏳ WAITING"}
+                                        {p.isReady ? "READY" : isUserReminded(p.userId) ? "REMINDED" : "WAITING"}
                                     </span>
                                 </div>
                             ))}
@@ -869,7 +861,7 @@ export default function Wheelpage() {
                                     <Wheel
                                         mustStartSpinning={mustSpin}
                                         prizeNumber={prizeNumber}
-                                        data={data}
+                                        data={data.map(item => ({ ...item, option: item.option_truncate }))} // ✅ use truncated for wheel display
                                         spinDuration={0.5} // 👈 MUST be same for all users
                                         onStopSpinning={handleStop}
                                         fontSize={14}
@@ -909,9 +901,26 @@ export default function Wheelpage() {
                 <div className="wp-overlay">
                     <div className="wp-popup">
                         
-                        {!finalSpin && (
+                        {/* {!finalSpin && (
                         <h1 className="wp-popup-text"> {result}</h1>
-                        )}
+                        )} */}
+
+                        {!finalSpin && 
+                        (
+                            <div className="wp-result-card">
+                                <h2 className="wp-result-title">{result.option}</h2>
+
+                                <div className="wp-result-meta">
+                                    <span>⭐ {result.rating}</span>
+                                    <span className="wp-result-price">
+                                        {"$".repeat(result.priceLevel)}
+                                    </span>
+                                </div>
+
+                                <p className="wp-result-address">📍 {result.address}</p>
+                            </div>
+                        )
+                        }
 
                         {!voted && !finalSpin && (
                             <>  
@@ -939,12 +948,31 @@ export default function Wheelpage() {
                             </div>
                         )}
 
-                        {finalSpin && (
+                        {/* {finalSpin && (
                             <p className="wp-popup-text">
                                 🎉 Final result: {result}
                             </p>
-                        )}
+                        )} */}
 
+                        {finalSpin && 
+                        (   
+                            <div className="wp-result-card">
+                                <p className="wp-popup-text">
+                                🎉 Final result
+                                </p>
+                                <h2 className="wp-result-title">{result.option}</h2>
+
+                                <div className="wp-result-meta">
+                                    <span>⭐ {result.rating}</span>
+                                    <span className="wp-result-price">
+                                        {"$".repeat(result.priceLevel)}
+                                    </span>
+                                </div>
+
+                                <p className="wp-result-address">📍 {result.address}</p>
+                            </div>
+                        )
+                        }
                         <br />
 
                         {!finalSpin && (
