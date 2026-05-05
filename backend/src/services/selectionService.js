@@ -225,7 +225,10 @@ async function getMySelectionsForSession({ sessionId, requesterUserId }) {
   }).lean();
 
   if (!selection) {
-    throw new HttpError(404, "You have not saved any restaurant selections for this room yet.");
+    return {
+      message: "You have not saved any restaurant selections for this room yet.",
+      selection: null,
+    };
   }
 
   return {

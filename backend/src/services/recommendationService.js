@@ -190,7 +190,11 @@ async function getLatestRecommendationsForSession({ sessionId, requesterUserId }
   const latestSnapshot = await getLatestRecommendationSnapshot(session._id);
 
   if (!latestSnapshot) {
-    throw new HttpError(404, "No recommendation snapshot has been generated yet.");
+    return {
+      message: "No recommendation snapshot has been generated yet.",
+      snapshot: null,
+      sessionStatus: session.status,
+    };
   }
 
   return {
