@@ -18,9 +18,6 @@ import {
 import "./RecommendationPage.css";
 
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
-const NO_SNAPSHOT_MESSAGE = "No recommendation snapshot has been generated yet.";
-const NO_SELECTIONS_MESSAGE =
-  "You have not saved any restaurant selections for this room yet.";
 
 function RecommendationPage() {
   const navigate = useNavigate();
@@ -124,6 +121,14 @@ function RecommendationPage() {
             return;
           }
 
+          // Handle 200 + null pattern from backend
+          if (!USE_MOCK && recommendationsResponse.snapshot === null) {
+            setItems([]);
+            setHasSnapshot(false);
+            setSelectedPlaceIds([]);
+            return;
+          }
+
           const nextItems = USE_MOCK
             ? recommendationsResponse.items || []
             : recommendationsResponse.snapshot?.restaurants || [];
@@ -132,40 +137,26 @@ function RecommendationPage() {
           setHasSnapshot(true);
 
           if (!USE_MOCK) {
-            try {
-              const selectionsResponse = await getMySelections(token, nextSession.id);
+            const selectionsResponse = await getMySelections(token, nextSession.id);
 
-              if (ignore) {
-                return;
-              }
+            if (ignore) {
+              return;
+            }
 
+            // Handle 200 + null pattern from backend (PR #93)
+            if (selectionsResponse.selection === null) {
+              setSelectedPlaceIds([]);
+            } else {
               const validPlaceIds = new Set(nextItems.map((item) => item.placeId));
               const savedPlaceIds = (selectionsResponse.selection?.selections || [])
                 .map((selection) => selection.placeId)
                 .filter((placeId) => validPlaceIds.has(placeId));
 
               setSelectedPlaceIds(savedPlaceIds);
-            } catch (error) {
-              if (ignore) {
-                return;
-              }
-
-              if (error.message === NO_SELECTIONS_MESSAGE) {
-                setSelectedPlaceIds([]);
-              } else {
-                throw error;
-              }
             }
           }
         } catch (error) {
           if (ignore) {
-            return;
-          }
-
-          if (error.message === NO_SNAPSHOT_MESSAGE) {
-            setItems([]);
-            setHasSnapshot(false);
-            setSelectedPlaceIds([]);
             return;
           }
 
