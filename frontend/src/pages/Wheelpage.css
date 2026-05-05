@@ -59,7 +59,7 @@
     width: 45%;
     height: 50px;
     border-radius: 5px;
-    background: #252C37;
+    background: #3a4452;
     color: white;
     font-family: 'Inter', sans-serif;
     border: none;
@@ -443,7 +443,7 @@
 }
 
 .reminder-button {
-    max-width: 200px;
+    /* max-width: 200px; */
     width: 100%;
     padding: 8px;
     background: #F27533;
@@ -501,7 +501,7 @@
     .wp-black-button {
         height: 50px;
         border-radius: 5px;
-        background: #252C37;
+        background: #3a4452;
         color: white;
         font-family: 'Inter', sans-serif;
         border: none;
@@ -523,6 +523,31 @@
     .reminder-button {
         display: block;
         margin: 10px auto;
+        max-width: 250px;
+        padding: 12px;
+        font-size: 16px;
+        border-radius: 8px;
+    }
+
+    .wp-result-card {
+        padding: 24px 28px;
+        font-size: 16px;
+    }
+
+    .wp-result-title {
+        font-size: 28px;
+        margin-bottom: 14px;
+    }
+
+    .wp-result-meta {
+        font-size: 18px;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .wp-result-address {
+        font-size: 15px;
+        margin-top: 10px;
     }
 }
 
@@ -581,6 +606,7 @@
     overflow-y: auto;
     padding-top: 12px;
     padding-right: 4px;
+    max-height: calc(100vh - 320px); /* ✅ adjust 320px based on space taken by header + tabs + buttons above */
 }
 
 .wp-tab-content::-webkit-scrollbar { width: 4px; }
@@ -741,3 +767,69 @@
 .wp-ready-badge.ready    { background-color: #F5A220; color: white; }
 .wp-ready-badge.reminded { background-color: #CFF9FC; color: red; }
 .wp-ready-badge.waiting  { background-color: #CFF9FC; color: #1b1b1b; }
+
+.wp-result-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 16px 18px;
+    text-align: center;
+    margin: 12px 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    animation: popIn 0.25s ease-out;
+}
+
+.wp-result-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #111;
+}
+
+.wp-result-meta {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+
+.wp-result-price {
+    letter-spacing: 1px;
+    color: #e8a838; /* nice warm gold */
+    font-weight: 600;
+}
+
+.wp-result-address {
+    font-size: 13px;
+    color: #666;
+    margin-top: 6px;
+}
+
+/* ====== MISSING HOVER STATES ====== */
+
+/* Tab buttons */
+.wp-tab-btn:hover {
+    color: #081D70;
+    background: #f5f5f5;
+}
+
+
+/* Black buttons */
+.wp-black-button:hover {
+    background: #252C37;
+    transform: translateY(-1px);
+    transition: background 0.2s, transform 0.1s;
+}
+
+/* Reminder button */
+.reminder-button:hover:not(:disabled) {
+    background: #d4601f;
+    transform: translateY(-1px);
+    transition: background 0.2s, transform 0.1s;
+}
+
+/* Orange ready button */
+.wp-orange-button:hover {
+    background-color: #e25f1f;
+    transform: translateY(-1px);
+}
