@@ -82,6 +82,13 @@ async function calculateVoteResult(session) {
     const remainingUniquePlaceIds = getUniquePlaceIds(remainingWheelItems);
 
     session.wheelItems = remainingWheelItems;
+    session.lastWheelResult = session.currentWheelResult;
+    session.lastVoteSummary = {
+      acceptCount: session.voteSummary.acceptCount,
+      respinCount: session.voteSummary.respinCount,
+      votedUserIds: [...session.voteSummary.votedUserIds],
+    };
+
     session.currentWheelResult = null;
     session.status = "spinning";
 
