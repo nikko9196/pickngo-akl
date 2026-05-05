@@ -95,7 +95,7 @@ describe("wheelController.spinWheel", () => {
     });
   });
 
-  // Test: User not host:
+  // Test: User is not host:
   test("Returns 403 if user is not host", async () => {
     const req = {
       params: { sessionId: "session123" },
