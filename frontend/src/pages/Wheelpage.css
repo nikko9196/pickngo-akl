@@ -119,6 +119,7 @@
     margin: 0 0 0 0;
     text-align: left;
     min-width: 300px;
+    text-align: center;
 }
 
 @media (max-width: 800px) {

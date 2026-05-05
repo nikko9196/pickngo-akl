@@ -198,6 +198,24 @@ export default function Wheelpage() {
             : text;
     };
 
+    const handleSendReminder = async () => {
+        try {
+            const res = await sendRemind(token, sessionId);
+    
+            socket.emit("send_reminder", {
+                sessionCode,
+                sessionId
+            });
+    
+            setReminders({
+                remindedUserIds: res.remindedUserIds
+            });
+    
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
     // ============================================================
     // EFFECTS
     // ============================================================
@@ -462,11 +480,7 @@ export default function Wheelpage() {
         socket.on("reminder_sent", ({ remindedUserIds }) => {
             setReminders({ remindedUserIds });
         
-            if (!currentUserId) return; // wait until loaded
-        
-            const shouldShow = remindedUserIds.includes(currentUserId);
-        
-            if (shouldShow) {
+            if (remindedUserIds.includes(String(currentUserId))) {
                 setShowReminderPopup(true);
             }
         });
@@ -563,7 +577,7 @@ export default function Wheelpage() {
     useEffect(() => {
         if (!currentUserId) return;
         if (!sentReminders?.remindedUserIds) return;
-    
+        console.log("debug",sentReminders.remindedUserIds.includes(currentUserId))
         setShowReminderPopup(
             sentReminders.remindedUserIds.includes(currentUserId)
         );
@@ -668,17 +682,7 @@ export default function Wheelpage() {
                             <button
                                 className="reminder-button"
                                 disabled={allNonHostReady}
-                                onClick={() => {
-                                    try {
-                                        socket.emit("send_reminder", {
-                                            sessionCode,
-                                            sessionId
-                                        });
-                            
-                                    } catch (err) {
-                                        console.error(err);
-                                    }
-                                }}
+                                onClick={handleSendReminder}
                             >
                                 Send Reminder
                             </button>
@@ -839,7 +843,7 @@ export default function Wheelpage() {
                                 <button
                                     className="reminder-button"
                                     disabled={allNonHostReady}
-                                    onClick={() => socket.emit("send_reminder", { sessionCode, sessionId })}
+                                    onClick={handleSendReminder}
                                 >
                                     Send Reminder
                                 </button>
@@ -965,12 +969,6 @@ export default function Wheelpage() {
                             className="reminder-button"
                             onClick={() => {
                                 setShowReminderPopup(false);
-                            
-                                setReminders(prev => ({
-                                    remindedUserIds: prev.remindedUserIds.filter(
-                                        id => id !== currentUserId
-                                    )
-                                }));
                             }}
                         >
                             GOT IT
