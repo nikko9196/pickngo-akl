@@ -253,4 +253,56 @@ describe("voteService.calculateVoteResult", () => {
 
     expect(session.save).toHaveBeenCalled();
   });
+
+  // Test: Respin handles duplicate placeIds correctly:
+  test("Respin handles duplicate placeIds correctly (placeIDs: 1,1,2,3)", async () => {
+    const session = createMockSession({
+      wheelItems: [
+        { placeId: "place1" },
+        { placeId: "place1" },
+        { placeId: "place2" },
+        { placeId: "place3" },
+      ],
+      voteSummary: {
+        acceptCount: 1,
+        respinCount: 2,
+        votedUserIds: ["user1", "user2"],
+      },
+    });
+
+    const result = await calculateVoteResult(session);
+
+    expect(result.result).toBe(
+      "The result is rejected. Spinning the wheel again.",
+    );
+
+    // Check Database state:
+    expect(session.wheelItems).toEqual([
+      { placeId: "place2" },
+      { placeId: "place3" },
+    ]);
+    expect(session.lastWheelResult.placeId).toBe("place1");
+    expect(session.lastVoteSummary).toEqual({
+      acceptCount: 1,
+      respinCount: 2,
+      votedUserIds: ["user1", "user2"],
+    });
+    expect(session.currentWheelResult).toBeNull();
+    expect(session.status).toBe("spinning");
+
+    // Check Response:
+    expect(result.rejectedWheelResult.placeId).toBe("place1");
+
+    expect(result.remainingUniquePlaceIds).toEqual(
+      expect.arrayContaining(["place2", "place3"]),
+    );
+    expect(result.remainingUniquePlaceIds).toHaveLength(2);
+
+    expect(result.voteSummary).toEqual(session.voteSummary);
+
+    // Only 2 unique places left = Next spin is final:
+    expect(result.isNextSpinFinal).toBe(true);
+
+    expect(session.save).toHaveBeenCalled();
+  });
 });
