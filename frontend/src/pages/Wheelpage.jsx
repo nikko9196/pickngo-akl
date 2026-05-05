@@ -603,10 +603,6 @@ export default function Wheelpage() {
         message = "Waiting for others to get ready...";
     }
 
-    // check if Host is the only one who is not ready
-    const allNonHostReady = participants
-    .filter(p => p.role !== "host")
-    .every(p => p.isReady);
     // ============================================================
     // RENDER
     // ============================================================
@@ -673,7 +669,6 @@ export default function Wheelpage() {
                             (
                             <button
                                 className="reminder-button"
-                                disabled={allNonHostReady}
                                 onClick={handleSendReminder}
                             >
                                 Send Reminder
@@ -834,7 +829,6 @@ export default function Wheelpage() {
                             {isHost && !spinready && sentReminders?.remindedUserIds?.length === 0 && (
                                 <button
                                     className="reminder-button"
-                                    disabled={allNonHostReady}
                                     onClick={handleSendReminder}
                                 >
                                     Send Reminder
@@ -975,12 +969,14 @@ export default function Wheelpage() {
                 </div>
             )}
             {/* Reminder Popup */}
-            {!isHost && showReminderPopup && (
+            {showReminderPopup && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
                         <p className="wp-popup-text">🔔 REMINDER</p>
                         <p className="wp-popup-subtitle">
-                            You have been reminded to get ready!
+                            {isHost
+                                ? "You reminded yourself to get ready!"
+                                : "You have been reminded to get ready!"}
                         </p>
 
                         <button
