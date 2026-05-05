@@ -900,10 +900,6 @@ export default function Wheelpage() {
             {!respin && result && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
-                        
-                        {/* {!finalSpin && (
-                        <h1 className="wp-popup-text"> {result}</h1>
-                        )} */}
 
                         {!finalSpin && 
                         (
@@ -947,12 +943,6 @@ export default function Wheelpage() {
                             </div>
                             </div>
                         )}
-
-                        {/* {finalSpin && (
-                            <p className="wp-popup-text">
-                                🎉 Final result: {result}
-                            </p>
-                        )} */}
 
                         {finalSpin && 
                         (   
