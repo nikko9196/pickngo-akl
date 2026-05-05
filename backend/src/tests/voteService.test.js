@@ -27,7 +27,7 @@ function createMockSession(overrides = {}) {
 
 // Test: applyVote for accept vote and respin vote counts, and duplicate vote rejection from the same user:
 describe("voteService.applyVote", () => {
-  test("Adds accept vote", async () => {
+  test("Adds accept vote.", async () => {
     const session = createMockSession();
 
     const result = await applyVote(session, "user1", "accept");
@@ -38,7 +38,7 @@ describe("voteService.applyVote", () => {
     expect(session.save).toHaveBeenCalled();
   });
 
-  test("Adds respin vote", async () => {
+  test("Adds respin vote.", async () => {
     const session = createMockSession();
 
     const result = await applyVote(session, "user1", "respin");
@@ -49,7 +49,7 @@ describe("voteService.applyVote", () => {
     expect(session.save).toHaveBeenCalled();
   });
 
-  test("Rejects duplicate vote from same user", async () => {
+  test("Rejects duplicate vote from same user.", async () => {
     const session = createMockSession({
       voteSummary: {
         acceptCount: 1,
@@ -66,7 +66,7 @@ describe("voteService.applyVote", () => {
 
 // Test: calculateVoteResult
 describe("voteService.calculateVoteResult", () => {
-  test("Throws error when no current wheel result exists", async () => {
+  test("Throws error when no current wheel result exists.", async () => {
     const session = createMockSession({
       currentWheelResult: null,
     });
@@ -77,7 +77,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // Test: Accept wins:
-  test("Accept wins and completes session", async () => {
+  test("Accept wins and completes session.", async () => {
     const session = createMockSession({
       voteSummary: {
         acceptCount: 2,
@@ -103,7 +103,7 @@ describe("voteService.calculateVoteResult", () => {
 
   // Test: Respin wins:
   // isNextSpinFinal: true:
-  test("Respin wins (isNextSpinFinal: true) and rejects current result", async () => {
+  test("Respin wins (isNextSpinFinal: true) and rejects current result.", async () => {
     const session = createMockSession({
       voteSummary: {
         acceptCount: 1,
@@ -142,7 +142,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // isNextSpinFinal: false:
-  test("Respin wins (isNextSpinFinal: false) and rejects current result", async () => {
+  test("Respin wins (isNextSpinFinal: false) and rejects current result.", async () => {
     const session = createMockSession({
       wheelItems: [
         { placeId: "place1" },
@@ -192,7 +192,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // Test: Tie vote is treated as respin:
-  test("Tie vote is treated as respin", async () => {
+  test("Tie vote is treated as respin.", async () => {
     const session = createMockSession({
       voteSummary: {
         acceptCount: 1,
@@ -229,7 +229,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // Test: 2 unique remaining restaurants on the wheel = Final spin:
-  test("Final spin completes session when only two unique restaurants remain", async () => {
+  test("Final spin completes session when only two unique restaurants remain.", async () => {
     const session = createMockSession({
       wheelItems: [{ placeId: "place1" }, { placeId: "place2" }],
       voteSummary: {
@@ -255,7 +255,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // Test: Respin handles duplicate placeIds correctly (Case: placeIDs: 1,1,2,3):
-  test("Respin handles duplicate placeIds correctly (placeIDs: 1,1,2,3)", async () => {
+  test("Respin handles duplicate placeIds correctly (placeIDs: 1,1,2,3).", async () => {
     const session = createMockSession({
       wheelItems: [
         { placeId: "place1" },
@@ -307,7 +307,7 @@ describe("voteService.calculateVoteResult", () => {
   });
 
   // Test: Respin handles duplicate placeIds correctly (Case: placeIDs: 1,2,2,3):
-  test("Respin handles duplicate placeIds correctly (placeIDs: 1,2,2,3)", async () => {
+  test("Respin handles duplicate placeIds correctly (placeIDs: 1,2,2,3).", async () => {
     const session = createMockSession({
       wheelItems: [
         { placeId: "place1" },
