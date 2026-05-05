@@ -1,3 +1,5 @@
+// Fallback search center for recommendation generation when no user location is provided.
+// This is intentionally set around the University of Auckland / Auckland CBD area.
 const DEFAULT_GROUP_LOCATION = Object.freeze({
   latitude: -36.8485,
   longitude: 174.7633,

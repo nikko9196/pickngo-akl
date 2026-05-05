@@ -7,6 +7,18 @@ function cuisineFlag(cuisine) {
     Italian: "🇮🇹",
     Indian: "🇮🇳",
     "Modern NZ": "🇳🇿",
+    Vietnamese: "🇻🇳",
+    Mexican: "🇲🇽",
+    French: "🇫🇷",
+    Greek: "🇬🇷",
+    Spanish: "🇪🇸",
+    Lebanese: "🇱🇧",
+    Turkish: "🇹🇷",
+    Malaysian: "🇲🇾",
+    Indonesian: "🇮🇩",
+    Filipino: "🇵🇭",
+    American: "🇺🇸",
+    British: "🇬🇧",
   };
 
   return flags[cuisine] || "🍽️";
