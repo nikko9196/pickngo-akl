@@ -90,8 +90,27 @@ export default function Wheelpage() {
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
     const [showGroupPicks, setShowGroupPicks] = useState(false);
     const [showReminderPopup, setShowReminderPopup] = useState(false);
-    
 
+    // --- Tab ---
+    const [activeTab, setActiveTab] = useState('picks');
+    
+    const mapWheelItems = (items) => {
+    return items.map((item, i) => ({
+        option_truncate: truncate(item.name, 15),
+        placeId: item.placeId,
+        roomDisplayName: item.roomDisplayName,
+        photo: item.photos,
+        option: item.name,
+        rating: item.rating,
+        priceLevel: item.priceLevel,
+        address: item.address,
+        cuisine: item.cuisine?.join(" • "),
+        style: {
+            backgroundColor: wheelcolors[i % wheelcolors.length],
+            textColor: '#ffffff'
+        }
+    }));
+    };
     // ============================================================
     // HANDLERS
     // ============================================================
@@ -173,6 +192,12 @@ export default function Wheelpage() {
         setTimeLeft(DURATION);
     };
     
+    const truncate = (text, maxLength = 15) => {
+        return text.length > maxLength
+            ? text.slice(0, maxLength) + "…"
+            : text;
+    };
+
     // ============================================================
     // EFFECTS
     // ============================================================
@@ -182,7 +207,7 @@ export default function Wheelpage() {
     // keep sessionIdRef and sessionId in sync
     useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
 
-    // featch current user
+    // fetch current user
     useEffect(() => {
         const fetchMe = async () => {
             try {
@@ -249,9 +274,15 @@ export default function Wheelpage() {
             }
 
             const fetchedData = finalWheelItems.map((item, i) => ({
-                option: item.name,
+                option_truncate: truncate(item.name, 15),
                 placeId: item.placeId,
                 roomDisplayName: item.roomDisplayName,
+                photo: item.photos,
+                option: item.name,
+                rating: item.rating,
+                priceLevel: item.priceLevel,
+                address: item.address,
+                cuisine: item.cuisine.join(" • "),
                 style: {
                     backgroundColor: wheelcolors[i % wheelcolors.length],
                     textColor: '#ffffff'
@@ -371,13 +402,22 @@ export default function Wheelpage() {
                 const { session: wheelData } = await reloadWheel(token, session.id);
 
                 const fetchedData = wheelData.wheelItems.map((item, i) => ({
+                    option_truncate: truncate(item.name, 15),
+                    placeId: item.placeId,
+                    roomDisplayName: item.roomDisplayName,
+                    photo: item.photos,
                     option: item.name,
-                    roomDisplayName: item.roomDisplayName, 
+                    rating: item.rating,
+                    priceLevel: item.priceLevel,
+                    address: item.address,
+                    cuisine: item.cuisine.join(" • "),
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
                     }
                 }));
+
+                
                 setSessionId(session.id);
                 setData(fetchedData);
                 setTotalParticipants(session.participants?.length || 0);
@@ -392,8 +432,15 @@ export default function Wheelpage() {
             try {
                 const { session } = await reloadWheel(token, sessionIdRef.current); // use ref
                 const fetchedData = session.wheelItems.map((item, i) => ({
+                    option_truncate: truncate(item.name, 15),
+                    placeId: item.placeId,
+                    roomDisplayName: item.roomDisplayName,
+                    photo: item.photos,
                     option: item.name,
-                    roomDisplayName: item.roomDisplayName, 
+                    rating: item.rating,
+                    priceLevel: item.priceLevel,
+                    address: item.address,
+                    cuisine: item.cuisine.join(" • "),
                     style: {
                         backgroundColor: wheelcolors[i % wheelcolors.length],
                         textColor: '#ffffff'
@@ -563,16 +610,17 @@ export default function Wheelpage() {
             <div className="wp-button-n-text">
                 {/* Top Buttons */}
                 <div className="wp-top-buttons">
+
                     {!getready &&
-                    (<button className="wp-black-button wp-black-button--left"
+                    (<button className="wp-black-button wp-black-button--left my-pick"
                     disabled={spinactivate}
                     onClick={() => navigate(`/sessions/${sessionCode}/recommendation`)}
                     > 
-                        My Picks
+                        🔄 REPICK
                     </button>)
                     }
                     {getready &&
-                    (<button className="wp-black-button wp-black-button--left"
+                    (<button className="wp-black-button wp-black-button--left group-pick"
                     disabled={spinactivate}
                     onClick={() => setShowGroupPicks(prev => !prev)}
                     > 
@@ -586,6 +634,7 @@ export default function Wheelpage() {
                     >
                         <FiUser /> {readyCount}/{totalParticipants} ready
                     </button>
+
                     { showReadyDropdown && (
                         <div className="ready-dropdown">
                             
@@ -605,10 +654,10 @@ export default function Wheelpage() {
                                             }`}
                                         >
                                             {p.isReady
-                                                ? "READY"
+                                                ? "✓ READY"
                                                 : isUserReminded(p.userId)
-                                                    ? "REMINDED"
-                                                    : "WAITING"}
+                                                    ? "🔔 REMINDED"
+                                                    : "⏳ WAITING"}
                                         </span>
                                     </div>
                                 ))}
@@ -636,18 +685,53 @@ export default function Wheelpage() {
                             )}
                         </div>
                     )}
-                    { showGroupPicks ? (
-                        <div className="picks-dropdown">
-                            <div className="ready-list">
+                    {showGroupPicks ? (
+                    <div className="picks-dropdown">
+                        <div className="wp-picks-list">
                             <span className="ready-header">MEMBERS PICKS</span>
-                                {data?.map((item, i) => (
-                                    <div key={i} className="ready-item">
-                                        <span className="ready-roomDisplayName">{item.roomDisplayName}</span>
-                                        <span className="pick-option">{item.option}</span>
+
+                            {data?.map((item, i) => (
+                                <div key={i} className="wp-pick-card">
+                                    
+                                    {item.photo?.[0] && (
+                                        <img
+                                            src={item.photo[0]}
+                                            alt={item.option}
+                                            className="wp-pick-photo"
+                                        />
+                                    )}
+
+                                    <div className="wp-pick-info">
+                                        <span className="wp-pick-name">{item.option}</span>
+
+                                        <div className="wp-pick-meta">
+                                            {item.rating && (
+                                                <span className="wp-pick-rating">
+                                                    ⭐ {item.rating}
+                                                </span>
+                                            )}
+
+                                            {item.priceLevel && (
+                                                <span className="wp-pick-price">
+                                                    {"$".repeat(item.priceLevel)}
+                                                </span>
+                                            )}
+
+                                            {item.address && (
+                                                <span className="wp-pick-address">
+                                                    📍 {item.address}
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <span className="wp-pick-room">
+                                            Picked by {item.roomDisplayName}
+                                        </span>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
+                    </div>
                     ) : (
                         <div className="my-picks">
                             {/* your existing My Picks UI */}
@@ -658,12 +742,22 @@ export default function Wheelpage() {
     
                 {/* Status Text */}
                 <div className="wp-status-container">
-                    <p className="wp-text1">
+                    <div className="wp-text1">
                         {respin ? "LET'S SPIN AGAIN" :
                         result ? "" :
                         spinactivate ? "HERE WE GO !" :
-                        getready ? "YOU'RE READY 👍" : "READY"}
-                    </p>
+                        getready ? "YOU'RE READY 👍" : ""}
+                    </div>
+
+                    {/* Ready Button */}
+                    {!getready &&
+                    <button 
+                        className="wp-orange-button"
+                        onClick={handleReady}
+                    >
+                        READY
+                    </button>}
+
                     <p className="wp-text2">
                         {message}
                     </p>
@@ -678,27 +772,89 @@ export default function Wheelpage() {
                         </p>
                     )}
         
-                    {/* Ready Button */}
-                    <button 
-                        className="wp-orange-button"
-                        style={{ visibility: getready ? "hidden" : "visible" }} 
-                        onClick={handleReady}
+
+                </div>
+
+            {/* ✅ Desktop: combined picks + ready panel with tabs */}
+            <div className="wp-desktop-panel">
+                
+                {/* Tab Headers */}
+                <div className="wp-tab-headers">
+                    <button
+                        className={`wp-tab-btn ${activeTab === 'picks' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('picks')}
                     >
-                        READY
+                        Group Picks
+                    </button>
+                    <button
+                        className={`wp-tab-btn ${activeTab === 'members' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('members')}
+                    >
+                        Members
+                        <span className="wp-tab-badge">{readyCount}/{totalParticipants}</span>
                     </button>
                 </div>
+
+                {/* Tab Content */}
+                <div className="wp-tab-content">
+
+                    {/* Group Picks Tab */}
+                    {activeTab === 'picks' && (
+                        getready ? (
+                            <div className="wp-picks-list">
+                                {data?.map((item, i) => (
+                                    <div key={i} className="wp-pick-card">
+                                        {item.photo?.[0] && (
+                                            <img src={item.photo[0]} alt={item.option} className="wp-pick-photo" />
+                                        )}
+                                        <div className="wp-pick-info">
+                                            <span className="wp-pick-name">{item.option}</span>
+                                            <div className="wp-pick-meta">
+                                                {item.rating && <span className="wp-pick-rating">⭐ {item.rating}</span>}
+                                                {item.priceLevel && <span className="wp-pick-price">{"$".repeat(item.priceLevel)}</span>}
+                                                {item.address && <span className="wp-pick-address">📍 {item.address}</span>}
+                                            </div>
+                                            <span className="wp-pick-room">Picked by {item.roomDisplayName}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="wp-tab-placeholder">Group Picks details only available when you're ready</p>
+                        )
+                    )}
+
+                    {/* Members Tab */}
+                    {activeTab === 'members' && (
+                        <div className="wp-ready-list-desktop">
+                            {participants.map((p, i) => (
+                                <div key={i} className="wp-ready-panel-item">
+                                    <span className="wp-ready-panel-name">{p.roomDisplayName}</span>
+                                    <span className={`wp-ready-badge ${p.isReady ? "ready" : isUserReminded(p.userId) ? "reminded" : "waiting"}`}>
+                                        {p.isReady ? "✓ READY" : isUserReminded(p.userId) ? "🔔 REMINDED" : "⏳ WAITING"}
+                                    </span>
+                                </div>
+                            ))}
+                            {isHost && !spinready && sentReminders?.remindedUserIds?.length === 0 && (
+                                <button
+                                    className="reminder-button"
+                                    disabled={allNonHostReady}
+                                    onClick={() => socket.emit("send_reminder", { sessionCode, sessionId })}
+                                >
+                                    Send Reminder
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                </div>
+            </div>
+
             </div>
     
             {/* Wheel */}
             <div className="wp-wheelntitle">
-                <svg className="curvy-text" width="400" height="120">
-                <path id="curve" d="M 10 120 Q 230 20 400 130" fill="transparent" />
-                <text>
-                    <textPath href="#curve" startOffset="50%" textAnchor="middle">
-                    Let Fate Pick the Table
-                    </textPath>
-                </text>
-                </svg>
+                <p className="curvy-text" width="400" height="80">Let Fate Pick the Table</p>
 
                 {/* Wheel */}
                 <div className="wp-spinning-wheel">

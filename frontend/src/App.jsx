@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
-import Wheelpage from "./pages/Wheelpage";
+import Wheelpage from "./pages/WheelPage";
 import ResultPage from "./pages/ResultPage";
 import { AuthProvider } from "./context/AuthContext";
 import AuthPage from "./pages/AuthPage";
