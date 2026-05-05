@@ -129,6 +129,10 @@ const sessionSchema = new mongoose.Schema(
       type: wheelResultSchema,
       default: null,
     },
+    lastWheelResult: {
+      type: wheelResultSchema,
+      default: null,
+    },
     finalWheelResult: {
       type: wheelResultSchema,
       default: null,
@@ -158,6 +162,28 @@ const sessionSchema = new mongoose.Schema(
         respinCount: 0,
         votedUserIds: [],
       }),
+    },
+    lastVoteSummary: {
+      type: new mongoose.Schema(
+        {
+          acceptCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          respinCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          votedUserIds: {
+            type: [String],
+            default: [],
+          },
+        },
+        { _id: false },
+      ),
+      default: null,
     },
   },
   { timestamps: true },
