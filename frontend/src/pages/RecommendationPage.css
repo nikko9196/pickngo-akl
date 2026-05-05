@@ -486,9 +486,9 @@
 }
 
 @media (min-width: 768px) {
-  .recommendation-shell {
+  .recommendation-container {     
     max-width: 1024px;
-    margin: 0 auto;
+    margin: 30px auto 0;
   }
 
   .recommendation-list {
@@ -536,5 +536,16 @@
   .restaurant-card-price,
   .restaurant-card-distance {
     font-size: 14px;
+  }
+}
+
+@media (min-width: 1025px) {
+   .recommendation-container {
+    border-bottom: 1px solid var(--rec-primary);
+    border-radius: 20px;
+  }
+
+   .recommendation-footer {
+    border: none;
   }
 }
