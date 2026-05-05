@@ -3,7 +3,7 @@ import '@fontsource/inter';
 import '@fontsource/inter/700.css';
 import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import './ResultPage.css';
 import { getFinalWheelResult } from "../api/userselections";
 import { useAuth } from "../context/useAuth";
@@ -13,13 +13,11 @@ import { useParams } from "react-router-dom";
 const quote = "\"People who love to eat are always the best people.\" — Julia Child";
 
 export default function ResultPage() {
-
+    const navigate = useNavigate();
     const location = useLocation();
     const { votes,  } = location.state;
     const { sessionCode } = useParams();
     const { token } = useAuth();
-
-    console.log("location.state:", location.state);
 
     const [restaurantData, setRestaurantData] = useState(null);
 
@@ -111,6 +109,15 @@ export default function ResultPage() {
                                 </span>
                             ))}
                         </div>
+                    </div>
+                    {/* ✅ Return to Home */}
+                    <div className="result-home-wrapper">
+                        <button
+                            className="result-home-button"
+                            onClick={() => navigate('/')}
+                        >
+                            Return to Home
+                        </button>
                     </div>
                 </div>
 
