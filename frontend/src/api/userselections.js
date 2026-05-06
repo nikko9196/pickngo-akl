@@ -99,3 +99,16 @@ export function getRemind(token, sessionId) {
   return request(`/api/sessions/${encodeURIComponent(sessionId)}/reminder`, token);
 }
 
+export function sendRating(token, sessionId, score) {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/result/rating`,
+    token,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ score }), // ✅ MUST stringify
+    }
+  );
+}                                

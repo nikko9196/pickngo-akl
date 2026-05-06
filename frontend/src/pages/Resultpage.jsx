@@ -3,9 +3,9 @@ import '@fontsource/inter';
 import '@fontsource/inter/700.css';
 import confetti from 'canvas-confetti';
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import './ResultPage.css';
-import { getFinalWheelResult } from "../api/userselections";
+import { getFinalWheelResult, sendRating } from "../api/userselections";
 import { useAuth } from "../context/useAuth";
 import { getSessionByCode } from "../api/sessions";
 import { useParams } from "react-router-dom";
@@ -14,33 +14,64 @@ const quote = "\"People who love to eat are always the best people.\" — Julia 
 
 export default function ResultPage() {
     const navigate = useNavigate();
-    const location = useLocation();
-    const { votes  } = location.state;
+    // const { votes  } = location.state;
     const { sessionCode } = useParams();
     const { token } = useAuth();
 
     const [restaurantData, setRestaurantData] = useState(null);
+    const [votesData, setVotesData] = useState(null);
+    const [sessionId, setSessionId] = useState(null);
 
+    // const handleSendRating = async (score) => {
+    //     try {
+    //         console.log("token:", token);
+    //         console.log("sessionId:", sessionId);
+    //         await sendRating(token, sessionId, score); // ✅ send score
+    
+    //     } catch (err) {
+    //         console.error(err);
+    //     }
+    // };
+    const handleSendRating = async (score) => {
+        if (!token || !sessionId) {
+          console.error("Missing token or sessionId");
+          return;
+        }
+      
+        try {
+          await sendRating(token, sessionId, score);
+        } catch (err) {
+          console.error("Failed to send rating:", err);
+        }
+      };
+      
     useEffect(() => {
-        const fetchResult = async () => {
+        const fetchData = async () => {
             try {
                 const { session: sessionInfo } = await getSessionByCode(token, sessionCode);
+                setSessionId(sessionInfo.id);
+    
                 const { session } = await getFinalWheelResult(token, sessionInfo.id);
+    
                 const { name, address, cuisine, rating, priceLevel, photos } = session.finalWheelResult;
+    
                 setRestaurantData({
                     name,
                     address,
-                    cuisine: cuisine.join(" • "),
+                    cuisine: cuisine?.join(" • ") || "Unknown",
                     rating,
                     priceLevel,
-                    photo: photos[0],
+                    photo: photos?.[0] || "/fallback.jpg",
                 });
+    
+                setVotesData(session.voteSummary);
+    
             } catch (err) {
-                console.error("Failed to fetch final result:", err);
+                console.error("Failed to fetch:", err);
             }
         };
-
-        if (token && sessionCode) fetchResult();
+    
+        if (token && sessionCode) fetchData();
     }, [token, sessionCode]);
 
     const [rating, setRating] = useState(0);
@@ -70,15 +101,15 @@ export default function ResultPage() {
                         <p className="result-restaurant-type">{restaurantData.cuisine} • {"$".repeat(restaurantData.priceLevel)} • ⭐ {restaurantData.rating}</p>
                         <p className="result-restaurant-address">📍 {restaurantData.address}</p>
 
-                        {(votes.yes > 0 || votes.respin > 0) && (
+                        {votesData && (votesData.acceptCount > 0 || votesData.respinCount > 0) && (
                             <div className="result-vote-row">
                                 <div className="result-vote-box">
-                                    <p className="result-vote-count">{votes.yes}</p>
+                                    <p className="result-vote-count">{votesData.acceptCount}</p>
                                     <p className="result-vote-label">👍 Happy</p>
                                 </div>
 
                                 <div className="result-vote-box">
-                                    <p className="result-vote-count">{votes.respin}</p>
+                                    <p className="result-vote-count">{votesData.respinCount}</p>
                                     <p className="result-vote-label">🔄 Respin</p>
                                 </div>
                             </div>
@@ -95,7 +126,11 @@ export default function ResultPage() {
                             {[1, 2, 3, 4, 5].map((star) => (
                                 <span
                                     key={star}
-                                    onClick={!rated ? () => { setRating(star); setRated(true); } : undefined}
+                                    onClick={!rated ? async () => {
+                                        setRating(star);
+                                        setRated(true);
+                                        await handleSendRating(star); // ✅ send immediately
+                                    } : undefined}
                                     style={{
                                         fontSize: "30px",
                                         cursor: rated ? "default" : "pointer",
