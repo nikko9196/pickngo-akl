@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -14,6 +14,7 @@ import "./HomePage.css";
 
 function HomePage() {
   const navigate = useNavigate();
+  const accountMenuRef = useRef(null);
   const [rooms, setRooms] = useState([]);
   const [roomDrafts, setRoomDrafts] = useState({});
   const [roomMessage, setRoomMessage] = useState("");
@@ -71,6 +72,26 @@ function HomePage() {
       ignore = true;
     };
   }, [isAuthenticated, token]);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    function handleDocumentPointerDown(event) {
+      if (accountMenuRef.current?.contains(event.target)) {
+        return;
+      }
+
+      setIsMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", handleDocumentPointerDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleDocumentPointerDown);
+    };
+  }, [isMenuOpen]);
 
   const welcomeName = user?.displayName || user?.email || "Friend";
   const avatarLabel = welcomeName.trim().charAt(0).toUpperCase() || "U";
@@ -156,6 +177,24 @@ function HomePage() {
     setRoomPendingDelete(room);
   }
 
+  function getRoomOpenPath(room) {
+    switch (room.status) {
+      case "questioning":
+        return `/sessions/${room.sessionCode}/question`;
+      case "generating":
+      case "selecting":
+        return `/sessions/${room.sessionCode}/recommendation`;
+      case "spinning":
+      case "voting":
+        return `/sessions/${room.sessionCode}/wheel`;
+      case "completed":
+        return `/sessions/${room.sessionCode}/result`;
+      case "waiting":
+      default:
+        return `/sessions/${room.sessionCode}`;
+    }
+  }
+
   return (
     <main className="landing-shell">
       <section className="landing-page">
@@ -179,7 +218,7 @@ function HomePage() {
         </header>
 
         {isAuthenticated ? (
-          <div className="account-menu landing-account-menu">
+          <div className="account-menu landing-account-menu" ref={accountMenuRef}>
             <button
               className="account-pill account-pill-trigger landing-account-trigger"
               type="button"
@@ -267,7 +306,10 @@ function HomePage() {
                             <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
                               Save
                             </button>
-                            <button type="button" onClick={() => navigate(`/sessions/${room.sessionCode}`)}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(getRoomOpenPath(room), { state: { inviteSession: room } })}
+                            >
                               Open
                             </button>
                             <button type="button" className="danger" onClick={() => requestRoomDelete(room.id)} disabled={isBusy}>
@@ -277,7 +319,10 @@ function HomePage() {
                         ) : (
                           <div className="room-card-member-actions">
                             <p className="room-card-readonly">Members can view rooms here, but only hosts can edit them.</p>
-                            <button type="button" onClick={() => navigate(`/sessions/${room.sessionCode}`)}>
+                            <button
+                              type="button"
+                              onClick={() => navigate(getRoomOpenPath(room), { state: { inviteSession: room } })}
+                            >
                               Open room
                             </button>
                           </div>
