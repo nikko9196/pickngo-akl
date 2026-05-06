@@ -9,6 +9,7 @@ import { getFinalWheelResult, sendRating } from "../api/userselections";
 import { useAuth } from "../context/useAuth";
 import { getSessionByCode } from "../api/sessions";
 import { useParams } from "react-router-dom";
+import { getCurrentUser } from "../api/auth";
 
 const quote = "\"People who love to eat are always the best people.\" — Julia Child";
 
@@ -17,44 +18,55 @@ export default function ResultPage() {
     // const { votes  } = location.state;
     const { sessionCode } = useParams();
     const { token } = useAuth();
+    const [currentUserId, setCurrentUserId] = useState(null);
 
     const [restaurantData, setRestaurantData] = useState(null);
     const [votesData, setVotesData] = useState(null);
     const [sessionId, setSessionId] = useState(null);
 
-    // const handleSendRating = async (score) => {
-    //     try {
-    //         console.log("token:", token);
-    //         console.log("sessionId:", sessionId);
-    //         await sendRating(token, sessionId, score); // ✅ send score
-    
-    //     } catch (err) {
-    //         console.error(err);
-    //     }
-    // };
     const handleSendRating = async (score) => {
-        if (!token || !sessionId) {
-          console.error("Missing token or sessionId");
-          return;
-        }
-      
+        if (!token || !sessionId || rated) return;
+    
         try {
-          await sendRating(token, sessionId, score);
+            await sendRating(token, sessionId, score);
         } catch (err) {
-          console.error("Failed to send rating:", err);
+            console.error("Failed to send rating:", err);
         }
-      };
-      
+    };
+    
+    // fetch current user
+    useEffect(() => {
+        const fetchMe = async () => {
+            try {
+                const res = await getCurrentUser(token);
+                setCurrentUserId(res.user.id);
+            } catch (err) {
+                console.error("Failed to fetch current user:", err);
+            }
+        };
+    
+        if (token) {
+            fetchMe();
+        }
+    }, [token]);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
                 const { session: sessionInfo } = await getSessionByCode(token, sessionCode);
                 setSessionId(sessionInfo.id);
-    
+                
+                // ✅ restore final result if user rejoined / reload
                 const { session } = await getFinalWheelResult(token, sessionInfo.id);
     
                 const { name, address, cuisine, rating, priceLevel, photos } = session.finalWheelResult;
     
+                const userRatingObj = session.resultRatingSummary?.ratings?.find(
+                    (r) => r.userId === currentUserId
+                );
+                
+                const userRating = userRatingObj?.score || null;
+
                 setRestaurantData({
                     name,
                     address,
@@ -62,6 +74,7 @@ export default function ResultPage() {
                     rating,
                     priceLevel,
                     photo: photos?.[0] || "/fallback.jpg",
+                    userRating,
                 });
     
                 setVotesData(session.voteSummary);
@@ -71,12 +84,19 @@ export default function ResultPage() {
             }
         };
     
-        if (token && sessionCode) fetchData();
-    }, [token, sessionCode]);
+        if (token && sessionCode && currentUserId) fetchData();
+    }, [token, sessionCode, currentUserId]);
 
     const [rating, setRating] = useState(0);
     const [hoverRating, setHoverRating] = useState(0);
     const [rated, setRated] = useState(false);
+
+    useEffect(() => {
+        if (restaurantData?.userRating) {
+            setRating(restaurantData.userRating);
+            setRated(true); // 🔒 lock the UI
+        }
+    }, [restaurantData]);
 
     useEffect(() => {
         confetti({
@@ -85,6 +105,7 @@ export default function ResultPage() {
             origin: { y: 0.4 },
         });
     }, []);
+
 
     if (!restaurantData) return <p>Loading...</p>; // ✅ add this line here
     return (

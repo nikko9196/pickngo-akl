@@ -225,6 +225,16 @@ export default function Wheelpage() {
     // keep sessionIdRef and sessionId in sync
     useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
 
+    useEffect(() => {
+        if (!sessionCode || !currentUserId) return;
+    
+        socket.emit("join_session", {
+            sessionCode,
+            userId: currentUserId
+        });
+    
+    }, [sessionCode, currentUserId]);
+
     // fetch current user
     useEffect(() => {
         const fetchMe = async () => {
@@ -340,8 +350,8 @@ export default function Wheelpage() {
                 }
             } 
 
-            // Re-emit join_session so backend can send current spin state
-            socket.emit("join_session", { sessionCode, userId: user.id });
+            // // Re-emit join_session so backend can send current spin state
+            // socket.emit("join_session", { sessionCode, userId: user.id });
 
             isLoadingRef.current = false; // reset on error to allow retry
 
@@ -499,6 +509,7 @@ export default function Wheelpage() {
         
             if (remindedUserIds.includes(String(currentUserId))) {
                 setShowReminderPopup(true);
+                console.log("reminder_Sent socket");
             }
         });
         

@@ -105,10 +105,7 @@ export function sendRating(token, sessionId, score) {
     token,
     {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ score }), // ✅ MUST stringify
+      body: JSON.stringify({ score }),
     }
   );
-}                                
+}                             
