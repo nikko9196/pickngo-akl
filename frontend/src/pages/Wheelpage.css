@@ -161,7 +161,7 @@
     flex: 1;  /* split space equally with text */
 }
 .curvy-text {
-    padding: 60px 40px 40px;
+    padding: 20px 40px 40px;
     font-family: 'Suez One', serif;
     font-size: 28px;
     fill: #081D70;
@@ -548,6 +548,10 @@
     .wp-result-address {
         font-size: 15px;
         margin-top: 10px;
+    }
+
+    .wp-popup {
+        max-width: 500px;
     }
 }
 
