@@ -121,6 +121,10 @@ const sessionSchema = new mongoose.Schema(
       type: [participantSchema],
       default: [],
     },
+    remindedUserIds: {
+      type: [String],
+      default: [],
+    },
     wheelItems: {
       type: [wheelItemSchema],
       default: [],

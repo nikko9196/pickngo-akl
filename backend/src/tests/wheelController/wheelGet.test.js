@@ -491,6 +491,17 @@ describe("wheelController.getFinalWheelResult", () => {
         recommendationSnapshotId: "snapshot1",
         placeId: "place1",
       },
+      voteSummary: {
+        acceptCount: 2,
+        respinCount: 1,
+        votedUserIds: ["host1", "user1"],
+      },
+      resultRatings: [
+        {
+          userId: { toString: () => "user1" },
+          score: 4,
+        },
+      ],
     });
 
     sessionService.findSessionById.mockResolvedValue(mockSession);
@@ -525,6 +536,23 @@ describe("wheelController.getFinalWheelResult", () => {
           rating: 4.8,
           priceLevel: 3,
         }),
+        voteSummary: {
+          acceptCount: 2,
+          respinCount: 1,
+          votedUserIds: ["host1", "user1"],
+          votedCount: 2,
+          totalParticipants: 2,
+        },
+        resultRatingSummary: {
+          ratings: [
+            {
+              userId: "user1",
+              score: 4,
+            },
+          ],
+          ratingCount: 1,
+          averageScore: 4,
+        },
       },
     });
   });

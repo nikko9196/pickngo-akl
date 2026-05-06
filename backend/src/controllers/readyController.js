@@ -74,11 +74,15 @@ async function sendReminder(req, res) {
       (participant) => !participant.isReady,
     );
 
+    session.remindedUserIds = waitingParticipants.map((participant) =>
+      participant.userId.toString(),
+    );
+
+    await session.save();
+
     return res.status(200).json({
       message: "Reminder sent to waiting users.",
-      remindedUserIds: waitingParticipants.map((participant) =>
-        participant.userId.toString(),
-      ),
+      remindedUserIds: session.remindedUserIds,
       readySummary: getReadySummary(session),
     });
   } catch (error) {
@@ -148,15 +152,9 @@ async function getReminder(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const waitingParticipants = session.participants.filter(
-      (participant) => !participant.isReady,
-    );
-
     return res.status(200).json({
       message: "Reminder status retrieved.",
-      remindedUserIds: waitingParticipants.map((participant) =>
-        participant.userId.toString(),
-      ),
+      remindedUserIds: session.remindedUserIds || [],
       readySummary: getReadySummary(session),
     });
   } catch (error) {

@@ -125,12 +125,16 @@ describe("readyController.sendReminder", () => {
           isReady: false,
         },
       ],
+      remindedUserIds: [],
     });
 
     sessionService.findSessionById.mockResolvedValue(mockSession);
     sessionService.checkValidHost.mockImplementation(() => {});
 
     await sendReminder(req, res);
+
+    expect(mockSession.remindedUserIds).toEqual(["user1"]);
+    expect(mockSession.save).toHaveBeenCalled();
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
@@ -223,8 +227,8 @@ describe("readyController.getReminder", () => {
     });
   });
 
-  // Test: Returns waiting participant user IDs:
-  test("Returns waiting participant user IDs", async () => {
+  // Test: Returns reminded user IDs from saved reminder state:
+  test("Returns reminded user IDs from saved reminder state", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -232,6 +236,7 @@ describe("readyController.getReminder", () => {
     const res = createMockRes();
 
     const mockSession = createMockSession({
+      remindedUserIds: ["user1"],
       participants: [
         {
           userId: { toString: () => "host1" },
