@@ -83,10 +83,15 @@ function SessionPage() {
             return;
         }
 
-        const nextPath =
-            session.status === "questioning"
-                ? `/sessions/${session.sessionCode}/question`
-                : `/sessions/${session.sessionCode}/recommendation`;
+        const statusRoutes = {
+            questioning: `/sessions/${session.sessionCode}/question`,
+            generating: `/sessions/${session.sessionCode}/recommendation`,
+            selecting: `/sessions/${session.sessionCode}/recommendation`,
+            spinning: `/sessions/${session.sessionCode}/wheel`,
+            voting: `/sessions/${session.sessionCode}/wheel`,
+            completed: `/sessions/${session.sessionCode}/result`,
+        };
+        const nextPath = statusRoutes[session.status] || `/sessions/${session.sessionCode}/recommendation`;
 
         if (location.pathname === nextPath) {
             return;

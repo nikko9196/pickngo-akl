@@ -110,6 +110,15 @@ function AuthPage() {
 
                 <section className="auth-page-layout">
                     <aside className="auth-panel auth-page-panel">
+                        <button
+                            className="auth-close-button"
+                            type="button"
+                            aria-label="Back to homepage"
+                            onClick={() => navigate("/")}
+                        >
+                            ×
+                        </button>
+
                         <div className="auth-copy">
                             <p className="auth-kicker">Account access</p>
                             <h2>

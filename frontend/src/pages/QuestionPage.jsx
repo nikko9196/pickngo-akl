@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { getActiveQuestionLists } from "../api/questions";
-import { submitResponse } from "../api/responses";
+import { getMyResponses, submitResponse } from "../api/responses";
 import { getSessionByCode, getSessionProgress } from "../api/sessions";
 import aucklandSkyBackground from "../assets/background - auckland - sky transparent 1.png";
 import loadingIllustration from "../assets/loading 1.png";
@@ -30,6 +30,14 @@ function QuestionPage() {
 
     const currentQuestion = questions[currentQuestionIndex] || null;
     const isGeneratingRestaurants = isComplete || session?.status === "generating";
+    const questionTypeHint =
+        currentQuestion?.questionType === "multiple_choice"
+            ? "Multiple choice"
+            : currentQuestion?.questionType === "text"
+                ? "Text"
+                : currentQuestion
+                    ? "Single choice"
+                    : "";
 
     useEffect(() => {
         if (isAuthReady && !isAuthenticated) {
@@ -145,6 +153,45 @@ function QuestionPage() {
         setSelectedOptionIds([]);
         setTextAnswer("");
     }, [currentQuestion]);
+
+    useEffect(() => {
+        if (!isAuthReady || !isAuthenticated || !token || !session?.id || questions.length === 0) {
+            return;
+        }
+
+        let ignore = false;
+
+        async function restoreQuestionProgress() {
+            try {
+                const { responses } = await getMyResponses(token, session.id);
+
+                if (ignore) {
+                    return;
+                }
+
+                const nextQuestionIndex = responses.length;
+
+                if (nextQuestionIndex >= questions.length) {
+                    setIsComplete(true);
+                    setCurrentQuestionIndex(questions.length - 1);
+                    return;
+                }
+
+                setIsComplete(false);
+                setCurrentQuestionIndex(nextQuestionIndex);
+            } catch (error) {
+                if (!ignore) {
+                    setErrorMessage(error.message);
+                }
+            }
+        }
+
+        void restoreQuestionProgress();
+
+        return () => {
+            ignore = true;
+        };
+    }, [isAuthReady, isAuthenticated, questions, session?.id, token]);
 
     useEffect(() => {
         if (!isGeneratingRestaurants || !session?.id || !token) {
@@ -298,6 +345,9 @@ function QuestionPage() {
                             <h2>
                                 Q{currentQuestionIndex + 1} - {currentQuestion?.questionText || "Loading question..."}
                             </h2>
+                            {questionTypeHint ? (
+                                <p className="question-type-hint">{questionTypeHint}</p>
+                            ) : null}
                         </div>
 
                         {isLoading ? <p className="account-dropdown-state">Loading session...</p> : null}
@@ -348,7 +398,7 @@ function QuestionPage() {
                                 onClick={() => handleAdvanceQuestion({ skipped: true })}
                                 disabled={isSubmitting}
                             >
-                                Skip this quiz
+                                Skip this question
                             </button>
                             <button
                                 className="question-page-action"
