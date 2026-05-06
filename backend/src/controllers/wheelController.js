@@ -8,6 +8,7 @@ const {
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
+const { getResultRatingSummary } = require("./resultController");
 
 function getStringValue(value) {
   if (!value) {
@@ -439,7 +440,8 @@ async function getWheelState(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
 
     return res.status(200).json({
       session: buildWheelStatePayload({
@@ -481,6 +483,8 @@ async function getFinalWheelResult(req, res) {
         id: session._id.toString(),
         status: session.status,
         finalWheelResult: finalResult,
+        voteSummary: buildVoteSummary(session),
+        resultRatingSummary: getResultRatingSummary(session),
       },
     });
   } catch (error) {
