@@ -117,6 +117,7 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
+            // console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
@@ -154,7 +155,7 @@ export default function Wheelpage() {
         if (finalSpin) {
             setTimeout(() => {
                 navigate(`/sessions/${sessionCode}/result`, {
-                    state: { votes: { yes: 0, respin: 0 }, result: spinResult }
+                    state: { votes: { yes: 0, respin: 0 }}
                 });
             }, 3000); // small delay so user sees the result before navigating
         }
@@ -271,12 +272,27 @@ export default function Wheelpage() {
                 setReady(currentParticipant.isReady);
             }
             
-            // ✅ restore voting state if user rejoined mid-session
+            // ✅ restore wheel state if user rejoined mid-session
             const wheelState = await getWheelState(token, id);
             const currentResult = wheelState.session?.currentWheelResult;
             const sessionStatus = wheelState.session?.status;
             const sessionData = wheelState.session ?? wheelState;
             const wheelItems = sessionData.wheelItems || [];
+
+            // ✅ restore latest voting result if user rejoined mid-session
+            const wheelLastRound = await reloadWheel(token, id);
+            const lastRoundResult = wheelLastRound.session?.lastWheelResult?.name;
+            const lastRoundVoteSummary = wheelLastRound.session?.lastVoteSummary;
+
+            if (lastRoundResult && lastRoundVoteSummary) {
+                setLastResult({
+                    result: lastRoundResult,
+                    votes: {
+                        yes: lastRoundVoteSummary.acceptCount ?? 0,
+                        respin: lastRoundVoteSummary.respinCount ?? 0
+                    }
+                });
+            }
 
             // ✅ Only build wheel if status is selecting
             let finalWheelItems = wheelItems;
@@ -311,7 +327,7 @@ export default function Wheelpage() {
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
                     setPrizeNumber(prize);
-                    setResult(fetchedData[prize].option);
+                    setResult(fetchedData[prize]);
                     setMustSpin(false);
                     spinActivate(false);
                 }
@@ -390,7 +406,7 @@ export default function Wheelpage() {
             setRespin(isrespin);
             if (!isrespin || finalSpin === true) {
                 navigate(`/sessions/${sessionCode}/result`, {
-                    state: { votes: currentVotes, result: current }
+                    state: { votes: currentVotes}
                 });
                 return;
             }
@@ -398,7 +414,7 @@ export default function Wheelpage() {
             // TODO: get from DB
             // if (isrespin && !finalSpin) {
             setLastResult({
-                result: current,
+                result: current?.option,
                 votes: currentVotes
             });
         
@@ -523,7 +539,7 @@ export default function Wheelpage() {
         
                 if (!shouldRespin) {
                     navigate(`/sessions/${sessionCode}/result`, {
-                        state: { votes: votesRef.current, result: resultRef.current }
+                        state: { votes: votesRef.current}
                     });
                 }
         
@@ -755,11 +771,9 @@ export default function Wheelpage() {
         
                     {/* Last Result */}
                     {
-                    // lastResult 
-                    result && (
+                    lastResult && (
                         <p className="wp-text3">
-                            {/* Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin}) */}
-                            Last Pick: {result.option} (👍 {votesRef.current.yes} / 🔄 {votesRef.current.respin})
+                            Last Pick: {lastResult.result} (👍 {lastResult.votes.yes} / 🔄 {lastResult.votes.respin})
                         </p>
                     )}
         

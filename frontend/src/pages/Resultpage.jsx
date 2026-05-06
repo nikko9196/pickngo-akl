@@ -15,7 +15,7 @@ const quote = "\"People who love to eat are always the best people.\" — Julia 
 export default function ResultPage() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { votes,  } = location.state;
+    const { votes  } = location.state;
     const { sessionCode } = useParams();
     const { token } = useAuth();
 
