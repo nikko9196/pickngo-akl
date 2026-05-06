@@ -3,6 +3,7 @@ const {
   sendReminder,
   getReadyStatus,
   markAllReady,
+  getReminder,
 } = require("../controllers/readyController");
 
 const sessionService = require("../services/sessionService");
@@ -558,6 +559,127 @@ describe("readyController.getReadyStatus", () => {
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.json).toHaveBeenCalledWith({
       message: "Failed to fetch ready status.",
+    });
+  });
+});
+
+// Test: getReminder:
+describe("readyController.getReminder", () => {
+  // Test: Session not found:
+  test("Returns 404 if session is not found", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    sessionService.findSessionById.mockRejectedValue(
+      createMockError("Session not found.", 404),
+    );
+
+    await getReminder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Session not found.",
+    });
+  });
+
+  // Test: User is not a participant:
+  test("Returns 403 if user is not participant", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user2",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession();
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {
+      throw createMockError("You are not a participant in this session.", 403);
+    });
+
+    await getReminder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "You are not a participant in this session.",
+    });
+  });
+
+  // Test: Returns waiting participant user IDs:
+  test("Returns waiting participant user IDs", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "host1",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession({
+      participants: [
+        {
+          userId: { toString: () => "host1" },
+          role: "host",
+          roomDisplayName: "Host",
+          isReady: true,
+        },
+        {
+          userId: { toString: () => "user1" },
+          role: "member",
+          roomDisplayName: "User 1",
+          isReady: false,
+        },
+      ],
+    });
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {});
+
+    await getReminder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Reminder status retrieved.",
+      remindedUserIds: ["user1"],
+      readySummary: {
+        sessionId: "session123",
+        readyCount: 1,
+        totalParticipants: 2,
+        allReady: false,
+        participants: [
+          {
+            userId: "host1",
+            role: "host",
+            roomDisplayName: "Host",
+            isReady: true,
+          },
+          {
+            userId: "user1",
+            role: "member",
+            roomDisplayName: "User 1",
+            isReady: false,
+          },
+        ],
+      },
+    });
+  });
+
+  // Test: Fallback error handling:
+  test("Returns fallback message when getReminder fails", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+
+    await getReminder(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Failed to get reminder.",
     });
   });
 });
