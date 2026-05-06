@@ -95,7 +95,11 @@ async function markAllReady(req, res) {
   try {
     const session = await findSessionById(sessionId);
 
-    checkValidHost(session, req.userId, "Only the host can mark all users as ready.");
+    checkValidHost(
+      session,
+      req.userId,
+      "Only the host can mark all users as ready.",
+    );
 
     session.participants.forEach((participant) => {
       participant.isReady = true;
@@ -136,9 +140,36 @@ async function getReadyStatus(req, res) {
   }
 }
 
+// GET REMINDER:
+async function getReminder(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    const waitingParticipants = session.participants.filter(
+      (participant) => !participant.isReady,
+    );
+
+    return res.status(200).json({
+      message: "Reminder status retrieved.",
+      remindedUserIds: waitingParticipants.map((participant) =>
+        participant.userId.toString(),
+      ),
+      readySummary: getReadySummary(session),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to get reminder.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
 module.exports = {
   markReady,
   sendReminder,
   getReadyStatus,
   markAllReady,
+  getReminder,
 };
