@@ -85,6 +85,7 @@ export default function Wheelpage() {
     const votesRef = useRef(votes); // Use refs to capture the latest values
     const isHostRef = useRef(false); // check if player is the host
     const dataRef = useRef(null);
+    const currentUserIdRef = useRef(null);
 
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
@@ -117,7 +118,7 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
-            console.log(token);
+            // console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
@@ -210,7 +211,6 @@ export default function Wheelpage() {
             setReminders({
                 remindedUserIds: res.remindedUserIds
             });
-    
         } catch (err) {
             console.error(err);
         }
@@ -226,14 +226,8 @@ export default function Wheelpage() {
     useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
 
     useEffect(() => {
-        if (!sessionCode || !currentUserId) return;
-    
-        socket.emit("join_session", {
-            sessionCode,
-            userId: currentUserId
-        });
-    
-    }, [sessionCode, currentUserId]);
+        currentUserIdRef.current = currentUserId;
+    }, [currentUserId]);
 
     // fetch current user
     useEffect(() => {
@@ -351,7 +345,7 @@ export default function Wheelpage() {
             } 
 
             // // Re-emit join_session so backend can send current spin state
-            // socket.emit("join_session", { sessionCode, userId: user.id });
+            socket.emit("join_session", { sessionCode, userId: user.id });
 
             isLoadingRef.current = false; // reset on error to allow retry
 
@@ -506,10 +500,9 @@ export default function Wheelpage() {
 
         socket.on("reminder_sent", ({ remindedUserIds }) => {
             setReminders({ remindedUserIds });
-        
-            if (remindedUserIds.includes(String(currentUserId))) {
+            const userId = currentUserIdRef.current;
+            if (userId && remindedUserIds.map(String).includes(String(userId))) {
                 setShowReminderPopup(true);
-                console.log("reminder_Sent socket");
             }
         });
         
@@ -520,7 +513,7 @@ export default function Wheelpage() {
             socket.off("wheel_built"); 
             socket.off("wheel_reloaded"); 
             socket.off("ready_update");
-            socket.off("reminder_sent");
+            socket.off("reminder_sent")
         };
     }, [sessionCode, token]);
 
