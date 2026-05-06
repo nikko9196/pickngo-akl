@@ -14,7 +14,7 @@ import { io } from "socket.io-client";
 import './Wheelpage.css';
 import { getSessionByCode } from "../api/sessions";
 import { buildWheelApi, spinWheel, getHost, submitVoteApi, ifRespin, reloadWheel,
-sendReady, sendRemind, collectReadyStatus, getWheelState} from "../api/userselections";
+sendReady, sendRemind, collectReadyStatus, getWheelState, getRemind} from "../api/userselections";
 import { useAuth } from "../context/useAuth";
 import { getCurrentUser } from "../api/auth";
 
@@ -117,7 +117,7 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
-            // console.log(token);
+            console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
@@ -292,6 +292,13 @@ export default function Wheelpage() {
                         respin: lastRoundVoteSummary.respinCount ?? 0
                     }
                 });
+            }
+
+            // ✅ restore Reminder status if user rejoined mid-session
+            const reminderRes = await getRemind(token, id);
+            const remindedUserIdsRes = reminderRes?.remindedUserIds;
+            if (Array.isArray(remindedUserIdsRes) && remindedUserIdsRes.length > 0) {
+                setReminders({ remindedUserIds: remindedUserIdsRes });
             }
 
             // ✅ Only build wheel if status is selecting
@@ -502,7 +509,7 @@ export default function Wheelpage() {
             socket.off("wheel_built"); 
             socket.off("wheel_reloaded"); 
             socket.off("ready_update");
-            socket.off("reminder_sent")
+            socket.off("reminder_sent");
         };
     }, [sessionCode, token]);
 
@@ -583,13 +590,13 @@ export default function Wheelpage() {
         return () => document.removeEventListener("click", handleClickOutside2);
     }, []);
 
-    useEffect(() => {
-        if (!currentUserId) return;
-        if (!sentReminders?.remindedUserIds) return;
-        setShowReminderPopup(
-            sentReminders.remindedUserIds.includes(currentUserId)
-        );
-    }, [currentUserId, sentReminders]);
+    // useEffect(() => {
+    //     if (!currentUserId) return;
+    //     if (!sentReminders?.remindedUserIds) return;
+    //     setShowReminderPopup(
+    //         sentReminders.remindedUserIds.includes(currentUserId)
+    //     );
+    // }, [currentUserId, sentReminders]);
 
     const isUserReminded = (userId) => {
         return sentReminders?.remindedUserIds?.includes(userId);

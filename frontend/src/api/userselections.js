@@ -94,3 +94,8 @@ export function getFinalWheelResult(token, sessionId) {
 export function getWheelState(token, sessionId) {
   return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/state`, token);
 }
+
+export function getRemind(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/reminder`, token);
+}
+
