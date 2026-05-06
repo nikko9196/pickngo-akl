@@ -99,10 +99,7 @@ function buildSelectionLookup(entries) {
   const lookup = new Map();
 
   for (const entry of entries) {
-    const key = getWheelItemKey(
-      entry.recommendationSnapshotId,
-      entry.placeId,
-    );
+    const key = getWheelItemKey(entry.recommendationSnapshotId, entry.placeId);
 
     if (!lookup.has(key)) {
       lookup.set(key, entry);
@@ -166,7 +163,8 @@ function getRestaurantDetails({ selectionLookup, snapshotLookup, item }) {
 
   return {
     userId: item.userId || selectionEntry?.userId || "",
-    roomDisplayName: item.roomDisplayName || selectionEntry?.roomDisplayName || "",
+    roomDisplayName:
+      item.roomDisplayName || selectionEntry?.roomDisplayName || "",
     recommendationSnapshotId,
     placeId: item.placeId,
     name: baseRestaurant.name || snapshotRestaurant?.name || "",
@@ -201,6 +199,47 @@ function getRestaurantDetails({ selectionLookup, snapshotLookup, item }) {
   };
 }
 
+function buildVoteSummary(session) {
+  const votedUserIds = session.voteSummary?.votedUserIds || [];
+
+  return {
+    acceptCount: session.voteSummary?.acceptCount || 0,
+    respinCount: session.voteSummary?.respinCount || 0,
+    votedUserIds,
+    votedCount: votedUserIds.length,
+    totalParticipants: session.participants.length,
+  };
+}
+
+function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
+  const wheelItems = (session.wheelItems || []).map((item) =>
+    getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
+  );
+  const currentWheelResult = session.currentWheelResult?.placeId
+    ? getRestaurantDetails({
+        selectionLookup,
+        snapshotLookup,
+        item: session.currentWheelResult,
+      })
+    : null;
+  const finalWheelResult = session.finalWheelResult?.placeId
+    ? getRestaurantDetails({
+        selectionLookup,
+        snapshotLookup,
+        item: session.finalWheelResult,
+      })
+    : null;
+
+  return {
+    id: session._id.toString(),
+    status: session.status,
+    wheelItems,
+    currentWheelResult,
+    finalWheelResult,
+    voteSummary: buildVoteSummary(session),
+  };
+}
+
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -210,6 +249,20 @@ async function buildWheel(req, res) {
 
     const { selectionEntries, selectionLookup, snapshotLookup } =
       await buildWheelContext(session);
+
+    if (["voting", "completed"].includes(session.status)) {
+      const detailedWheelItems = (session.wheelItems || []).map((item) =>
+        getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
+      );
+
+      return res.status(200).json({
+        session: {
+          id: session._id.toString(),
+          status: session.status,
+          wheelItems: detailedWheelItems,
+        },
+      });
+    }
 
     if (!selectionEntries.length) {
       return res.status(404).json({
@@ -243,12 +296,14 @@ async function buildWheel(req, res) {
       roomDisplayName: item.roomDisplayName,
     }));
     session.currentWheelResult = null;
+    session.lastWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
       acceptCount: 0,
       respinCount: 0,
       votedUserIds: [],
     };
+    session.lastVoteSummary = null;
 
     await session.save();
 
@@ -293,7 +348,8 @@ async function spinWheel(req, res) {
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
     const selectedItem = session.wheelItems[randomIndex];
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const detailedResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
@@ -344,23 +400,57 @@ async function getCurrentWheel(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const currentWheelItems = session.wheelItems || [];
 
     const detailedWheelItems = currentWheelItems.map((item) =>
       getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
     );
 
+    const lastWheelResult = session.lastWheelResult?.placeId
+      ? getRestaurantDetails({
+          selectionLookup,
+          snapshotLookup,
+          item: session.lastWheelResult,
+        })
+      : null;
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
         status: session.status,
         wheelItems: detailedWheelItems,
+        lastWheelResult,
+        lastVoteSummary: session.lastVoteSummary,
       },
     });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch current wheel.";
+    return res.status(getErrorStatus(error)).json({ message });
+  }
+}
+
+async function getWheelState(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  try {
+    const session = await findSessionById(sessionId);
+    checkValidParticipant(session, req.userId);
+
+    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+
+    return res.status(200).json({
+      session: buildWheelStatePayload({
+        session,
+        selectionLookup,
+        snapshotLookup,
+      }),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch wheel state.";
     return res.status(getErrorStatus(error)).json({ message });
   }
 }
@@ -378,7 +468,8 @@ async function getFinalWheelResult(req, res) {
       });
     }
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const finalResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
@@ -405,5 +496,6 @@ module.exports = {
   buildWheel,
   spinWheel,
   getCurrentWheel,
+  getWheelState,
   getFinalWheelResult,
 };
