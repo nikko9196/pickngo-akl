@@ -1,6 +1,7 @@
 const {
   getCurrentWheel,
   getFinalWheelResult,
+  getWheelState,
 } = require("../../controllers/wheelController");
 
 const RecommendationSnapshot = require("../../models/RecommendationSnapshot");
@@ -244,6 +245,170 @@ describe("wheelController.getCurrentWheel", () => {
   });
 });
 
+// Test: getWheelState:
+describe("wheelController.getWheelState", () => {
+  // Test: Session not found:
+  test("Returns 404 if session is not found", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    sessionService.findSessionById.mockRejectedValue(
+      createMockError("Session not found.", 404),
+    );
+
+    await getWheelState(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Session not found.",
+    });
+  });
+
+  // Test: User is not a participant:
+  test("Returns 403 if user is not participant", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user2",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession();
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {
+      throw createMockError("You are not a participant in this session.", 403);
+    });
+
+    await getWheelState(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "You are not a participant in this session.",
+    });
+  });
+
+  // Test: Returns full wheel state successfully:
+  test("Returns full wheel state successfully", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession({
+      status: "voting",
+      wheelItems: [
+        {
+          recommendationSnapshotId: "snapshot1",
+          placeId: "place1",
+          userId: "user1",
+          roomDisplayName: "User 1",
+        },
+        {
+          recommendationSnapshotId: "snapshot1",
+          placeId: "place2",
+          userId: "host1",
+          roomDisplayName: "Host",
+        },
+      ],
+      currentWheelResult: {
+        recommendationSnapshotId: "snapshot1",
+        placeId: "place1",
+      },
+      finalWheelResult: null,
+      voteSummary: {
+        acceptCount: 2,
+        respinCount: 1,
+        votedUserIds: ["host1", "user1"],
+      },
+    });
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {});
+    mockLeanFind(SessionSelection, []);
+    mockLeanFind(RecommendationSnapshot, [
+      {
+        _id: "snapshot1",
+        restaurants: [
+          {
+            placeId: "place1",
+            name: "Restaurant 1",
+            address: "Address 1",
+            rating: 4.5,
+            priceLevel: 2,
+            location: { lat: -36.8, lng: 174.7 },
+          },
+          {
+            placeId: "place2",
+            name: "Restaurant 2",
+            address: "Address 2",
+            rating: 4.5,
+            priceLevel: 2,
+            location: { lat: -36.9, lng: 174.8 },
+          },
+        ],
+      },
+    ]);
+
+    await getWheelState(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({
+      session: {
+        id: "session123",
+        status: "voting",
+        wheelItems: [
+          expect.objectContaining({
+            placeId: "place1",
+            name: "Restaurant 1",
+            userId: "user1",
+            roomDisplayName: "User 1",
+          }),
+          expect.objectContaining({
+            placeId: "place2",
+            name: "Restaurant 2",
+            userId: "host1",
+            roomDisplayName: "Host",
+          }),
+        ],
+        currentWheelResult: expect.objectContaining({
+          placeId: "place1",
+          name: "Restaurant 1",
+        }),
+        finalWheelResult: null,
+        voteSummary: {
+          acceptCount: 2,
+          respinCount: 1,
+          votedUserIds: ["host1", "user1"],
+          votedCount: 2,
+          totalParticipants: 2,
+        },
+      },
+    });
+  });
+
+  // Test: Fallback error handling:
+  test("Returns fallback message when getWheelState fails", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+
+    await getWheelState(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Failed to fetch wheel state.",
+    });
+  });
+});
+
 // Test: getFinalWheelResult:
 describe("wheelController.getFinalWheelResult", () => {
   // Test: Session not found:
@@ -326,6 +491,17 @@ describe("wheelController.getFinalWheelResult", () => {
         recommendationSnapshotId: "snapshot1",
         placeId: "place1",
       },
+      voteSummary: {
+        acceptCount: 2,
+        respinCount: 1,
+        votedUserIds: ["host1", "user1"],
+      },
+      resultRatings: [
+        {
+          userId: { toString: () => "user1" },
+          score: 4,
+        },
+      ],
     });
 
     sessionService.findSessionById.mockResolvedValue(mockSession);
@@ -360,6 +536,23 @@ describe("wheelController.getFinalWheelResult", () => {
           rating: 4.8,
           priceLevel: 3,
         }),
+        voteSummary: {
+          acceptCount: 2,
+          respinCount: 1,
+          votedUserIds: ["host1", "user1"],
+          votedCount: 2,
+          totalParticipants: 2,
+        },
+        resultRatingSummary: {
+          ratings: [
+            {
+              userId: "user1",
+              score: 4,
+            },
+          ],
+          ratingCount: 1,
+          averageScore: 4,
+        },
       },
     });
   });

@@ -121,6 +121,10 @@ const sessionSchema = new mongoose.Schema(
       type: [participantSchema],
       default: [],
     },
+    remindedUserIds: {
+      type: [String],
+      default: [],
+    },
     wheelItems: {
       type: [wheelItemSchema],
       default: [],
@@ -185,6 +189,16 @@ const sessionSchema = new mongoose.Schema(
       ),
       default: null,
     },
+    resultRatings: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        score: { type: Number, min: 1, max: 5, required: true },
+      },
+    ],
   },
   { timestamps: true },
 );

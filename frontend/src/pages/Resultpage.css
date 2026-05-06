@@ -15,7 +15,7 @@
     font-family: 'Suez One', serif;
     font-size: 40px;
     color: #081D70;
-    text-align: left;
+    text-align: center;
     padding: 0 0 20px 0;
     margin: 0;
 }
@@ -42,6 +42,7 @@
     position: relative;
     flex: 1;
     min-height: 500px;
+    max-height: calc(100vh - 195px); /* ✅ navbar ~115px + page padding ~80px */
     overflow: hidden;
     border-radius: 16px;
     flex-shrink: 0;
@@ -64,6 +65,7 @@
     padding: 30px;
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
     position: relative;
+    justify-items: center;
 }
 
 .result-restaurant-name {
@@ -71,6 +73,7 @@
     font-size: 32px;
     color: #081D70;
     margin: 0 0 8px 0;
+    align-items: center;
 }
 
 .result-restaurant-type {
@@ -135,6 +138,7 @@
     border-radius: 16px;
     text-align: left;
     box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.08);
+    justify-items: center;
 }
 
 .result-rating-title {
@@ -221,5 +225,43 @@
 
     .result-stars {
         justify-content: center;
+    }
+}
+
+.result-home-wrapper {
+    flex: 1;           /* ✅ takes all remaining height */
+    display: flex;
+    align-items: center;   /* ✅ vertical center */
+    justify-content: center; /* ✅ horizontal center */
+}
+
+.result-home-button {
+    align-self: center;
+    width: 100%;
+    max-width: 200px;
+    height: 46px;
+    background: #081D70;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+}
+
+.result-home-button:hover {
+    background: #F27533;
+    transform: translateY(-1px);
+}
+
+/* Mobile */
+@media (max-width: 430px) {
+    .result-home-container {
+        padding: 20px;
+        margin: 0 20px 20px 20px;
+        align-items: center;
+        text-align: center;
     }
 }
