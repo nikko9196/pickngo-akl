@@ -11,8 +11,10 @@ function parseAnswer(rawValue) {
 }
 
 async function getActiveQuestionCount() {
-  const questionLists = await QuestionList.find({ isActive: true }).select("questionList");
-  return questionLists.reduce((total, questionList) => total + questionList.questionList.length, 0);
+  return QuestionList.countDocuments({
+    isActive: true,
+    "questionList.0": { $exists: true },
+  });
 }
 
 async function updateSessionStatusIfComplete(sessionId) {
@@ -112,6 +114,38 @@ async function upsertResponse(req, res) {
   }
 }
 
+async function getMyResponses(req, res) {
+  const sessionId = req.params.sessionId?.trim();
+
+  if (!sessionId) {
+    return res.status(400).json({ message: "Session ID is required." });
+  }
+
+  try {
+    const responses = await Response.find({
+      sessionId,
+      userId: req.userId,
+    })
+      .sort({ createdAt: 1 })
+      .lean();
+
+    return res.status(200).json({
+      responses: responses.map((response) => ({
+        sessionId: response.sessionId,
+        userId: response.userId,
+        questionId: response.questionId,
+        answer: response.answer,
+        skipped: response.skipped,
+        createdAt: response.createdAt,
+      })),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch responses.";
+    return res.status(500).json({ message });
+  }
+}
+
 module.exports = {
+  getMyResponses,
   upsertResponse,
 };

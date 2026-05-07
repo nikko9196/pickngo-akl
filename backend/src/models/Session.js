@@ -70,6 +70,36 @@ const wheelResultSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const locationSchema = new mongoose.Schema(
+  {
+    source: {
+      type: String,
+      enum: ["current", "map"],
+      default: "map",
+    },
+    label: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    lat: {
+      type: Number,
+      default: null,
+    },
+    lng: {
+      type: Number,
+      default: null,
+    },
+    radiusMeters: {
+      type: Number,
+      min: 100,
+      max: 50000,
+      default: 3000,
+    },
+  },
+  { _id: false }
+);
+
 const sessionSchema = new mongoose.Schema(
   {
     hostUserId: {
@@ -116,6 +146,10 @@ const sessionSchema = new mongoose.Schema(
       min: 1,
       max: 10,
       default: MAX_SELECTIONS_PER_USER_DEFAULT,
+    },
+    location: {
+      type: locationSchema,
+      default: () => ({}),
     },
     participants: {
       type: [participantSchema],

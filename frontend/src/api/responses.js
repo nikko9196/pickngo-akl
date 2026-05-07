@@ -28,3 +28,7 @@ export function submitResponse(token, payload) {
     body: JSON.stringify(body),
   });
 }
+
+export function getMyResponses(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/responses/me`, token);
+}

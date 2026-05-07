@@ -1,19 +1,34 @@
 const QuestionList = require("../models/QuestionList");
 
+function pickRandomQuestion(questions) {
+  if (!Array.isArray(questions) || questions.length === 0) {
+    return null;
+  }
+
+  const randomIndex = Math.floor(Math.random() * questions.length);
+  return questions[randomIndex];
+}
+
+function serializeQuestion(question) {
+  return {
+    questionId: question.questionId,
+    questionType: question.questionType,
+    questionText: question.questionText,
+    questionValue: (question.questionValue || []).map((option) => ({
+      optionLabel: option.optionLabel,
+      optionText: option.optionText,
+    })),
+  };
+}
+
 function serializeQuestionList(questionList) {
+  const randomQuestion = pickRandomQuestion(questionList.questionList);
+
   return {
     questionListId: questionList.questionListId,
     category: questionList.category,
     isActive: questionList.isActive,
-    questionList: questionList.questionList.map((question) => ({
-      questionId: question.questionId,
-      questionType: question.questionType,
-      questionText: question.questionText,
-      questionValue: (question.questionValue || []).map((option) => ({
-        optionLabel: option.optionLabel,
-        optionText: option.optionText,
-      })),
-    })),
+    questionList: randomQuestion ? [serializeQuestion(randomQuestion)] : [],
   };
 }
 
