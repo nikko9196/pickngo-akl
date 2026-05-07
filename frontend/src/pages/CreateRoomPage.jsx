@@ -435,9 +435,6 @@ function CreateRoomPage() {
                                 <span>Room location</span>
                                 <h2>Pick on map</h2>
                             </div>
-                            <button className="room-map-close" type="button" onClick={() => setIsMapModalOpen(false)}>
-                                Close
-                            </button>
                         </div>
                         <div className="room-map-canvas" ref={mapElementRef} />
                         {mapStatusMessage ? <p className="auth-status error">{mapStatusMessage}</p> : null}
