@@ -6,7 +6,7 @@ import { getMyResponses, submitResponse } from "../api/responses";
 import { getSessionByCode, getSessionProgress } from "../api/sessions";
 import aucklandSkyBackground from "../assets/background - auckland - sky transparent 1.png";
 import loadingIllustration from "../assets/loading 1.png";
-import logoPointer from "../assets/Polygon 1.svg";
+import Navbar from "../components/Navbar";
 import { useAuth } from "../context/useAuth";
 import "./QuestionPage.css";
 
@@ -305,19 +305,7 @@ function QuestionPage() {
                     style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
                 />
 
-                <header className="top-banner question-page-banner">
-                    <button className="brand-lockup brand-lockup-button" type="button" onClick={() => navigate("/")}>
-                        <div className="brand-name" aria-label="PICK n GO AKL">
-                            <span className="brand-word brand-word-left">PICK</span>
-                            <span className="brand-word brand-word-connector">n</span>
-                            <span className="brand-word brand-word-right">GO</span>
-                        </div>
-                        <div className="brand-city">
-                            <span>AKL</span>
-                            <img src={logoPointer} alt="" aria-hidden="true" />
-                        </div>
-                    </button>
-                </header>
+                <Navbar variant="brand" className="question-page-banner" />
 
                 {isGeneratingRestaurants ? (
                     <section className="question-finished-state">

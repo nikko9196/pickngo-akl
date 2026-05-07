@@ -7,7 +7,7 @@ import {
     updateSession,
 } from "../api/sessions";
 import foodPatternBackground from "../assets/background - pattern - food 1.png";
-import logoPointer from "../assets/Polygon 1.svg";
+import Navbar from "../components/Navbar";
 import taglineImage from "../assets/Tagline 1.png";
 import { useAuth } from "../context/useAuth";
 import "./HomePage.css";
@@ -203,19 +203,7 @@ function HomePage() {
                     aria-hidden="true"
                     style={{ "--landing-background-image": `url("${foodPatternBackground}")` }}
                 />
-                <header className="top-banner">
-                    <div className="brand-lockup">
-                        <div className="brand-name" aria-label="PICK n GO AKL">
-                            <span className="brand-word brand-word-left">PICK</span>
-                            <span className="brand-word brand-word-connector">n</span>
-                            <span className="brand-word brand-word-right">GO</span>
-                        </div>
-                        <div className="brand-city">
-                            <span>AKL</span>
-                            <img src={logoPointer} alt="" aria-hidden="true" />
-                        </div>
-                    </div>
-                </header>
+                <Navbar variant="brand" />
 
                 {isAuthenticated ? (
                     <div className="account-menu landing-account-menu" ref={accountMenuRef}>

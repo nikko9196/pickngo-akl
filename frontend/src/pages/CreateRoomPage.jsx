@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { createSession } from "../api/sessions";
 import aucklandSkyBackground from "../assets/background - auckland - sky transparent 1.png";
-import logoPointer from "../assets/Polygon 1.svg";
+import Navbar from "../components/Navbar";
 import { useAuth } from "../context/useAuth";
 import "./RoomPage.css";
 
@@ -329,19 +329,7 @@ function CreateRoomPage() {
                     style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
                 />
 
-                <header className="top-banner">
-                    <button className="brand-lockup brand-lockup-button" type="button" onClick={() => navigate("/")}>
-                        <div className="brand-name" aria-label="PICK n GO AKL">
-                            <span className="brand-word brand-word-left">PICK</span>
-                            <span className="brand-word brand-word-connector">n</span>
-                            <span className="brand-word brand-word-right">GO</span>
-                        </div>
-                        <div className="brand-city">
-                            <span>AKL</span>
-                            <img src={logoPointer} alt="" aria-hidden="true" />
-                        </div>
-                    </button>
-                </header>
+                <Navbar variant="brand" />
 
                 <section className="room-page-layout">
                     <aside className="room-panel create-room-panel">
