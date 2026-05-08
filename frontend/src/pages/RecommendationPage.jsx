@@ -331,46 +331,46 @@ function RecommendationPage() {
           <small>This may take up to 30 seconds.</small>
         </div>
       ) : !hasRecommendations ? (
-        <div className="recommendation-container">
-          <section className="recommendation-intro">
-            <h2>Picks for your group</h2>
-            <p className="recommendation-intro-sub">
-              {hasSnapshot
-                ? "No restaurants matched the current preferences."
-                : "No recommendations yet."}
-            </p>
-          </section>
-          <div className="recommendation-state">
-            {pageError ? (
-              <p className="recommendation-error recommendation-error-banner">
-                {pageError}
-              </p>
-            ) : null}
-            {isHost ? (
-              <>
-                <p>
-                  {hasSnapshot
-                    ? "Try generating another recommendation set."
-                    : "Generate restaurant recommendations for your group."}
-                </p>
-                <button
-                  className="recommendation-generate"
-                  type="button"
-                  onClick={() => handleGenerate({ isAutomatic: false })}
-                >
-                  {hasSnapshot ? "Generate Again" : "Generate Recommendations"}
-                </button>
-              </>
-            ) : (
-              <p>
-                {session?.status === "generating"
-                  ? "Waiting for the host to generate recommendations..."
-                  : "Recommendations are not available yet."}
-              </p>
-            )}
-          </div>
-        </div>
+  <>
+    <section className="recommendation-intro">
+      <h2>Picks for your group</h2>
+      <p className="recommendation-intro-sub">
+        {hasSnapshot
+          ? "No restaurants matched the current preferences."
+          : "No recommendations yet."}
+      </p>
+    </section>
+    <div className="recommendation-state">
+      {pageError ? (
+        <p className="recommendation-error recommendation-error-banner">
+          {pageError}
+        </p>
+      ) : null}
+      {isHost ? (
+        <>
+          <p>
+            {hasSnapshot
+              ? "Try generating another recommendation set."
+              : "Generate restaurant recommendations for your group."}
+          </p>
+          <button
+            className="recommendation-generate"
+            type="button"
+            onClick={() => handleGenerate({ isAutomatic: false })}
+          >
+            {hasSnapshot ? "Generate Again" : "Generate Recommendations"}
+          </button>
+        </>
       ) : (
+        <p>
+          {session?.status === "generating"
+            ? "Waiting for the host to generate recommendations..."
+            : "Recommendations are not available yet."}
+        </p>
+      )}
+    </div>
+  </>
+) : (
         <>
           <div className="recommendation-container">
             <section className="recommendation-intro">
