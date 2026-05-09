@@ -6,6 +6,7 @@
     "test": "jest",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "test:unit": "jest tests/unit",
     "test:integration": "jest tests/integration --runInBand"
   },
   "keywords": [],

@@ -1,11 +1,11 @@
 const {
   sendReminder,
   getReminder,
-} = require("../../controllers/readyController");
+} = require("../../../controllers/readyController");
 
-const sessionService = require("../../services/sessionService");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../services/sessionService");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -55,7 +55,7 @@ beforeEach(() => {
 // Test: sendReminder:
 describe("readyController.sendReminder", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -75,7 +75,7 @@ describe("readyController.sendReminder", () => {
   });
 
   // Test: User is not host:
-  test("Returns 403 if user is not host", async () => {
+  test("Returns 403 if user is not host.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -103,7 +103,7 @@ describe("readyController.sendReminder", () => {
   });
 
   // Test: Returns waiting participant user IDs:
-  test("Returns waiting participant user IDs", async () => {
+  test("Returns waiting participant user IDs.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -164,14 +164,14 @@ describe("readyController.sendReminder", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when sendReminder fails", async () => {
+  test("Returns fallback message when sendReminder fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await sendReminder(req, res);
 
@@ -185,7 +185,7 @@ describe("readyController.sendReminder", () => {
 // Test: getReminder:
 describe("readyController.getReminder", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -205,7 +205,7 @@ describe("readyController.getReminder", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -228,7 +228,7 @@ describe("readyController.getReminder", () => {
   });
 
   // Test: Returns reminded user IDs from saved reminder state:
-  test("Returns reminded user IDs from saved reminder state", async () => {
+  test("Returns reminded user IDs from saved reminder state.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -286,14 +286,14 @@ describe("readyController.getReminder", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when getReminder fails", async () => {
+  test("Returns fallback message when getReminder fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getReminder(req, res);
 

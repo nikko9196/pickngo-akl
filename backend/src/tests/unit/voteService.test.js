@@ -1,4 +1,7 @@
-const { applyVote, calculateVoteResult } = require("../services/voteService");
+const {
+  applyVote,
+  calculateVoteResult,
+} = require("../../services/voteService");
 
 function createMockSession(overrides = {}) {
   return {

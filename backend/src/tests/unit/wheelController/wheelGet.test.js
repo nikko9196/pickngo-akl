@@ -2,15 +2,15 @@ const {
   getCurrentWheel,
   getFinalWheelResult,
   getWheelState,
-} = require("../../controllers/wheelController");
+} = require("../../../controllers/wheelController");
 
-const RecommendationSnapshot = require("../../models/RecommendationSnapshot");
-const SessionSelection = require("../../models/SessionSelection");
-const sessionService = require("../../services/sessionService");
+const RecommendationSnapshot = require("../../../models/RecommendationSnapshot");
+const SessionSelection = require("../../../models/SessionSelection");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../models/RecommendationSnapshot");
-jest.mock("../../models/SessionSelection");
-jest.mock("../../services/sessionService");
+jest.mock("../../../models/RecommendationSnapshot");
+jest.mock("../../../models/SessionSelection");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -80,7 +80,7 @@ beforeEach(() => {
 // Test: getCurrentWheel:
 describe("wheelController.getCurrentWheel", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -97,7 +97,7 @@ describe("wheelController.getCurrentWheel", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user3",
@@ -120,7 +120,7 @@ describe("wheelController.getCurrentWheel", () => {
   });
 
   // Test: Returns current wheel with last result and last vote summary:
-  test("Returns current wheel with last result and last vote summary", async () => {
+  test("Returns current wheel with last result and last vote summary.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -197,7 +197,7 @@ describe("wheelController.getCurrentWheel", () => {
   });
 
   // Test: Returns empty wheelItems array when no wheel items exist:
-  test("Returns empty wheelItems array when no wheel items exist", async () => {
+  test("Returns empty wheelItems array when no wheel items exist.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -234,7 +234,7 @@ describe("wheelController.getCurrentWheel", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getCurrentWheel(req, res);
 
@@ -248,7 +248,7 @@ describe("wheelController.getCurrentWheel", () => {
 // Test: getWheelState:
 describe("wheelController.getWheelState", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -268,7 +268,7 @@ describe("wheelController.getWheelState", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -291,7 +291,7 @@ describe("wheelController.getWheelState", () => {
   });
 
   // Test: Returns full wheel state successfully:
-  test("Returns full wheel state successfully", async () => {
+  test("Returns full wheel state successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -391,14 +391,14 @@ describe("wheelController.getWheelState", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when getWheelState fails", async () => {
+  test("Returns fallback message when getWheelState fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getWheelState(req, res);
 
@@ -412,7 +412,7 @@ describe("wheelController.getWheelState", () => {
 // Test: getFinalWheelResult:
 describe("wheelController.getFinalWheelResult", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -432,7 +432,7 @@ describe("wheelController.getFinalWheelResult", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user3",
@@ -455,7 +455,7 @@ describe("wheelController.getFinalWheelResult", () => {
   });
 
   // Test: No final wheel result found:
-  test("Returns 404 if final wheel result does not exist", async () => {
+  test("Returns 404 if final wheel result does not exist.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -478,7 +478,7 @@ describe("wheelController.getFinalWheelResult", () => {
   });
 
   // Test: Returns final wheel result successfully:
-  test("Returns final wheel result successfully", async () => {
+  test("Returns final wheel result successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -565,7 +565,7 @@ describe("wheelController.getFinalWheelResult", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getFinalWheelResult(req, res);
 
