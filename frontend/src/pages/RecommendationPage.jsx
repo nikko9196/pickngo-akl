@@ -17,6 +17,14 @@ import {
 } from "../utils/mockRecommendations";
 import "./RecommendationPage.css";
 
+// import socket and reminder components and hook
+import ReminderPopup from "../components/ReminderPopup";
+import { useReminderPopup } from "../hooks/useReminderPopup";
+import { io } from "socket.io-client";
+import { getCurrentUser } from "../api/auth";
+
+const socket = io(import.meta.env.VITE_API_BASE_URL);
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
 
 function RecommendationPage() {
@@ -51,6 +59,49 @@ function RecommendationPage() {
     session?.status === "generating" &&
     !hasSnapshot &&
     !isGenerating;
+
+  // ============================================================
+  // Reminder State and EFFECTS
+ 
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const currentUserIdRef = useRef(null);
+
+  useEffect(() => {
+      const fetchMe = async () => {
+          try {
+              const { user } = await getCurrentUser(token);
+              setCurrentUserId(user.id);
+          } catch (err) {
+              console.error(err);
+          }
+      };
+
+      if (token) {
+          fetchMe();
+      }
+  }, [token]);
+
+  useEffect(() => {
+      currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!sessionCode || !currentUserId) return;
+
+    socket.emit("join_session", {
+        sessionCode,
+        userId: currentUserId
+    });
+
+  }, [sessionCode, currentUserId]);
+
+  const {
+      showReminderPopup,
+      setShowReminderPopup,
+  } = useReminderPopup(socket, currentUserIdRef);
+
+  // End of Reminder State and EFFECTS
+  // ============================================================
 
   useEffect(() => {
     if (!isAuthReady) {
@@ -417,6 +468,15 @@ function RecommendationPage() {
           </div>
         </>
       )}
+      {/* Reminder Popup */}
+      {showReminderPopup && (
+                <ReminderPopup
+                    isHost={isHost}
+                    onClose={() => {
+                        setShowReminderPopup(false);
+                    }}
+                />
+            )}
     </main>
   );
 }
