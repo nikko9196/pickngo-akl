@@ -172,7 +172,7 @@ function SessionPage() {
                     style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
                 />
 
-                <Navbar variant="brand" />
+                <Navbar />
 
                 {isLoading && !session ? (
                     <section className="session-loading-state" aria-live="polite">
