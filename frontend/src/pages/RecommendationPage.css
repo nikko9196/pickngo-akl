@@ -32,7 +32,7 @@
   flex-shrink: 0;
   padding: 22px 20px 18px;
   text-align: center;
-  background: var(--rec-surface-light);
+  background: transparent;
   border-bottom: 1px solid transparent;
 }
 
