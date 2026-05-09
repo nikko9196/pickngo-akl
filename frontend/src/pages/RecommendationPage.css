@@ -15,92 +15,6 @@
   overflow: hidden;
 }
 
-.top-banner {
-  flex-shrink: 0;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 115px;
-  padding: 24px 20px 18px;
-  background: #28469e;
-}
-
-.brand-lockup {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 173px;
-  height: 52px;
-}
-
-.brand-lockup-button {
-  border: 0;
-  padding: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.brand-name {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 0;
-  color: #fff8ea;
-  font-family: var(--display-font);
-  font-size: 40px;
-  font-weight: 400;
-  line-height: 1;
-  text-align: center;
-  text-transform: none;
-}
-
-.brand-word {
-  display: inline-block;
-}
-
-.brand-word-left {
-  letter-spacing: -1.6px;
-}
-
-.brand-word-connector {
-  margin: 0 4px 4px 2px;
-  font-size: 32px;
-  letter-spacing: -3.2px;
-}
-
-.brand-word-right {
-  letter-spacing: -1.6px;
-}
-
-.brand-city {
-  position: absolute;
-  right: -14px;
-  bottom: -14px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  margin-top: 0;
-  color: #fff;
-  font-family: var(--accent-font);
-  font-size: 24px;
-  font-weight: 400;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.brand-city span {
-  transform: skewX(-10deg);
-}
-
-.brand-city img {
-  width: 10px;
-  height: auto;
-  display: block;
-}
-
 .recommendation-container {
   flex: 1;
   display: flex;
@@ -478,13 +392,6 @@
   }
 }
 
-@media (max-width: 639px) {
-  .top-banner {
-    min-height: 115px;
-    padding: 22px 16px 18px;
-  }
-}
-
 @media (min-width: 768px) {
   .recommendation-container {     
     max-width: 1024px;
@@ -497,11 +404,6 @@
     align-content: start;
     gap: 24px;
     padding: 16px 24px 24px;
-  }
-
-  .top-banner {
-    min-height: 128px;
-    padding: 28px 24px 20px;
   }
 
   .restaurant-card-name {
