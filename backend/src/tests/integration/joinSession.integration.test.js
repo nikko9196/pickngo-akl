@@ -111,13 +111,16 @@ describe("Integration test: Join session", () => {
 
     const sessionCode = createResponse.body.session.sessionCode;
 
-    await request(BASE_URL)
+    const joinResponse = await request(BASE_URL)
       .post("/api/sessions/join")
       .set("Authorization", `Bearer ${memberOne.token}`)
       .send({
         sessionCode,
         roomDisplayName: "Member One",
       });
+
+    expect(joinResponse.statusCode).toBeGreaterThanOrEqual(200);
+    expect(joinResponse.statusCode).toBeLessThan(300);
 
     const response = await request(BASE_URL)
       .post("/api/sessions/join")
