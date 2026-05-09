@@ -17,6 +17,10 @@ import {
 } from "../utils/mockRecommendations";
 import "./RecommendationPage.css";
 
+function isMissingResponsesError(message) {
+  return /questionnaire responses|usable responses/i.test(message ?? "");
+}
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
 
 function RecommendationPage() {
@@ -26,6 +30,7 @@ function RecommendationPage() {
   const initialSession = location.state?.inviteSession || null;
   const { isAuthenticated, isAuthReady, token } = useAuth();
   const autoGenerateAttemptedRef = useRef(false);
+  const generateErrorRef = useRef(null);
 
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState([]);
@@ -35,6 +40,7 @@ function RecommendationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageError, setPageError] = useState("");
+  const [hasWaitedTooLong, setHasWaitedTooLong] = useState(false);
 
   const selectedSet = useMemo(
     () => new Set(selectedPlaceIds),
@@ -64,6 +70,7 @@ function RecommendationPage() {
 
   useEffect(() => {
     autoGenerateAttemptedRef.current = false;
+    generateErrorRef.current = null;
   }, [session?.id]);
 
   useEffect(() => {
@@ -88,6 +95,26 @@ function RecommendationPage() {
   }, [navigate, session]);
 
   useEffect(() => {
+    if (
+      isHost ||
+      session?.status !== "generating" ||
+      hasRecommendations ||
+      hasSnapshot
+    ) {
+      setHasWaitedTooLong(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHasWaitedTooLong(true);
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isHost, session?.status, hasRecommendations, hasSnapshot]);
+
+  useEffect(() => {
     if (!isAuthReady || !isAuthenticated || !token || !sessionCode) {
       return;
     }
@@ -110,7 +137,7 @@ function RecommendationPage() {
 
         const nextSession = sessionResponse.session;
         setSession(nextSession);
-        setPageError("");
+        setPageError(generateErrorRef.current ?? "");
 
         try {
           const recommendationsResponse = USE_MOCK
@@ -207,6 +234,7 @@ function RecommendationPage() {
 
     setIsGenerating(true);
     setPageError("");
+    generateErrorRef.current = null;
 
     try {
       const response = USE_MOCK
@@ -232,6 +260,10 @@ function RecommendationPage() {
       );
     } catch (error) {
       setPageError(error.message);
+
+      if (isMissingResponsesError(error.message)) {
+        generateErrorRef.current = error.message;
+      }
 
       if (isAutomatic) {
         autoGenerateAttemptedRef.current = true;
@@ -297,18 +329,31 @@ function RecommendationPage() {
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Loading recommendations...</p>
         </div>
+      ) : isMissingResponsesError(pageError) || (!isHost && hasWaitedTooLong) ? (
+        <div className="recommendation-state">
+          <p>
+            No quiz responses yet. Recommendations need at least one answer to work. Please return home and create or join a new room.
+          </p>
+          <button
+            className="recommendation-close"
+            type="button"
+            onClick={() => navigate("/")}
+          >
+            Back to Home
+          </button>
+        </div>
       ) : pageError && !hasRecommendations && !hasSnapshot ? (
         <div className="recommendation-state">
           <p className="recommendation-error">{pageError}</p>
           <button
-            className="recommendation-retry"
+            className="recommendation-close"
             type="button"
             onClick={() => window.location.reload()}
           >
             Try again
           </button>
         </div>
-      ) : isGenerating ? (
+      ) : isGenerating || (shouldAutoGenerate && !autoGenerateAttemptedRef.current) ? (
         <div className="recommendation-state">
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Generating recommendations...</p>
