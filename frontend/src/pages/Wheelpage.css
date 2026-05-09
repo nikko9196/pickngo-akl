@@ -4,6 +4,14 @@
    ============================================================ */
 
 /* --- Page Layout --- */
+/* Make the main wrapper fill the screen */
+.wheel-page-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
 
 .wp-page {
     position: relative;
@@ -14,11 +22,15 @@
     margin: 0 auto;
     display: flex;
     flex-direction: row;
-    padding: 40px 80px;
+    padding: 40px 40px;
     box-sizing: border-box;
 }
 
 @media (max-width: 800px) {
+    .wheel-page-shell {
+        min-height: 800px;   /* ✅ minimum height on mobile */
+    }
+
     .wp-page {
         max-width: 430px;
         flex-direction: column;
@@ -65,6 +77,7 @@
     border: none;
     font-weight: 700;
     min-width: 200px;
+    padding: 5px;
 }
 
 @media (max-width: 800px) {
@@ -74,12 +87,12 @@
 }
 
 .wp-black-button--left {
-    font-size: 16px;
+    font-size: 18px;
     margin-right: auto;  
 }
 
 .wp-black-button--right {
-    font-size: 14px;
+    font-size: 16px;
     margin-left: auto;
 }
 
@@ -103,7 +116,7 @@
 
 .wp-text2 {
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     color: #081D70;
     margin: 0 0 10px 0;
@@ -115,7 +128,7 @@
 
 .wp-text3 {
     font-family: 'Inter', sans-serif;
-    font-size: 12px;
+    font-size: 14px;
     margin: 0 0 0 0;
     text-align: left;
     min-width: 300px;
@@ -140,14 +153,14 @@
     background: #F27533;
     color: white;
     font-family: 'Inter', sans-serif;
-    font-size: 20px;
+    font-size: 24px;
     border: none;
     font-weight: 700;
     /* align-self: flex-start; */
     display: block; /* behaves like a block inside flex */
-    /* position: relative; */
-    margin: 20px auto; /* 👈 centers it */
-    z-index: 2; /*make the button not overlayed by wheel div element*/
+    position: relative; /* must keep this so z-index could work */
+    margin: 10px auto; /* 👈 centers it */
+    z-index: 10; /*make the button not overlayed by wheel div element*/
 }
 
 .wp-orange-button:hover {
@@ -163,7 +176,7 @@
 .curvy-text {
     padding: 20px 40px 40px;
     font-family: 'Suez One', serif;
-    font-size: 28px;
+    font-size: 30px;
     fill: #081D70;
     font-weight: 200;
 
@@ -188,6 +201,28 @@
     display: flex;
     justify-content: center;
     margin-top: 60px; /*check with height of svg*/
+    z-index: 1;
+}
+
+.wp-loading-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+}
+
+.wp-loading-illustration {
+    width: 70%;
+    max-width: 220px;
+    height: auto;
+}
+
+.wp-loading-wheel {
+    font-size: 16px;
+    font-weight: 600;
 }
 
 @media (max-width: 800px) {
@@ -241,7 +276,7 @@
     left: 47%;
     width: 25%;
     transform: translate(-50%, -50%);
-    z-index: 1;
+    z-index: 5;
     transition: transform 0.3s ease;
 }
 
@@ -271,7 +306,7 @@
 .wp-popup {
     background: #ffffff;
     border-radius: 12px;
-    padding: 30px;
+    padding: 34px;
     width: 80%;
     max-width: 280px;
     text-align: center;
@@ -281,7 +316,7 @@
 
 .wp-popup-text {
     font-family: 'Suez One', serif;
-    font-size: 30px;
+    font-size: 34px;
     color: #F27533;
     margin-bottom: 10px;
 }
@@ -290,7 +325,7 @@
     color: #081D70;
     font-weight: 600;
     font-family: 'Inter', sans-serif;
-    font-size: 16px;
+    font-size: 20px;
     margin-bottom: 20px;
     
 }
@@ -308,7 +343,7 @@
 
 .wp-popup-timer {
     color: #F27533;
-    font-size: 13px;
+    font-size: 17px;
 }
 
 .wp-yes-button,
@@ -321,7 +356,7 @@
     cursor: pointer;
     font-weight: 500;
     font-family: 'Inter', sans-serif;
-    font-size: 14px;
+    font-size: 18px;
     color: white;
     display: flex;
     align-items: center;
@@ -345,7 +380,7 @@
 
 .wp-vote-count-label {
     margin: 0;
-    font-size: 11px;
+    font-size: 15px;
     color: #0F6E56;
     font-weight: 500;
     font-family: 'Inter', sans-serif;
@@ -353,7 +388,7 @@
 
 .wp-vote-count-number {
     margin: 0;
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 600;
     color: #0F6E56;
     font-family: 'Inter', sans-serif;
@@ -367,39 +402,47 @@
     width: auto;
     background: white;
     color:#081D70;
-    z-index: 1000;
+    z-index: 90;
     box-shadow: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
     max-height: 600px;
     overflow-y: auto;
+    overflow-x: auto;
     padding: 10px;
 }
 
-.ready-header {
+.ready-header-p, .ready-header-m {
     width: 100%;
     display: flex;
-    justify-content: center;
+    justify-content: left;
     color: #081D70;
     font-weight: 400;
     font-family: 'Suez One', serif;
-    font-size: 20px;
+    font-size: 24px;
+}
+
+.ready-header-p {
+    text-indent: 40px;
+}
+.ready-header-m {
+    text-indent: 80px;
 }
 
 .ready-roomDisplayName {
     color: #081D70;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 18px;
     font-family: 'Inter', sans-serif;
     display: flex;
     align-items: center;
     max-width: 100px;        /* 👈 required */
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    /* text-overflow: ellipsis; */
 }
 
 .ready-isReady {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 18px;
     font-family: 'Inter', sans-serif;
     width: 100px; 
     text-align: center;
@@ -439,7 +482,7 @@
     display: flex;
     justify-content: space-between;
     padding: 5px 0;
-    font-size: 14px;
+    font-size: 18px;
 }
 
 .reminder-button {
@@ -453,13 +496,6 @@
     font-weight: 700;
     font-family: 'Inter', sans-serif;
     color: white;
-}
-
-.pick-option {
-    max-width: 150px;        /* 👈 required */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .reminder-button:disabled {
@@ -525,28 +561,28 @@
         margin: 10px auto;
         max-width: 250px;
         padding: 12px;
-        font-size: 16px;
+        font-size: 20px;
         border-radius: 8px;
     }
 
     .wp-result-card {
         padding: 24px 28px;
-        font-size: 16px;
+        font-size: 20px;
     }
 
     .wp-result-title {
-        font-size: 28px;
+        font-size: 30px;
         margin-bottom: 14px;
     }
 
     .wp-result-meta {
-        font-size: 18px;
+        font-size: 22px;
         gap: 16px;
         margin-bottom: 12px;
     }
 
     .wp-result-address {
-        font-size: 15px;
+        font-size: 19px;
         margin-top: 10px;
     }
 
@@ -571,7 +607,7 @@
     margin-bottom: -2px; /* overlap panel border */
     cursor: pointer;
     font-family: 'Inter', sans-serif;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 600;
     color: #888;
     display: flex;
@@ -593,7 +629,7 @@
 .wp-tab-badge {
     background: #081D70;
     color: white;
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
     padding: 2px 6px;
     border-radius: 99px;
@@ -607,10 +643,11 @@
 .wp-tab-content {
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
+    /* overflow-y: auto; */
+    overflow: auto;
     padding-top: 12px;
     padding-right: 4px;
-    max-height: calc(100vh - 320px); /* ✅ adjust 320px based on space taken by header + tabs + buttons above */
+    max-height: calc(100vh - 450px); /*✅ adjust 320px based on space taken by header + tabs + buttons above */
 }
 
 .wp-tab-content::-webkit-scrollbar { width: 4px; }
@@ -625,6 +662,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    overflow: visible;
+    /* width: 100%; */
+    min-width: max-content;
 }
 
 .wp-pick-card {
@@ -636,6 +676,10 @@
     background: #f8f8f8;
     border: 1px solid #ececec;
     transition: box-shadow 0.2s;
+    overflow: visible;
+    /* min-width: max-content; */
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .wp-pick-card:hover {
@@ -643,8 +687,8 @@
 }
 
 .wp-pick-photo {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     object-fit: cover;
     border-radius: 8px;
     flex-shrink: 0;
@@ -659,24 +703,25 @@
 }
 
 .wp-pick-name {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
     color: #1a1a1a;
     font-family: 'Inter', sans-serif;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    /* text-overflow: ellipsis; */
 }
 
 .wp-pick-meta {
     display: flex;
     align-items: center;
     gap: 6px;
-    overflow: hidden;
+    overflow: visible;
+    flex-wrap: nowrap;
 }
 
 .wp-pick-rating {
-    font-size: 12px;
+    font-size: 16px;
     font-weight: 600;
     color: #f59e0b;
     white-space: nowrap;
@@ -684,7 +729,7 @@
 }
 
 .wp-pick-price {
-    font-size: 12px;
+    font-size: 16px;
     font-weight: 600;
     color: #22c55e;
     white-space: nowrap;
@@ -692,18 +737,18 @@
 }
 
 .wp-pick-address {
-    font-size: 11px;
+    font-size: 15px;
     color: #666;
     font-family: 'Inter', sans-serif;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    /* text-overflow: ellipsis; */
     flex: 1;
     min-width: 0;
 }
 
 .wp-pick-room {
-    font-size: 11px;
+    font-size: 15px;
     color: #999;
     font-family: 'Inter', sans-serif;
     font-style: italic;
@@ -741,17 +786,17 @@
 }
 
 .wp-ready-panel-name {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 600;
     color: #081D70;
     font-family: 'Inter', sans-serif;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    /* text-overflow: ellipsis; */
 }
 
 .wp-ready-badge {
-    font-size: 14px;
+    font-size: 18px;
     font-weight: 700;
     padding: 4px 10px;
     border-radius: 20px;
@@ -767,6 +812,8 @@
 }
 .wp-tab-placeholder {
     font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    color: #666;
 }
 .wp-ready-badge.ready    { background-color: #F5A220; color: white; }
 .wp-ready-badge.reminded { background-color: #CFF9FC; color: red; }
@@ -783,7 +830,7 @@
 }
 
 .wp-result-title {
-    font-size: 22px;
+    font-size: 26px;
     font-weight: 700;
     margin-bottom: 10px;
     color: #111;
@@ -793,7 +840,7 @@
     display: flex;
     justify-content: center;
     gap: 12px;
-    font-size: 15px;
+    font-size: 19px;
     margin-bottom: 8px;
 }
 
@@ -804,7 +851,7 @@
 }
 
 .wp-result-address {
-    font-size: 13px;
+    font-size: 17px;
     color: #666;
     margin-top: 6px;
 }
@@ -820,7 +867,7 @@
 
 /* Black buttons */
 .wp-black-button:hover {
-    background: #252C37;
+    background: #081D70;
     transform: translateY(-1px);
     transition: background 0.2s, transform 0.1s;
 }
