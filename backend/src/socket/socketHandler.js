@@ -135,7 +135,7 @@ const initSocket = (io) => {
                     .filter(p => !p.isReady)
                     .map(p => p.userId.toString());
 
-                io.to(sessionCode).emit("reminder_sent", { remindedUserIds });
+                io.to(sessionCode).emit("reminder_sent", remindedUserIds);
             } catch (error) {
                 console.error("Failed to send reminder:", error);
             }
