@@ -5,6 +5,7 @@ const RecommendationSnapshot = require("../models/RecommendationSnapshot");
 const Response = require("../models/Response");
 const Session = require("../models/Session");
 const {
+  DEFAULT_MAX_DISTANCE_KM,
   SNAPSHOT_CACHE_WINDOW_MINUTES,
 } = require("../config/recommendationQuestionMap");
 const { combineGroupPreferences } = require("./groupPreferenceService");
@@ -18,9 +19,12 @@ const {
   participantHasUsablePreferences,
 } = require("./preferenceParserService");
 const { rankRestaurants } = require("./placeScoringService");
+const { clampNumber, roundNumber } = require("../utils/geo");
 const HttpError = require("../utils/httpError");
 
 const SNAPSHOT_CACHE_WINDOW_MS = SNAPSHOT_CACHE_WINDOW_MINUTES * 60 * 1000;
+const LOCATION_RADIUS_MIN_METERS = 100;
+const LOCATION_RADIUS_MAX_METERS = 50000;
 
 function getUserIdValue(value) {
   if (!value) {
@@ -51,7 +55,7 @@ function ensureParticipantAccess(session, requesterUserId) {
 }
 
 async function fetchSessionForRecommendations(sessionId) {
-  return Session.findById(sessionId).select("status participants");
+  return Session.findById(sessionId).select("status participants location");
 }
 
 async function getLatestRecommendationSnapshot(sessionId) {
@@ -77,13 +81,109 @@ function attachSessionParticipants(parsedParticipants, sessionParticipants) {
   });
 }
 
-async function createRecommendationSnapshot({ session, groupPrefs, restaurants }) {
+async function createRecommendationSnapshot({
+  session,
+  groupPrefs,
+  restaurants,
+  usedFallback = false,
+  fallbackReason = "",
+}) {
   return RecommendationSnapshot.create({
     sessionId: session._id,
     generatedAt: new Date(),
+    usedFallback,
+    fallbackReason,
     groupPrefs,
     restaurants,
   });
+}
+
+function createFallbackGroupPreferences() {
+  // Reuse the normal group preference combiner so fallback behavior stays aligned
+  // with the same default location and distance settings as the main pipeline.
+  return combineGroupPreferences([]);
+}
+
+function resolveSessionSearchLocation(session) {
+  const latitude = session?.location?.lat;
+  const longitude = session?.location?.lng;
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  const radiusMeters = Number.isFinite(session.location?.radiusMeters)
+    ? clampNumber(
+        session.location.radiusMeters,
+        LOCATION_RADIUS_MIN_METERS,
+        LOCATION_RADIUS_MAX_METERS
+      )
+    : DEFAULT_MAX_DISTANCE_KM * 1000;
+
+  return {
+    latitude,
+    longitude,
+    maxDistanceKm: roundNumber(radiusMeters / 1000, 1),
+  };
+}
+
+function applySessionLocationToGroupPreferences(groupPrefs, session) {
+  const sessionLocation = resolveSessionSearchLocation(session);
+
+  if (!sessionLocation) {
+    return groupPrefs;
+  }
+
+  return {
+    ...groupPrefs,
+    ...sessionLocation,
+  };
+}
+
+function createNearbyFallbackGroupPreferences(groupPrefs) {
+  return {
+    topCuisines: [],
+    preferredPrice: "",
+    dietary: Array.isArray(groupPrefs.dietary) ? groupPrefs.dietary : [],
+    exclude: Array.isArray(groupPrefs.exclude) ? groupPrefs.exclude : [],
+    coffeePreference: "",
+    openLatePreference: "",
+    serviceMode: "",
+    specialRequestKeywords: [],
+    maxDistanceKm: Math.max(
+      Number.isFinite(groupPrefs.maxDistanceKm) ? groupPrefs.maxDistanceKm * 1.5 : 0,
+      DEFAULT_MAX_DISTANCE_KM * 1.5
+    ),
+    latitude: groupPrefs.latitude,
+    longitude: groupPrefs.longitude,
+  };
+}
+
+async function searchAndPresentRestaurants(groupPrefs) {
+  const places = await searchGooglePlaces(groupPrefs);
+  const normalizedPlaces = places
+    .map((place) => normalizePlace(place, groupPrefs))
+    .filter(Boolean);
+  const rankedRestaurants = rankRestaurants(normalizedPlaces, groupPrefs);
+  return presentRankedRestaurants(rankedRestaurants);
+}
+
+function buildGenerationMessage({ restaurantsFound, usedFallback, fallbackReason }) {
+  if (usedFallback && fallbackReason === "no_usable_responses") {
+    return restaurantsFound
+      ? "Generated fallback location-based recommendations because no usable questionnaire responses were available."
+      : "No usable questionnaire responses were available, and no nearby fallback recommendations matched.";
+  }
+
+  if (usedFallback && fallbackReason === "no_matches_for_preferences") {
+    return restaurantsFound
+      ? "We couldn't find strong matches for the group's preferences, so we're showing nearby alternatives instead."
+      : "No restaurants matched the group's preferences or nearby fallback alternatives. Saved an empty recommendation snapshot.";
+  }
+
+  return restaurantsFound
+    ? "Generated group recommendations."
+    : "No restaurants matched the current group preferences. Saved an empty recommendation snapshot.";
 }
 
 async function generateRecommendationsForSession({
@@ -128,36 +228,46 @@ async function generateRecommendationsForSession({
     .sort({ createdAt: 1 })
     .lean();
 
+  let usedFallback = false;
+  let fallbackReason = "";
+  let groupPrefs;
+
   if (responses.length === 0) {
-    throw new HttpError(
-      409,
-      "No questionnaire responses are available for recommendation generation yet."
-    );
+    usedFallback = true;
+    fallbackReason = "no_usable_responses";
+    groupPrefs = createFallbackGroupPreferences();
+  } else {
+    const questionLookup = await loadQuestionLookup();
+    const parsedParticipants = parseParticipantPreferences(responses, questionLookup);
+    const sessionParticipants = attachSessionParticipants(parsedParticipants, session.participants);
+    const usableParticipants = sessionParticipants.filter(participantHasUsablePreferences);
+
+    if (usableParticipants.length === 0) {
+      usedFallback = true;
+      fallbackReason = "no_usable_responses";
+      groupPrefs = createFallbackGroupPreferences();
+    } else {
+      groupPrefs = combineGroupPreferences(usableParticipants);
+    }
   }
 
-  const questionLookup = await loadQuestionLookup();
-  const parsedParticipants = parseParticipantPreferences(responses, questionLookup);
-  const sessionParticipants = attachSessionParticipants(parsedParticipants, session.participants);
-  const usableParticipants = sessionParticipants.filter(participantHasUsablePreferences);
+  groupPrefs = applySessionLocationToGroupPreferences(groupPrefs, session);
+  let searchGroupPrefs = groupPrefs;
+  let presentedRestaurants = await searchAndPresentRestaurants(searchGroupPrefs);
 
-  if (usableParticipants.length === 0) {
-    throw new HttpError(
-      409,
-      "No usable responses match the current recommendation question mapping yet."
-    );
+  if (presentedRestaurants.length === 0 && !usedFallback) {
+    usedFallback = true;
+    fallbackReason = "no_matches_for_preferences";
+    searchGroupPrefs = createNearbyFallbackGroupPreferences(groupPrefs);
+    presentedRestaurants = await searchAndPresentRestaurants(searchGroupPrefs);
   }
 
-  const groupPrefs = combineGroupPreferences(usableParticipants);
-  const places = await searchGooglePlaces(groupPrefs);
-  const normalizedPlaces = places
-    .map((place) => normalizePlace(place, groupPrefs))
-    .filter(Boolean);
-  const rankedRestaurants = rankRestaurants(normalizedPlaces, groupPrefs);
-  const presentedRestaurants = await presentRankedRestaurants(rankedRestaurants);
   const snapshot = await createRecommendationSnapshot({
     session,
     groupPrefs,
     restaurants: presentedRestaurants,
+    usedFallback,
+    fallbackReason,
   });
 
   if (presentedRestaurants.length > 0) {
@@ -167,10 +277,13 @@ async function generateRecommendationsForSession({
 
   return {
     cached: false,
-    message:
-      presentedRestaurants.length > 0
-        ? "Generated group recommendations."
-        : "No restaurants matched the current group preferences. Saved an empty recommendation snapshot.",
+    message: buildGenerationMessage({
+      restaurantsFound: presentedRestaurants.length > 0,
+      usedFallback,
+      fallbackReason,
+    }),
+    usedFallback,
+    fallbackReason,
     snapshot: presentSnapshot(snapshot.toObject()),
     sessionStatus: session.status,
   };

@@ -1,11 +1,8 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
 const {
   buildQuestionLookup,
   parseParticipantPreferences,
   participantHasUsablePreferences,
-} = require("../src/services/preferenceParserService");
+} = require("../../../services/preferenceParserService");
 
 test("parseParticipantPreferences normalizes current recommendation answers and note hints", () => {
   const questionLookup = buildQuestionLookup([
@@ -55,22 +52,21 @@ test("parseParticipantPreferences normalizes current recommendation answers and 
     questionLookup
   );
 
-  assert.deepEqual(participant.cuisines, ["japanese", "cafe"]);
-  assert.deepEqual(participant.dietary, ["vegetarian", "halal"]);
-  assert.deepEqual(participant.exclude, ["seafood"]);
-  assert.equal(participant.preferredPrice, "$$");
-  assert.equal(participant.coffeePreference, "yes");
-  assert.equal(participant.serviceMode, "takeaway");
-  assert.equal(participant.openLatePreference, "");
-  assert.deepEqual(participant.specialRequestKeywords, [
+  expect(participant.cuisines).toEqual(["japanese", "cafe"]);
+  expect(participant.dietary).toEqual(["vegetarian", "halal"]);
+  expect(participant.exclude).toEqual(["seafood"]);
+  expect(participant.preferredPrice).toBe("$$");
+  expect(participant.coffeePreference).toBe("yes");
+  expect(participant.serviceMode).toBe("takeaway");
+  expect(participant.openLatePreference).toBe("");
+  expect(participant.specialRequestKeywords).toEqual([
     "coffee",
     "takeaway",
     "dessert",
     "quiet",
   ]);
-  assert.equal(participant.latitude, -36.8485);
-  assert.equal(participant.longitude, 174.7633);
-  assert.equal(participant.maxDistanceKm, 8);
-  assert.equal(participantHasUsablePreferences(participant), true);
+  expect(participant.latitude).toBe(-36.8485);
+  expect(participant.longitude).toBe(174.7633);
+  expect(participant.maxDistanceKm).toBe(8);
+  expect(participantHasUsablePreferences(participant)).toBe(true);
 });
-
