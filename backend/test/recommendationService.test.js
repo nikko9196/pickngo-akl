@@ -1,56 +1,79 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
 const mongoose = require("mongoose");
 
+const QuestionList = require("../src/models/QuestionList");
 const RecommendationSnapshot = require("../src/models/RecommendationSnapshot");
+const Response = require("../src/models/Response");
 const Session = require("../src/models/Session");
+const { DEFAULT_GROUP_LOCATION, DEFAULT_MAX_DISTANCE_KM } = require("../src/config/recommendationQuestionMap");
 const {
   generateRecommendationsForSession,
   getLatestRecommendationsForSession,
 } = require("../src/services/recommendationService");
 
-function mockSessionLookup(t, session) {
-  t.mock.method(Session, "findById", () => ({
-    select: async () => session,
-  }));
+function mockSessionLookup(session) {
+  jest.spyOn(Session, "findById").mockReturnValue({
+    select: jest.fn().mockResolvedValue(session),
+  });
 }
 
-function mockLatestSnapshotLookup(t, snapshot) {
-  t.mock.method(RecommendationSnapshot, "findOne", () => ({
-    sort: async () => snapshot,
-  }));
+function mockLatestSnapshotLookup(snapshot) {
+  jest.spyOn(RecommendationSnapshot, "findOne").mockReturnValue({
+    sort: jest.fn().mockResolvedValue(snapshot),
+  });
 }
 
-test("getLatestRecommendationsForSession returns a clean empty state when no snapshot exists", async (t) => {
+function mockResponseLookup(responses) {
+  jest.spyOn(Response, "find").mockReturnValue({
+    sort: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(responses),
+    }),
+  });
+}
+
+function mockQuestionLookup(questionLists) {
+  jest.spyOn(QuestionList, "find").mockReturnValue({
+    select: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(questionLists),
+    }),
+  });
+}
+
+afterEach(() => {
+  jest.restoreAllMocks();
+  delete global.fetch;
+  delete process.env.GOOGLE_PLACES_API_KEY;
+});
+
+test("getLatestRecommendationsForSession returns a clean empty state when no snapshot exists", async () => {
   const sessionId = new mongoose.Types.ObjectId();
 
-  mockSessionLookup(t, {
+  mockSessionLookup({
     _id: sessionId,
     status: "generating",
     participants: [{ userId: "user-1" }],
   });
-  mockLatestSnapshotLookup(t, null);
+  mockLatestSnapshotLookup(null);
 
   const result = await getLatestRecommendationsForSession({
     sessionId: sessionId.toString(),
     requesterUserId: "user-1",
   });
 
-  assert.equal(result.message, "No recommendation snapshot has been generated yet.");
-  assert.equal(result.snapshot, null);
-  assert.equal(result.sessionStatus, "generating");
+  expect(result.message).toBe("No recommendation snapshot has been generated yet.");
+  expect(result.snapshot).toBeNull();
+  expect(result.sessionStatus).toBe("generating");
 });
 
-test("generateRecommendationsForSession reuses a fresh cached snapshot before hitting Google", async (t) => {
+test("generateRecommendationsForSession reuses a fresh cached snapshot before hitting Google", async () => {
   const sessionId = new mongoose.Types.ObjectId();
   const generatedAt = new Date();
 
-  mockSessionLookup(t, {
+  mockSessionLookup({
     _id: sessionId,
     status: "generating",
     participants: [{ userId: "user-1" }],
   });
-  mockLatestSnapshotLookup(t, {
+  mockLatestSnapshotLookup({
     generatedAt,
     toObject() {
       return {
@@ -80,9 +103,336 @@ test("generateRecommendationsForSession reuses a fresh cached snapshot before hi
     requesterUserId: "user-1",
   });
 
-  assert.equal(result.cached, true);
-  assert.equal(result.message, "Returning the most recent recommendation snapshot.");
-  assert.equal(result.sessionStatus, "generating");
-  assert.equal(result.snapshot.restaurants.length, 1);
-  assert.equal(result.snapshot.restaurants[0].name, "Tanuki's Cave");
+  expect(result.cached).toBe(true);
+  expect(result.message).toBe("Returning the most recent recommendation snapshot.");
+  expect(result.sessionStatus).toBe("generating");
+  expect(result.snapshot.restaurants).toHaveLength(1);
+  expect(result.snapshot.restaurants[0].name).toBe("Tanuki's Cave");
+});
+
+test("generateRecommendationsForSession falls back to neutral location-based recommendations when there are no responses", async () => {
+  const sessionId = new mongoose.Types.ObjectId();
+  const session = {
+    _id: sessionId,
+    status: "generating",
+    participants: [{ userId: "user-1" }],
+    save: jest.fn().mockResolvedValue(true),
+  };
+  const generatedAt = new Date();
+
+  mockSessionLookup(session);
+  mockLatestSnapshotLookup(null);
+  mockResponseLookup([]);
+  jest.spyOn(RecommendationSnapshot, "create").mockResolvedValue({
+    toObject() {
+      return {
+        sessionId: sessionId.toString(),
+        generatedAt,
+        groupPrefs: {
+          topCuisines: [],
+          preferredPrice: "",
+          dietary: [],
+          exclude: [],
+          coffeePreference: "",
+          openLatePreference: "",
+          serviceMode: "",
+          specialRequestKeywords: [],
+          maxDistanceKm: DEFAULT_MAX_DISTANCE_KM,
+          latitude: DEFAULT_GROUP_LOCATION.latitude,
+          longitude: DEFAULT_GROUP_LOCATION.longitude,
+        },
+        restaurants: [
+          {
+            placeId: "place-fallback",
+            name: "Fallback Sushi",
+            address: "1 Queen Street, Auckland CBD",
+            district: "Auckland CBD",
+            location: { lat: -36.848, lng: 174.764 },
+            rating: 4.6,
+            priceLevel: 2,
+            cuisine: ["Japanese"],
+            photos: [],
+            distance: 0.2,
+            openNow: true,
+          },
+        ],
+      };
+    },
+  });
+
+  process.env.GOOGLE_PLACES_API_KEY = "test-api-key";
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    text: async () =>
+      JSON.stringify({
+        places: [
+          {
+            id: "place-fallback",
+            displayName: { text: "Fallback Sushi" },
+            formattedAddress: "1 Queen Street, Auckland CBD",
+            location: { latitude: -36.848, longitude: 174.764 },
+            rating: 4.6,
+            userRatingCount: 210,
+            priceLevel: "PRICE_LEVEL_MODERATE",
+            primaryType: "japanese_restaurant",
+            types: ["restaurant", "japanese_restaurant"],
+            googleMapsUri: "https://maps.google.com/example",
+            photos: [],
+            currentOpeningHours: { openNow: true },
+          },
+        ],
+      }),
+  });
+
+  const result = await generateRecommendationsForSession({
+    sessionId: sessionId.toString(),
+    requesterUserId: "user-1",
+    refresh: true,
+  });
+
+  expect(global.fetch).toHaveBeenCalledTimes(1);
+  const fetchPayload = JSON.parse(global.fetch.mock.calls[0][1].body);
+  expect(fetchPayload.textQuery).toBe("restaurant");
+  expect(fetchPayload.locationBias.circle.center).toEqual({
+    latitude: DEFAULT_GROUP_LOCATION.latitude,
+    longitude: DEFAULT_GROUP_LOCATION.longitude,
+  });
+  expect(result.usedFallback).toBe(true);
+  expect(result.fallbackReason).toBe("no_usable_responses");
+  expect(result.message).toBe(
+    "Generated fallback location-based recommendations because no usable questionnaire responses were available."
+  );
+  expect(result.snapshot.restaurants).toHaveLength(1);
+  expect(result.sessionStatus).toBe("selecting");
+  expect(session.save).toHaveBeenCalledTimes(1);
+});
+
+test("generateRecommendationsForSession falls back when responses exist but none are usable", async () => {
+  const sessionId = new mongoose.Types.ObjectId();
+  const session = {
+    _id: sessionId,
+    status: "generating",
+    participants: [{ userId: "user-1" }],
+    save: jest.fn().mockResolvedValue(true),
+  };
+  const generatedAt = new Date();
+
+  mockSessionLookup(session);
+  mockLatestSnapshotLookup(null);
+  mockResponseLookup([
+    {
+      userId: "user-1",
+      questionId: "q_budget_1",
+      answer: "",
+      skipped: true,
+    },
+  ]);
+  mockQuestionLookup([
+    {
+      category: "budget",
+      questionList: [{ questionId: "q_budget_1", questionType: "single_choice" }],
+    },
+  ]);
+  jest.spyOn(RecommendationSnapshot, "create").mockResolvedValue({
+    toObject() {
+      return {
+        sessionId: sessionId.toString(),
+        generatedAt,
+        groupPrefs: {
+          topCuisines: [],
+          preferredPrice: "",
+          dietary: [],
+          exclude: [],
+          coffeePreference: "",
+          openLatePreference: "",
+          serviceMode: "",
+          specialRequestKeywords: [],
+          maxDistanceKm: DEFAULT_MAX_DISTANCE_KM,
+          latitude: DEFAULT_GROUP_LOCATION.latitude,
+          longitude: DEFAULT_GROUP_LOCATION.longitude,
+        },
+        restaurants: [],
+      };
+    },
+  });
+
+  process.env.GOOGLE_PLACES_API_KEY = "test-api-key";
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: true,
+    text: async () => JSON.stringify({ places: [] }),
+  });
+
+  const result = await generateRecommendationsForSession({
+    sessionId: sessionId.toString(),
+    requesterUserId: "user-1",
+    refresh: true,
+  });
+
+  expect(result.usedFallback).toBe(true);
+  expect(result.fallbackReason).toBe("no_usable_responses");
+  expect(result.message).toBe(
+    "No usable questionnaire responses were available, and no nearby fallback recommendations matched."
+  );
+  expect(result.snapshot.restaurants).toHaveLength(0);
+  expect(result.sessionStatus).toBe("generating");
+  expect(session.save).not.toHaveBeenCalled();
+});
+
+test("generateRecommendationsForSession falls back to nearby alternatives when strict preferences produce no matches", async () => {
+  const sessionId = new mongoose.Types.ObjectId();
+  const session = {
+    _id: sessionId,
+    status: "generating",
+    participants: [{ userId: "user-1" }],
+    save: jest.fn().mockResolvedValue(true),
+  };
+  const generatedAt = new Date();
+
+  mockSessionLookup(session);
+  mockLatestSnapshotLookup(null);
+  mockResponseLookup([
+    {
+      userId: "user-1",
+      questionId: "q_cuisine_1",
+      answer: "Japanese",
+      skipped: false,
+    },
+    {
+      userId: "user-1",
+      questionId: "q_budget_1",
+      answer: "Expensive ($$$)",
+      skipped: false,
+    },
+  ]);
+  mockQuestionLookup([
+    {
+      category: "cuisine",
+      questionList: [{ questionId: "q_cuisine_1", questionType: "multiple_choice" }],
+    },
+    {
+      category: "budget",
+      questionList: [{ questionId: "q_budget_1", questionType: "single_choice" }],
+    },
+  ]);
+
+  const createSnapshot = jest.spyOn(RecommendationSnapshot, "create").mockResolvedValue({
+    toObject() {
+      return {
+        sessionId: sessionId.toString(),
+        generatedAt,
+        usedFallback: true,
+        fallbackReason: "no_matches_for_preferences",
+        groupPrefs: {
+          topCuisines: ["japanese"],
+          preferredPrice: "$$$",
+          dietary: [],
+          exclude: [],
+          coffeePreference: "",
+          openLatePreference: "",
+          serviceMode: "",
+          specialRequestKeywords: [],
+          maxDistanceKm: DEFAULT_MAX_DISTANCE_KM,
+          latitude: DEFAULT_GROUP_LOCATION.latitude,
+          longitude: DEFAULT_GROUP_LOCATION.longitude,
+        },
+        restaurants: [
+          {
+            placeId: "place-nearby",
+            name: "Nearby Noodles",
+            address: "2 Queen Street, Auckland CBD",
+            district: "Auckland CBD",
+            location: { lat: -36.8482, lng: 174.7644 },
+            rating: 4.6,
+            priceLevel: 2,
+            cuisine: ["Restaurant"],
+            photos: [],
+            distance: 0.1,
+            openNow: true,
+          },
+        ],
+      };
+    },
+  });
+
+  process.env.GOOGLE_PLACES_API_KEY = "test-api-key";
+  global.fetch = jest
+    .fn()
+    .mockResolvedValueOnce({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          places: [
+            {
+              id: "strict-place",
+              displayName: { text: "Far Cheap Chinese" },
+              formattedAddress: "200 Albany Highway, Auckland",
+              location: { latitude: -36.75, longitude: 174.7 },
+              rating: 3.1,
+              userRatingCount: 12,
+              priceLevel: "PRICE_LEVEL_INEXPENSIVE",
+              primaryType: "chinese_restaurant",
+              types: ["restaurant", "chinese_restaurant"],
+              googleMapsUri: "https://maps.google.com/strict",
+              photos: [],
+              currentOpeningHours: { openNow: true },
+            },
+          ],
+        }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      text: async () =>
+        JSON.stringify({
+          places: [
+            {
+              id: "place-nearby",
+              displayName: { text: "Nearby Noodles" },
+              formattedAddress: "2 Queen Street, Auckland CBD",
+              location: { latitude: -36.8482, longitude: 174.7644 },
+              rating: 4.6,
+              userRatingCount: 250,
+              priceLevel: "PRICE_LEVEL_MODERATE",
+              primaryType: "restaurant",
+              types: ["restaurant"],
+              googleMapsUri: "https://maps.google.com/nearby",
+              photos: [],
+              currentOpeningHours: { openNow: true },
+            },
+          ],
+        }),
+    });
+
+  const result = await generateRecommendationsForSession({
+    sessionId: sessionId.toString(),
+    requesterUserId: "user-1",
+    refresh: true,
+  });
+
+  expect(global.fetch).toHaveBeenCalledTimes(2);
+  const strictPayload = JSON.parse(global.fetch.mock.calls[0][1].body);
+  const fallbackPayload = JSON.parse(global.fetch.mock.calls[1][1].body);
+  expect(strictPayload.textQuery).toBe("japanese restaurant");
+  expect(fallbackPayload.textQuery).toBe("restaurant");
+  expect(fallbackPayload.locationBias.circle.radius).toBeGreaterThan(
+    strictPayload.locationBias.circle.radius
+  );
+  expect(createSnapshot).toHaveBeenCalledWith(
+    expect.objectContaining({
+      usedFallback: true,
+      fallbackReason: "no_matches_for_preferences",
+      groupPrefs: expect.objectContaining({
+        topCuisines: ["japanese"],
+        preferredPrice: "$$$",
+      }),
+    })
+  );
+  expect(result.usedFallback).toBe(true);
+  expect(result.fallbackReason).toBe("no_matches_for_preferences");
+  expect(result.message).toBe(
+    "We couldn't find strong matches for the group's preferences, so we're showing nearby alternatives instead."
+  );
+  expect(result.snapshot.restaurants).toHaveLength(1);
+  expect(result.snapshot.restaurants[0].name).toBe("Nearby Noodles");
+  expect(result.sessionStatus).toBe("selecting");
+  expect(session.save).toHaveBeenCalledTimes(1);
 });

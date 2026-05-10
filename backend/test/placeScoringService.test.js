@@ -1,6 +1,3 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
 const {
   rankRestaurants,
   scoreRestaurant,
@@ -47,11 +44,11 @@ test("scoreRestaurant rewards matching recommendation signals", () => {
     groupPrefs
   );
 
-  assert.ok(restaurant);
-  assert.ok(restaurant.score > 0);
-  assert.match(restaurant.reasons.join(" | "), /Cuisine match: japanese/);
-  assert.match(restaurant.reasons.join(" | "), /Matches preferred price level/);
-  assert.match(restaurant.reasons.join(" | "), /Coffee-friendly option/);
+  expect(restaurant).toBeTruthy();
+  expect(restaurant.score).toBeGreaterThan(0);
+  expect(restaurant.reasons.join(" | ")).toMatch(/Cuisine match: japanese/);
+  expect(restaurant.reasons.join(" | ")).toMatch(/Matches preferred price level/);
+  expect(restaurant.reasons.join(" | ")).toMatch(/Coffee-friendly option/);
 });
 
 test("rankRestaurants dedupes, filters blocked picks, and caps the shortlist", () => {
@@ -85,13 +82,11 @@ test("rankRestaurants dedupes, filters blocked picks, and caps the shortlist", (
     exclude: ["pork"],
   });
 
-  assert.equal(ranked.length, 15);
-  assert.equal(
-    ranked.filter((restaurant) => restaurant.restaurantId === "restaurant-0").length,
-    1
-  );
-  assert.ok(
+  expect(ranked).toHaveLength(15);
+  expect(
+    ranked.filter((restaurant) => restaurant.restaurantId === "restaurant-0")
+  ).toHaveLength(1);
+  expect(
     ranked.every((restaurant) => restaurant.restaurantId !== "blocked-restaurant")
-  );
+  ).toBe(true);
 });
-

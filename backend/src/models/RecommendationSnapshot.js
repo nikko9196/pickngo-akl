@@ -175,6 +175,15 @@ const recommendationSnapshotSchema = new mongoose.Schema(
       default: Date.now,
       index: true,
     },
+    usedFallback: {
+      type: Boolean,
+      default: false,
+    },
+    fallbackReason: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     groupPrefs: {
       type: groupPreferenceSchema,
       required: true,
