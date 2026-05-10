@@ -589,6 +589,7 @@
     .wp-popup {
         max-width: 500px;
     }
+
 }
 
 /* ====== TAB HEADERS ====== */
@@ -883,4 +884,10 @@
 .wp-orange-button:hover {
     background-color: #e25f1f;
     transform: translateY(-1px);
+}
+
+.wp-warning {
+    color: red;
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
 }
