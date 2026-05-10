@@ -1,4 +1,4 @@
-const { combineGroupPreferences } = require("../src/services/groupPreferenceService");
+const { combineGroupPreferences } = require("../../../services/groupPreferenceService");
 
 test("combineGroupPreferences builds stable group preferences from participant answers", () => {
   const groupPrefs = combineGroupPreferences([

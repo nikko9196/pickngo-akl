@@ -2,7 +2,7 @@ const {
   buildQuestionLookup,
   parseParticipantPreferences,
   participantHasUsablePreferences,
-} = require("../src/services/preferenceParserService");
+} = require("../../../services/preferenceParserService");
 
 test("parseParticipantPreferences normalizes current recommendation answers and note hints", () => {
   const questionLookup = buildQuestionLookup([

@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-jest.mock("../src/services/recommendationService", () => ({
+jest.mock("../../../services/recommendationService", () => ({
   generateRecommendationsForSession: jest.fn(),
   getLatestRecommendationsForSession: jest.fn(),
 }));
@@ -8,14 +8,14 @@ jest.mock("../src/services/recommendationService", () => ({
 const {
   generateSessionRecommendations,
   getLatestSessionRecommendations,
-} = require("../src/controllers/recommendationController");
-const { requireAuth } = require("../src/middleware/auth");
-const { JWT_SECRET } = require("../src/services/authService");
+} = require("../../../controllers/recommendationController");
+const { requireAuth } = require("../../../middleware/auth");
+const { JWT_SECRET } = require("../../../services/authService");
 const {
   generateRecommendationsForSession,
   getLatestRecommendationsForSession,
-} = require("../src/services/recommendationService");
-const HttpError = require("../src/utils/httpError");
+} = require("../../../services/recommendationService");
+const HttpError = require("../../../utils/httpError");
 
 function createToken(userId = "user-1") {
   return jwt.sign({ sub: userId, email: `${userId}@example.com` }, JWT_SECRET, {

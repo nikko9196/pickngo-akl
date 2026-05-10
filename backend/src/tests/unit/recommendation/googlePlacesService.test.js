@@ -2,7 +2,7 @@ const {
   buildPlacesSearchPayload,
   buildTextQuery,
   mapPreferredPriceToGoogleLevels,
-} = require("../src/services/googlePlacesService");
+} = require("../../../services/googlePlacesService");
 
 test("buildTextQuery keeps only query-safe recommendation terms", () => {
   const query = buildTextQuery({

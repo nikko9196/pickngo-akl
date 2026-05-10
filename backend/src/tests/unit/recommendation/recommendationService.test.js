@@ -1,14 +1,17 @@
 const mongoose = require("mongoose");
 
-const QuestionList = require("../src/models/QuestionList");
-const RecommendationSnapshot = require("../src/models/RecommendationSnapshot");
-const Response = require("../src/models/Response");
-const Session = require("../src/models/Session");
-const { DEFAULT_GROUP_LOCATION, DEFAULT_MAX_DISTANCE_KM } = require("../src/config/recommendationQuestionMap");
+const QuestionList = require("../../../models/QuestionList");
+const RecommendationSnapshot = require("../../../models/RecommendationSnapshot");
+const Response = require("../../../models/Response");
+const Session = require("../../../models/Session");
+const {
+  DEFAULT_GROUP_LOCATION,
+  DEFAULT_MAX_DISTANCE_KM,
+} = require("../../../config/recommendationQuestionMap");
 const {
   generateRecommendationsForSession,
   getLatestRecommendationsForSession,
-} = require("../src/services/recommendationService");
+} = require("../../../services/recommendationService");
 
 const SESSION_LOCATION = {
   source: "map",

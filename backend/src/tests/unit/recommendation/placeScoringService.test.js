@@ -1,7 +1,7 @@
 const {
   rankRestaurants,
   scoreRestaurant,
-} = require("../src/services/placeScoringService");
+} = require("../../../services/placeScoringService");
 
 function makeRestaurant(restaurantId, overrides = {}) {
   return {
