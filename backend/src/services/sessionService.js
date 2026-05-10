@@ -50,9 +50,29 @@ function checkValidHost(
   }
 }
 
+async function findSessionByCode(sessionCode) {
+  if (!sessionCode) {
+    const error = new Error("Session code is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const session = await Session.findOne({ sessionCode: sessionCode.toUpperCase() });
+
+  if (!session) {
+    const error = new Error("Session not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return session;
+}
+
 module.exports = {
   findSessionById,
+  // findSessionByIdFresh,
   checkValidParticipant,
   checkSessionStatus,
   checkValidHost,
+  findSessionByCode,
 };

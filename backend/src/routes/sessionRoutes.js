@@ -20,7 +20,7 @@ const {
   getSessionSelections,
   saveMySessionSelections,
 } = require("../controllers/selectionController");
-const { upsertResponse } = require("../controllers/responseController");
+const { getMyResponses, upsertResponse } = require("../controllers/responseController");
 const { requireAuth } = require("../middleware/auth");
 
 const router = express.Router();
@@ -29,6 +29,7 @@ router.use(requireAuth);
 router.get("/mine", getMySessions);
 router.get("/:sessionId/progress", getSessionProgress);
 router.get("/:sessionId/recommendations/latest", getLatestSessionRecommendations);
+router.get("/:sessionId/responses/me", getMyResponses);
 router.get("/:sessionId/selections/me", getMySessionSelections);
 router.get("/:sessionId/selections", getSessionSelections);
 router.get("/code/:sessionCode", getSessionByCode);

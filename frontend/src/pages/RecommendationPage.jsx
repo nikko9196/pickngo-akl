@@ -8,7 +8,7 @@ import {
   saveMySelections,
 } from "../api/recommendations";
 import { getSessionByCode } from "../api/sessions";
-import logoPointer from "../assets/Polygon 1.svg";
+import Navbar from "../components/Navbar";
 import RestaurantCard from "../components/RestaurantCard";
 import { useAuth } from "../context/useAuth";
 import {
@@ -17,10 +17,11 @@ import {
 } from "../utils/mockRecommendations";
 import "./RecommendationPage.css";
 
+function isMissingResponsesError(message) {
+  return /questionnaire responses|usable responses/i.test(message ?? "");
+}
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
-const NO_SNAPSHOT_MESSAGE = "No recommendation snapshot has been generated yet.";
-const NO_SELECTIONS_MESSAGE =
-  "You have not saved any restaurant selections for this room yet.";
 
 function RecommendationPage() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ function RecommendationPage() {
   const initialSession = location.state?.inviteSession || null;
   const { isAuthenticated, isAuthReady, token } = useAuth();
   const autoGenerateAttemptedRef = useRef(false);
+  const generateErrorRef = useRef(null);
 
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState([]);
@@ -38,6 +40,7 @@ function RecommendationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageError, setPageError] = useState("");
+  const [hasWaitedTooLong, setHasWaitedTooLong] = useState(false);
 
   const selectedSet = useMemo(
     () => new Set(selectedPlaceIds),
@@ -67,6 +70,7 @@ function RecommendationPage() {
 
   useEffect(() => {
     autoGenerateAttemptedRef.current = false;
+    generateErrorRef.current = null;
   }, [session?.id]);
 
   useEffect(() => {
@@ -91,6 +95,26 @@ function RecommendationPage() {
   }, [navigate, session]);
 
   useEffect(() => {
+    if (
+      isHost ||
+      session?.status !== "generating" ||
+      hasRecommendations ||
+      hasSnapshot
+    ) {
+      setHasWaitedTooLong(false);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setHasWaitedTooLong(true);
+    }, 8000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [isHost, session?.status, hasRecommendations, hasSnapshot]);
+
+  useEffect(() => {
     if (!isAuthReady || !isAuthenticated || !token || !sessionCode) {
       return;
     }
@@ -113,7 +137,7 @@ function RecommendationPage() {
 
         const nextSession = sessionResponse.session;
         setSession(nextSession);
-        setPageError("");
+        setPageError(generateErrorRef.current ?? "");
 
         try {
           const recommendationsResponse = USE_MOCK
@@ -121,6 +145,14 @@ function RecommendationPage() {
             : await getRecommendations(token, nextSession.id);
 
           if (ignore) {
+            return;
+          }
+
+          // Handle 200 + null pattern from backend
+          if (!USE_MOCK && recommendationsResponse.snapshot === null) {
+            setItems([]);
+            setHasSnapshot(false);
+            setSelectedPlaceIds([]);
             return;
           }
 
@@ -132,40 +164,26 @@ function RecommendationPage() {
           setHasSnapshot(true);
 
           if (!USE_MOCK) {
-            try {
-              const selectionsResponse = await getMySelections(token, nextSession.id);
+            const selectionsResponse = await getMySelections(token, nextSession.id);
 
-              if (ignore) {
-                return;
-              }
+            if (ignore) {
+              return;
+            }
 
+            // Handle 200 + null pattern from backend (PR #93)
+            if (selectionsResponse.selection === null) {
+              setSelectedPlaceIds([]);
+            } else {
               const validPlaceIds = new Set(nextItems.map((item) => item.placeId));
               const savedPlaceIds = (selectionsResponse.selection?.selections || [])
                 .map((selection) => selection.placeId)
                 .filter((placeId) => validPlaceIds.has(placeId));
 
               setSelectedPlaceIds(savedPlaceIds);
-            } catch (error) {
-              if (ignore) {
-                return;
-              }
-
-              if (error.message === NO_SELECTIONS_MESSAGE) {
-                setSelectedPlaceIds([]);
-              } else {
-                throw error;
-              }
             }
           }
         } catch (error) {
           if (ignore) {
-            return;
-          }
-
-          if (error.message === NO_SNAPSHOT_MESSAGE) {
-            setItems([]);
-            setHasSnapshot(false);
-            setSelectedPlaceIds([]);
             return;
           }
 
@@ -216,6 +234,7 @@ function RecommendationPage() {
 
     setIsGenerating(true);
     setPageError("");
+    generateErrorRef.current = null;
 
     try {
       const response = USE_MOCK
@@ -241,6 +260,10 @@ function RecommendationPage() {
       );
     } catch (error) {
       setPageError(error.message);
+
+      if (isMissingResponsesError(error.message)) {
+        generateErrorRef.current = error.message;
+      }
 
       if (isAutomatic) {
         autoGenerateAttemptedRef.current = true;
@@ -299,87 +322,84 @@ function RecommendationPage() {
 
   return (
     <main className="recommendation-shell">
-      <header className="top-banner">
-        <button
-          className="brand-lockup brand-lockup-button"
-          type="button"
-          onClick={() => navigate("/")}
-        >
-          <div className="brand-name" aria-label="PICK n GO AKL">
-            <span className="brand-word brand-word-left">PICK</span>
-            <span className="brand-word brand-word-connector">n</span>
-            <span className="brand-word brand-word-right">GO</span>
-          </div>
-          <div className="brand-city">
-            <span>AKL</span>
-            <img src={logoPointer} alt="" aria-hidden="true" />
-          </div>
-        </button>
-      </header>
+      <Navbar variant="brand" />
 
       {!isAuthReady || isLoading ? (
         <div className="recommendation-state">
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Loading recommendations...</p>
         </div>
+      ) : isMissingResponsesError(pageError) || (!isHost && hasWaitedTooLong) ? (
+        <div className="recommendation-state">
+          <p>
+            No quiz responses yet. Recommendations need at least one answer to work. Please return home and create or join a new room.
+          </p>
+          <button
+            className="recommendation-close"
+            type="button"
+            onClick={() => navigate("/")}
+          >
+            Back to Home
+          </button>
+        </div>
       ) : pageError && !hasRecommendations && !hasSnapshot ? (
         <div className="recommendation-state">
           <p className="recommendation-error">{pageError}</p>
           <button
-            className="recommendation-retry"
+            className="recommendation-close"
             type="button"
             onClick={() => window.location.reload()}
           >
             Try again
           </button>
         </div>
-      ) : isGenerating ? (
+      ) : isGenerating || (shouldAutoGenerate && !autoGenerateAttemptedRef.current) ? (
         <div className="recommendation-state">
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Generating recommendations...</p>
           <small>This may take up to 30 seconds.</small>
         </div>
       ) : !hasRecommendations ? (
-        <div className="recommendation-container">
-          <section className="recommendation-intro">
-            <h2>Picks for your group</h2>
-            <p className="recommendation-intro-sub">
-              {hasSnapshot
-                ? "No restaurants matched the current preferences."
-                : "No recommendations yet."}
-            </p>
-          </section>
-          <div className="recommendation-state">
-            {pageError ? (
-              <p className="recommendation-error recommendation-error-banner">
-                {pageError}
-              </p>
-            ) : null}
-            {isHost ? (
-              <>
-                <p>
-                  {hasSnapshot
-                    ? "Try generating another recommendation set."
-                    : "Generate restaurant recommendations for your group."}
-                </p>
-                <button
-                  className="recommendation-generate"
-                  type="button"
-                  onClick={() => handleGenerate({ isAutomatic: false })}
-                >
-                  {hasSnapshot ? "Generate Again" : "Generate Recommendations"}
-                </button>
-              </>
-            ) : (
-              <p>
-                {session?.status === "generating"
-                  ? "Waiting for the host to generate recommendations..."
-                  : "Recommendations are not available yet."}
-              </p>
-            )}
-          </div>
-        </div>
+  <>
+    <section className="recommendation-intro">
+      <h2>Picks for your group</h2>
+      <p className="recommendation-intro-sub">
+        {hasSnapshot
+          ? "No restaurants matched the current preferences."
+          : "No recommendations yet."}
+      </p>
+    </section>
+    <div className="recommendation-state">
+      {pageError ? (
+        <p className="recommendation-error recommendation-error-banner">
+          {pageError}
+        </p>
+      ) : null}
+      {isHost ? (
+        <>
+          <p>
+            {hasSnapshot
+              ? "Try generating another recommendation set."
+              : "Generate restaurant recommendations for your group."}
+          </p>
+          <button
+            className="recommendation-generate"
+            type="button"
+            onClick={() => handleGenerate({ isAutomatic: false })}
+          >
+            {hasSnapshot ? "Generate Again" : "Generate Recommendations"}
+          </button>
+        </>
       ) : (
+        <p>
+          {session?.status === "generating"
+            ? "Waiting for the host to generate recommendations..."
+            : "Recommendations are not available yet."}
+        </p>
+      )}
+    </div>
+  </>
+) : (
         <>
           <div className="recommendation-container">
             <section className="recommendation-intro">

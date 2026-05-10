@@ -7,6 +7,18 @@ function cuisineFlag(cuisine) {
     Italian: "🇮🇹",
     Indian: "🇮🇳",
     "Modern NZ": "🇳🇿",
+    Vietnamese: "🇻🇳",
+    Mexican: "🇲🇽",
+    French: "🇫🇷",
+    Greek: "🇬🇷",
+    Spanish: "🇪🇸",
+    Lebanese: "🇱🇧",
+    Turkish: "🇹🇷",
+    Malaysian: "🇲🇾",
+    Indonesian: "🇮🇩",
+    Filipino: "🇵🇭",
+    American: "🇺🇸",
+    British: "🇬🇧",
   };
 
   return flags[cuisine] || "🍽️";
@@ -72,8 +84,8 @@ function RestaurantCard({ item, isSelected, isDisabled, onToggle }) {
 
         <div className="restaurant-card-row restaurant-card-row-fixed">
           <span className="restaurant-card-cuisine">
-            <span aria-hidden="true">{cuisineFlag(primaryCuisine)}</span>{" "}
-            {primaryCuisine}
+            <span aria-hidden="true">{cuisineFlag(primaryCuisine)}</span>
+            <span className="restaurant-card-cuisine-text">{primaryCuisine}</span>
           </span>
           <span className="restaurant-card-rating">
             <span aria-hidden="true">⭐</span> {item.rating?.toFixed(1) || "-"}

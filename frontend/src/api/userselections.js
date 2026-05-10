@@ -90,3 +90,22 @@ export function collectReadyStatus(token, sessionId) {
 export function getFinalWheelResult(token, sessionId) {
   return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/result`, token);
 }
+
+export function getWheelState(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/wheel/state`, token);
+}
+
+export function getRemind(token, sessionId) {
+  return request(`/api/sessions/${encodeURIComponent(sessionId)}/reminder`, token);
+}
+
+export function sendRating(token, sessionId, score) {
+  return request(
+    `/api/sessions/${encodeURIComponent(sessionId)}/result/rating`,
+    token,
+    {
+      method: "POST",
+      body: JSON.stringify({ score }),
+    }
+  );
+}                             

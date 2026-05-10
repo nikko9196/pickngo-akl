@@ -8,6 +8,7 @@ const {
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 const { getUniquePlaceIds } = require("../utils/wheelUtils");
+const { getResultRatingSummary } = require("./resultController");
 
 function getStringValue(value) {
   if (!value) {
@@ -99,10 +100,7 @@ function buildSelectionLookup(entries) {
   const lookup = new Map();
 
   for (const entry of entries) {
-    const key = getWheelItemKey(
-      entry.recommendationSnapshotId,
-      entry.placeId,
-    );
+    const key = getWheelItemKey(entry.recommendationSnapshotId, entry.placeId);
 
     if (!lookup.has(key)) {
       lookup.set(key, entry);
@@ -166,7 +164,8 @@ function getRestaurantDetails({ selectionLookup, snapshotLookup, item }) {
 
   return {
     userId: item.userId || selectionEntry?.userId || "",
-    roomDisplayName: item.roomDisplayName || selectionEntry?.roomDisplayName || "",
+    roomDisplayName:
+      item.roomDisplayName || selectionEntry?.roomDisplayName || "",
     recommendationSnapshotId,
     placeId: item.placeId,
     name: baseRestaurant.name || snapshotRestaurant?.name || "",
@@ -252,6 +251,20 @@ async function buildWheel(req, res) {
     const { selectionEntries, selectionLookup, snapshotLookup } =
       await buildWheelContext(session);
 
+    if (["voting", "completed"].includes(session.status)) {
+      const detailedWheelItems = (session.wheelItems || []).map((item) =>
+        getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
+      );
+
+      return res.status(200).json({
+        session: {
+          id: session._id.toString(),
+          status: session.status,
+          wheelItems: detailedWheelItems,
+        },
+      });
+    }
+
     if (!selectionEntries.length) {
       return res.status(404).json({
         message:
@@ -284,12 +297,14 @@ async function buildWheel(req, res) {
       roomDisplayName: item.roomDisplayName,
     }));
     session.currentWheelResult = null;
+    session.lastWheelResult = null;
     session.finalWheelResult = null;
     session.voteSummary = {
       acceptCount: 0,
       respinCount: 0,
       votedUserIds: [],
     };
+    session.lastVoteSummary = null;
 
     await session.save();
 
@@ -334,7 +349,8 @@ async function spinWheel(req, res) {
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
     const selectedItem = session.wheelItems[randomIndex];
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const detailedResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
@@ -385,18 +401,29 @@ async function getCurrentWheel(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const currentWheelItems = session.wheelItems || [];
 
     const detailedWheelItems = currentWheelItems.map((item) =>
       getRestaurantDetails({ selectionLookup, snapshotLookup, item }),
     );
 
+    const lastWheelResult = session.lastWheelResult?.placeId
+      ? getRestaurantDetails({
+          selectionLookup,
+          snapshotLookup,
+          item: session.lastWheelResult,
+        })
+      : null;
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
         status: session.status,
         wheelItems: detailedWheelItems,
+        lastWheelResult,
+        lastVoteSummary: session.lastVoteSummary,
       },
     });
   } catch (error) {
@@ -413,7 +440,8 @@ async function getWheelState(req, res) {
     const session = await findSessionById(sessionId);
     checkValidParticipant(session, req.userId);
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
 
     return res.status(200).json({
       session: buildWheelStatePayload({
@@ -442,7 +470,8 @@ async function getFinalWheelResult(req, res) {
       });
     }
 
-    const { selectionLookup, snapshotLookup } = await buildWheelContext(session);
+    const { selectionLookup, snapshotLookup } =
+      await buildWheelContext(session);
     const finalResult = getRestaurantDetails({
       selectionLookup,
       snapshotLookup,
@@ -454,6 +483,8 @@ async function getFinalWheelResult(req, res) {
         id: session._id.toString(),
         status: session.status,
         finalWheelResult: finalResult,
+        voteSummary: buildVoteSummary(session),
+        resultRatingSummary: getResultRatingSummary(session),
       },
     });
   } catch (error) {

@@ -70,6 +70,36 @@ const wheelResultSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const locationSchema = new mongoose.Schema(
+  {
+    source: {
+      type: String,
+      enum: ["current", "map"],
+      default: "map",
+    },
+    label: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    lat: {
+      type: Number,
+      default: null,
+    },
+    lng: {
+      type: Number,
+      default: null,
+    },
+    radiusMeters: {
+      type: Number,
+      min: 100,
+      max: 50000,
+      default: 3000,
+    },
+  },
+  { _id: false }
+);
+
 const sessionSchema = new mongoose.Schema(
   {
     hostUserId: {
@@ -117,8 +147,16 @@ const sessionSchema = new mongoose.Schema(
       max: 10,
       default: MAX_SELECTIONS_PER_USER_DEFAULT,
     },
+    location: {
+      type: locationSchema,
+      default: () => ({}),
+    },
     participants: {
       type: [participantSchema],
+      default: [],
+    },
+    remindedUserIds: {
+      type: [String],
       default: [],
     },
     wheelItems: {
@@ -126,6 +164,10 @@ const sessionSchema = new mongoose.Schema(
       default: [],
     },
     currentWheelResult: {
+      type: wheelResultSchema,
+      default: null,
+    },
+    lastWheelResult: {
       type: wheelResultSchema,
       default: null,
     },
@@ -159,6 +201,38 @@ const sessionSchema = new mongoose.Schema(
         votedUserIds: [],
       }),
     },
+    lastVoteSummary: {
+      type: new mongoose.Schema(
+        {
+          acceptCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          respinCount: {
+            type: Number,
+            default: 0,
+            min: 0,
+          },
+          votedUserIds: {
+            type: [String],
+            default: [],
+          },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
+    resultRatings: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        score: { type: Number, min: 1, max: 5, required: true },
+      },
+    ],
   },
   { timestamps: true },
 );
