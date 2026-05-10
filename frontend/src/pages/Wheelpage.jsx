@@ -27,7 +27,7 @@ import { useReminderPopup } from "../hooks/useReminderPopup";
 // CONSTANTS
 // ============================================================
 const socket = io(import.meta.env.VITE_API_BASE_URL);
-const DURATION = 10 // seconds - duration for voting
+const DURATION = 15 // seconds - duration for voting
 
 const wheelcolors = [
     '#2D4A8A', // deep blue
@@ -84,6 +84,7 @@ export default function Wheelpage() {
     const [timeLeft, setTimeLeft] = useState(DURATION);
     const [lastResult, setLastResult] = useState(null);
     const [showVotePopup, setShowVotePopup] = useState(false);
+    const [voteWarning, setVoteWarning] = useState("");
 
     // --- Refs (to capture latest values in async callbacks) ---
     const resultRef = useRef(result); // Use refs to capture the latest values
@@ -131,7 +132,6 @@ export default function Wheelpage() {
     // ============================================================
     const handleSpin = async () => {
         try {
-            
             const response = await spinWheel(token, sessionId);
             // console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
@@ -147,6 +147,7 @@ export default function Wheelpage() {
             spinActivate(true);
             setRespin("");
             setVoted(false);
+            // console.log("debug vote warning", voteWarning);
     
             // notify all users in the session to spin
             socket.emit("spin", { 
@@ -161,19 +162,40 @@ export default function Wheelpage() {
     };
 
     const handleStop = () => {
-        const spinResult = data[prizeNumber];
-
         setMustSpin(false);
-        setResult(spinResult);
         setHovered(false);
-
-        // navigate after wheel stops if final spin
-        if (finalSpin) {
-            setTimeout(() => {
-                navigate(`/sessions/${sessionCode}/result`, {
-                    state: { votes: { yes: 0, respin: 0 }}
-                });
-            }, 3000); // small delay so user sees the result before navigating
+    
+        // only host decides the final result
+        if (isHostRef.current) {
+    
+            const spinResult = data[prizeNumber];
+            // console.log("spinResult:", spinResult);
+            if (!spinResult) {
+                console.error("Invalid spin result");
+                return;
+            }
+    
+            // host updates local state
+            setResult(spinResult);
+    
+            // broadcast authoritative result
+            socket.emit("spin_finished", {
+                sessionCode,
+                result: spinResult,
+                finalSpin,
+                sessionId
+            });
+    
+            // final navigation
+            if (finalSpin) {
+                setTimeout(() => {
+                    navigate(`/sessions/${sessionCode}/result`, {
+                        state: {
+                            votes: { yes: 0, respin: 0 }
+                        }
+                    });
+                }, 3000);
+            }
         }
     };
 
@@ -185,9 +207,17 @@ export default function Wheelpage() {
             // re-sync from backend (source of truth)
             const res = await getWheelState(token, sessionId);
             setVoted(hasUserVoted(currentUserIdRef.current, res.session));
+            // console.log("vote reset status after handling Vote:", voted);
     
         } catch (error) {
             console.error("Failed to submit vote:", error);
+
+            // backend duplicate vote warning
+            if (
+                error.message?.includes("already voted")
+            ) {
+                setVoteWarning("⚠️ You have already voted.");
+            }
         }
     };
 
@@ -205,9 +235,11 @@ export default function Wheelpage() {
     const resetRoundState = () => {
         setResult(null);
         setVoted(false);
+        // console.log("vote reset status for spin", voted);
         setRespin(null);
         setVotes({ yes: 0, respin: 0 });
         setTimeLeft(DURATION);
+        setVoteWarning(null);
     };
     
     const truncate = (text, maxLength = 15) => {
@@ -270,7 +302,7 @@ export default function Wheelpage() {
         async function loadWheelData() {
         if (isLoadingRef.current) return; // prevent duplicate calls
         isLoadingRef.current = true;
-
+        // console.log("token:",token);
         try {
             const { session } = await getSessionByCode(token, sessionCode);
             const id = session.id;
@@ -345,9 +377,9 @@ export default function Wheelpage() {
             setData(fetchedData);
             dataRef.current = fetchedData;
 
-
             if (sessionStatus === "voting" && currentResult?.placeId) {
                 // ✅ wheel already stopped, restore voting UI
+                // setShowVotePopup(true);
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
                     setPrizeNumber(prize);
@@ -534,6 +566,29 @@ export default function Wheelpage() {
             setSpinReady(allReady);
             setParticipants(participants);
         });
+
+        socket.on("spin_finished", ({ result, finalSpin }) => {
+
+            // listeners sync from host result
+            if (!isHostRef.current) {
+                setResult(result);
+            }
+        
+            setFinalSpin(finalSpin);
+            setMustSpin(false);
+            setHovered(false);
+        
+            // non-host final navigation
+            if (finalSpin && !isHostRef.current) {
+                setTimeout(() => {
+                    navigate(`/sessions/${sessionCode}/result`, {
+                        state: {
+                            votes: { yes: 0, respin: 0 }
+                        }
+                    });
+                }, 3000);
+            }
+        });
         
         return () => {
             socket.off("spin");
@@ -541,7 +596,8 @@ export default function Wheelpage() {
             socket.off("respin_update");
             socket.off("wheel_built"); 
             socket.off("wheel_reloaded"); 
-            socket.off("ready_update")
+            socket.off("ready_update");
+            socket.off("spin_finished");
         };
     }, [sessionCode, token]);
 
@@ -550,7 +606,12 @@ export default function Wheelpage() {
 
         if (!result) return;
 
-        setShowVotePopup(true);
+        // setShowVotePopup(true);
+        // only show popup if user has not voted
+        // console.log("voted status during voting timer:", voted);
+        if (!voted) {
+            setShowVotePopup(true);
+        }
 
         setTimeLeft(DURATION);
 
@@ -628,7 +689,7 @@ export default function Wheelpage() {
 
     useEffect(() => {
         if (lastResult) {
-            console.log("lastResult:", lastResult);
+            // console.log("lastResult:", lastResult);
         }
     }, [lastResult]);
 
@@ -910,7 +971,11 @@ export default function Wheelpage() {
                 {/* Wheel */}
                 <div className="wp-spinning-wheel">
                     <div className="wp-wheel-container">
-                        {data ? (  // only render when data is ready
+                        {Array.isArray(data) &&
+                        data.length > 0 &&
+                        Number.isInteger(prizeNumber) &&
+                        prizeNumber >= 0 &&
+                        prizeNumber <= data.length ? (  // only render when data is ready
                             <>
                                 <div style={{ transform: "rotate(-47deg)", width: "100%" }}>
                                     <Wheel
@@ -989,6 +1054,7 @@ export default function Wheelpage() {
                                     <button className="wp-yes-button" onClick={() => handleVote('accept')}>👍 Yes!</button>
                                     <button className="wp-no-button" onClick={() => handleVote('respin')}>🔄 Respin</button>
                                 </div>
+                                <p className="wp-warning">{voteWarning}</p>
                             </>
                         )}
 
