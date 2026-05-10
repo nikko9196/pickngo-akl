@@ -1,7 +1,7 @@
-const { submitResultRating } = require("../controllers/resultController");
-const sessionService = require("../services/sessionService");
+const { submitResultRating } = require("../../controllers/resultController");
+const sessionService = require("../../services/sessionService");
 
-jest.mock("../services/sessionService");
+jest.mock("../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -114,7 +114,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -135,7 +135,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -159,7 +159,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: No final result is available to rate:
-  test("Returns 400 if no final result is available to rate", async () => {
+  test("Returns 400 if no final result is available to rate.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -183,7 +183,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: Add a new rating successfully:
-  test("Add a new rating successfully", async () => {
+  test("Add a new rating successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -223,7 +223,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: Update an existing rating successfully:
-  test("Update an existing rating successfully", async () => {
+  test("Update an existing rating successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -265,7 +265,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: Calculates average rating correctly when multiple users have rated:
-  test("Calculates average rating correctly when multiple users have rated", async () => {
+  test("Calculates average rating correctly when multiple users have rated.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -315,7 +315,7 @@ describe("resultController.submitResultRating", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when submitResultRating fails", async () => {
+  test("Returns fallback message when submitResultRating fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -323,7 +323,7 @@ describe("resultController.submitResultRating", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await submitResultRating(req, res);
 

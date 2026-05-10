@@ -2,13 +2,13 @@ const {
   submitVote,
   resolveVote,
   getVoteSummary,
-} = require("../controllers/voteController");
+} = require("../../controllers/voteController");
 
-const sessionService = require("../services/sessionService");
-const voteService = require("../services/voteService");
+const sessionService = require("../../services/sessionService");
+const voteService = require("../../services/voteService");
 
-jest.mock("../services/sessionService");
-jest.mock("../services/voteService");
+jest.mock("../../services/sessionService");
+jest.mock("../../services/voteService");
 
 function createMockRes() {
   return {
@@ -44,7 +44,7 @@ beforeEach(() => {
 // Test: submitVote:
 describe("voteController.submitVote", () => {
   // Test: Invalid vote:
-  test("Returns 400 for invalid vote", async () => {
+  test("Returns 400 for invalid vote.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "invalid" },
@@ -61,7 +61,7 @@ describe("voteController.submitVote", () => {
   });
 
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "accept" },
@@ -82,7 +82,7 @@ describe("voteController.submitVote", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "accept" },
@@ -112,7 +112,7 @@ describe("voteController.submitVote", () => {
   });
 
   // Test: Session not in voting state:
-  test("Returns 400 if session is not in voting state", async () => {
+  test("Returns 400 if session is not in voting state.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "accept" },
@@ -149,7 +149,7 @@ describe("voteController.submitVote", () => {
   });
 
   // Test: Successfully submit accept vote:
-  test("Successfully submits accept vote and returns voteSummary", async () => {
+  test("Successfully submits accept vote and returns voteSummary.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "accept" },
@@ -193,7 +193,7 @@ describe("voteController.submitVote", () => {
   });
 
   // Test: Successfully submit respin vote:
-  test("Successfully submits respin vote and returns voteSummary", async () => {
+  test("Successfully submits respin vote and returns voteSummary.", async () => {
     const req = {
       params: { sessionId: "session123" },
       body: { vote: "respin" },
@@ -250,7 +250,7 @@ describe("voteController.submitVote", () => {
     sessionService.findSessionById.mockResolvedValue(mockSession);
     sessionService.checkValidParticipant.mockImplementation(() => {});
     sessionService.checkSessionStatus.mockImplementation(() => {});
-    voteService.applyVote.mockRejectedValue("Unexpected failure");
+    voteService.applyVote.mockRejectedValue("Unexpected failure.");
 
     await submitVote(req, res);
 
@@ -264,7 +264,7 @@ describe("voteController.submitVote", () => {
 // Test: resolveVote:
 describe("voteController.resolveVote", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -284,7 +284,7 @@ describe("voteController.resolveVote", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user3",
@@ -312,7 +312,7 @@ describe("voteController.resolveVote", () => {
   });
 
   // Test: Returns 400 if session is not in voting state:
-  test("Returns 400 if session is not in voting state", async () => {
+  test("Returns 400 if session is not in voting state.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -343,7 +343,7 @@ describe("voteController.resolveVote", () => {
   });
 
   // Test: Successfully resolve vote:
-  test("Successfully resolves vote and returns result", async () => {
+  test("Successfully resolves vote and returns result.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -400,7 +400,7 @@ describe("voteController.resolveVote", () => {
     sessionService.findSessionById.mockResolvedValue(mockSession);
     sessionService.checkValidParticipant.mockImplementation(() => {});
     sessionService.checkSessionStatus.mockImplementation(() => {});
-    voteService.calculateVoteResult.mockRejectedValue("Unexpected failure");
+    voteService.calculateVoteResult.mockRejectedValue("Unexpected failure.");
 
     await resolveVote(req, res);
 
@@ -414,7 +414,7 @@ describe("voteController.resolveVote", () => {
 // Test: getVoteSummary:
 describe("voteController.getVoteSummary", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -434,7 +434,7 @@ describe("voteController.getVoteSummary", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user3",
@@ -462,7 +462,7 @@ describe("voteController.getVoteSummary", () => {
   });
 
   // Test: Returns vote summary successfully:
-  test("Returns vote summary successfully", async () => {
+  test("Returns vote summary successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -513,7 +513,7 @@ describe("voteController.getVoteSummary", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getVoteSummary(req, res);
 

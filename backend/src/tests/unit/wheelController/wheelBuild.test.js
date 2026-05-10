@@ -1,12 +1,12 @@
-const { buildWheel } = require("../../controllers/wheelController");
+const { buildWheel } = require("../../../controllers/wheelController");
 
-const RecommendationSnapshot = require("../../models/RecommendationSnapshot");
-const SessionSelection = require("../../models/SessionSelection");
-const sessionService = require("../../services/sessionService");
+const RecommendationSnapshot = require("../../../models/RecommendationSnapshot");
+const SessionSelection = require("../../../models/SessionSelection");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../models/RecommendationSnapshot");
-jest.mock("../../models/SessionSelection");
-jest.mock("../../services/sessionService");
+jest.mock("../../../models/RecommendationSnapshot");
+jest.mock("../../../models/SessionSelection");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -76,7 +76,7 @@ beforeEach(() => {
 // Test: buildWheel:
 describe("wheelController.buildWheel", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -96,7 +96,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user3",
@@ -125,7 +125,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: No saved selections:
-  test("Returns 404 if there are no saved selections", async () => {
+  test("Returns 404 if there are no saved selections.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -148,7 +148,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: Wheel items exceed maximum allowed selections:
-  test("Returns 400 if wheel items exceed maximum allowed selections", async () => {
+  test("Returns 400 if wheel items exceed maximum allowed selections.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -187,7 +187,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: Returns current wheel without rebuilding when session is voting:
-  test("Returns current wheel without rebuilding when session is voting", async () => {
+  test("Returns current wheel without rebuilding when session is voting.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -244,7 +244,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: Returns current wheel without rebuilding when session is completed:
-  test("Returns current wheel without rebuilding when session is completed", async () => {
+  test("Returns current wheel without rebuilding when session is completed.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -297,7 +297,7 @@ describe("wheelController.buildWheel", () => {
   });
 
   // Test: Successfully builds wheel and resets state:
-  test("Successfully builds wheel from saved selections and resets wheel state", async () => {
+  test("Successfully builds wheel from saved selections and resets wheel state.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -409,7 +409,7 @@ describe("wheelController.buildWheel", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await buildWheel(req, res);
 

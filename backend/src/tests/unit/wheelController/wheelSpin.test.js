@@ -1,12 +1,12 @@
-const { spinWheel } = require("../../controllers/wheelController");
+const { spinWheel } = require("../../../controllers/wheelController");
 
-const RecommendationSnapshot = require("../../models/RecommendationSnapshot");
-const SessionSelection = require("../../models/SessionSelection");
-const sessionService = require("../../services/sessionService");
+const RecommendationSnapshot = require("../../../models/RecommendationSnapshot");
+const SessionSelection = require("../../../models/SessionSelection");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../models/RecommendationSnapshot");
-jest.mock("../../models/SessionSelection");
-jest.mock("../../services/sessionService");
+jest.mock("../../../models/RecommendationSnapshot");
+jest.mock("../../../models/SessionSelection");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -76,7 +76,7 @@ beforeEach(() => {
 // Test: spinWheel:
 describe("wheelController.spinWheel", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -96,7 +96,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: User is not host:
-  test("Returns 403 if user is not host", async () => {
+  test("Returns 403 if user is not host.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -125,7 +125,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: No wheel items:
-  test("Returns 400 if no wheel items are available", async () => {
+  test("Returns 400 if no wheel items are available.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -148,7 +148,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: Wheel already spun:
-  test("Returns 400 if wheel has already been spun and session is voting", async () => {
+  test("Returns 400 if wheel has already been spun and session is voting.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -174,7 +174,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: Session not in spinning state:
-  test("Returns 400 if session is not in spinning state", async () => {
+  test("Returns 400 if session is not in spinning state.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -207,7 +207,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: Successful spin:
-  test("Successfully spins wheel and moves session to voting", async () => {
+  test("Successfully spins wheel and moves session to voting.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -282,7 +282,7 @@ describe("wheelController.spinWheel", () => {
   });
 
   // Test: Final spin completes session:
-  test("Completes session when spin is final", async () => {
+  test("Completes session when spin is final.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -344,7 +344,7 @@ describe("wheelController.spinWheel", () => {
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await spinWheel(req, res);
 

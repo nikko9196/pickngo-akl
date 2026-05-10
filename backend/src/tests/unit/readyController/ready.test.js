@@ -2,11 +2,11 @@ const {
   markReady,
   markAllReady,
   getReadyStatus,
-} = require("../../controllers/readyController");
+} = require("../../../controllers/readyController");
 
-const sessionService = require("../../services/sessionService");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../services/sessionService");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
@@ -56,7 +56,7 @@ beforeEach(() => {
 // Test: markReady:
 describe("readyController.markReady", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -76,7 +76,7 @@ describe("readyController.markReady", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -103,7 +103,7 @@ describe("readyController.markReady", () => {
   });
 
   // Test: User clicks READY successfully:
-  test("Marks current user as ready", async () => {
+  test("Marks current user as ready.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -148,7 +148,7 @@ describe("readyController.markReady", () => {
   });
 
   // Test: Changes session status to spinning when all users are ready:
-  test("Changes session status to spinning when all users are ready", async () => {
+  test("Changes session status to spinning when all users are ready.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -195,14 +195,14 @@ describe("readyController.markReady", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when markReady fails", async () => {
+  test("Returns fallback message when markReady fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await markReady(req, res);
 
@@ -216,7 +216,7 @@ describe("readyController.markReady", () => {
 // Test: markAllReady:
 describe("readyController.markAllReady", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -236,7 +236,7 @@ describe("readyController.markAllReady", () => {
   });
 
   // Test: User is not host:
-  test("Returns 403 if user is not host", async () => {
+  test("Returns 403 if user is not host.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -264,7 +264,7 @@ describe("readyController.markAllReady", () => {
   });
 
   // Test: Marks all users as ready and changes status to spinning:
-  test("Marks all users as ready and changes status to spinning", async () => {
+  test("Marks all users as ready and changes status to spinning.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
@@ -298,14 +298,14 @@ describe("readyController.markAllReady", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when markAllReady fails", async () => {
+  test("Returns fallback message when markAllReady fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "host1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await markAllReady(req, res);
 
@@ -319,7 +319,7 @@ describe("readyController.markAllReady", () => {
 // Test: getReadyStatus:
 describe("readyController.getReadyStatus", () => {
   // Test: Session not found:
-  test("Returns 404 if session is not found", async () => {
+  test("Returns 404 if session is not found.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -339,7 +339,7 @@ describe("readyController.getReadyStatus", () => {
   });
 
   // Test: User is not a participant:
-  test("Returns 403 if user is not participant", async () => {
+  test("Returns 403 if user is not a participant.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user2",
@@ -362,7 +362,7 @@ describe("readyController.getReadyStatus", () => {
   });
 
   // Test: Returns ready summary successfully:
-  test("Returns ready summary successfully", async () => {
+  test("Returns ready summary successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -417,14 +417,14 @@ describe("readyController.getReadyStatus", () => {
   });
 
   // Test: Fallback error handling:
-  test("Returns fallback message when getReadyStatus fails", async () => {
+  test("Returns fallback message when getReadyStatus fails.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
     };
     const res = createMockRes();
 
-    sessionService.findSessionById.mockRejectedValue("Unexpected failure");
+    sessionService.findSessionById.mockRejectedValue("Unexpected failure.");
 
     await getReadyStatus(req, res);
 
