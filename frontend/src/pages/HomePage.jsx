@@ -203,7 +203,7 @@ function HomePage() {
                     aria-hidden="true"
                     style={{ "--landing-background-image": `url("${foodPatternBackground}")` }}
                 />
-                <Navbar variant="brand" />
+                <Navbar />
 
                 {isAuthenticated ? (
                     <div className="account-menu landing-account-menu" ref={accountMenuRef}>

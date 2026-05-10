@@ -72,7 +72,7 @@ function JoinRoomPage() {
                     style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
                 />
 
-                <Navbar variant="brand" />
+                <Navbar />
 
                 <section className="room-page-layout join-room-layout">
                     <aside className="room-panel create-room-panel join-room-panel">
