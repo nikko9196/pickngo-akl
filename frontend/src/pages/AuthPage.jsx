@@ -94,7 +94,7 @@ function AuthPage() {
                     style={{ "--landing-background-image": `url("${foodPatternBackground}")` }}
                 />
 
-                <Navbar variant="brand" />
+                <Navbar />
 
                 <section className="auth-page-layout">
                     <aside className="auth-panel auth-page-panel">
