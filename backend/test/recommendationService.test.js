@@ -10,6 +10,14 @@ const {
   getLatestRecommendationsForSession,
 } = require("../src/services/recommendationService");
 
+const SESSION_LOCATION = {
+  source: "map",
+  label: "UOA",
+  lat: -36.8502,
+  lng: 174.7681,
+  radiusMeters: 8000,
+};
+
 function mockSessionLookup(session) {
   jest.spyOn(Session, "findById").mockReturnValue({
     select: jest.fn().mockResolvedValue(session),
@@ -116,6 +124,7 @@ test("generateRecommendationsForSession falls back to neutral location-based rec
     _id: sessionId,
     status: "generating",
     participants: [{ userId: "user-1" }],
+    location: SESSION_LOCATION,
     save: jest.fn().mockResolvedValue(true),
   };
   const generatedAt = new Date();
@@ -194,9 +203,10 @@ test("generateRecommendationsForSession falls back to neutral location-based rec
   const fetchPayload = JSON.parse(global.fetch.mock.calls[0][1].body);
   expect(fetchPayload.textQuery).toBe("restaurant");
   expect(fetchPayload.locationBias.circle.center).toEqual({
-    latitude: DEFAULT_GROUP_LOCATION.latitude,
-    longitude: DEFAULT_GROUP_LOCATION.longitude,
+    latitude: SESSION_LOCATION.lat,
+    longitude: SESSION_LOCATION.lng,
   });
+  expect(fetchPayload.locationBias.circle.radius).toBe(SESSION_LOCATION.radiusMeters);
   expect(result.usedFallback).toBe(true);
   expect(result.fallbackReason).toBe("no_usable_responses");
   expect(result.message).toBe(
@@ -213,6 +223,7 @@ test("generateRecommendationsForSession falls back when responses exist but none
     _id: sessionId,
     status: "generating",
     participants: [{ userId: "user-1" }],
+    location: SESSION_LOCATION,
     save: jest.fn().mockResolvedValue(true),
   };
   const generatedAt = new Date();
@@ -284,6 +295,7 @@ test("generateRecommendationsForSession falls back to nearby alternatives when s
     _id: sessionId,
     status: "generating",
     participants: [{ userId: "user-1" }],
+    location: SESSION_LOCATION,
     save: jest.fn().mockResolvedValue(true),
   };
   const generatedAt = new Date();
@@ -303,6 +315,12 @@ test("generateRecommendationsForSession falls back to nearby alternatives when s
       answer: "Expensive ($$$)",
       skipped: false,
     },
+    {
+      userId: "user-1",
+      questionId: "location_coordinates",
+      answer: "-36.9000, 174.6500",
+      skipped: false,
+    },
   ]);
   mockQuestionLookup([
     {
@@ -312,6 +330,10 @@ test("generateRecommendationsForSession falls back to nearby alternatives when s
     {
       category: "budget",
       questionList: [{ questionId: "q_budget_1", questionType: "single_choice" }],
+    },
+    {
+      category: "location",
+      questionList: [{ questionId: "location_coordinates", questionType: "text" }],
     },
   ]);
 
@@ -412,6 +434,11 @@ test("generateRecommendationsForSession falls back to nearby alternatives when s
   const strictPayload = JSON.parse(global.fetch.mock.calls[0][1].body);
   const fallbackPayload = JSON.parse(global.fetch.mock.calls[1][1].body);
   expect(strictPayload.textQuery).toBe("japanese restaurant");
+  expect(strictPayload.locationBias.circle.center).toEqual({
+    latitude: SESSION_LOCATION.lat,
+    longitude: SESSION_LOCATION.lng,
+  });
+  expect(strictPayload.locationBias.circle.radius).toBe(SESSION_LOCATION.radiusMeters);
   expect(fallbackPayload.textQuery).toBe("restaurant");
   expect(fallbackPayload.locationBias.circle.radius).toBeGreaterThan(
     strictPayload.locationBias.circle.radius

@@ -19,9 +19,12 @@ const {
   participantHasUsablePreferences,
 } = require("./preferenceParserService");
 const { rankRestaurants } = require("./placeScoringService");
+const { clampNumber, roundNumber } = require("../utils/geo");
 const HttpError = require("../utils/httpError");
 
 const SNAPSHOT_CACHE_WINDOW_MS = SNAPSHOT_CACHE_WINDOW_MINUTES * 60 * 1000;
+const LOCATION_RADIUS_MIN_METERS = 100;
+const LOCATION_RADIUS_MAX_METERS = 50000;
 
 function getUserIdValue(value) {
   if (!value) {
@@ -52,7 +55,7 @@ function ensureParticipantAccess(session, requesterUserId) {
 }
 
 async function fetchSessionForRecommendations(sessionId) {
-  return Session.findById(sessionId).select("status participants");
+  return Session.findById(sessionId).select("status participants location");
 }
 
 async function getLatestRecommendationSnapshot(sessionId) {
@@ -99,6 +102,42 @@ function createFallbackGroupPreferences() {
   // Reuse the normal group preference combiner so fallback behavior stays aligned
   // with the same default location and distance settings as the main pipeline.
   return combineGroupPreferences([]);
+}
+
+function resolveSessionSearchLocation(session) {
+  const latitude = session?.location?.lat;
+  const longitude = session?.location?.lng;
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return null;
+  }
+
+  const radiusMeters = Number.isFinite(session.location?.radiusMeters)
+    ? clampNumber(
+        session.location.radiusMeters,
+        LOCATION_RADIUS_MIN_METERS,
+        LOCATION_RADIUS_MAX_METERS
+      )
+    : DEFAULT_MAX_DISTANCE_KM * 1000;
+
+  return {
+    latitude,
+    longitude,
+    maxDistanceKm: roundNumber(radiusMeters / 1000, 1),
+  };
+}
+
+function applySessionLocationToGroupPreferences(groupPrefs, session) {
+  const sessionLocation = resolveSessionSearchLocation(session);
+
+  if (!sessionLocation) {
+    return groupPrefs;
+  }
+
+  return {
+    ...groupPrefs,
+    ...sessionLocation,
+  };
 }
 
 function createNearbyFallbackGroupPreferences(groupPrefs) {
@@ -192,13 +231,11 @@ async function generateRecommendationsForSession({
   let usedFallback = false;
   let fallbackReason = "";
   let groupPrefs;
-  let searchGroupPrefs;
 
   if (responses.length === 0) {
     usedFallback = true;
     fallbackReason = "no_usable_responses";
     groupPrefs = createFallbackGroupPreferences();
-    searchGroupPrefs = groupPrefs;
   } else {
     const questionLookup = await loadQuestionLookup();
     const parsedParticipants = parseParticipantPreferences(responses, questionLookup);
@@ -209,13 +246,13 @@ async function generateRecommendationsForSession({
       usedFallback = true;
       fallbackReason = "no_usable_responses";
       groupPrefs = createFallbackGroupPreferences();
-      searchGroupPrefs = groupPrefs;
     } else {
       groupPrefs = combineGroupPreferences(usableParticipants);
-      searchGroupPrefs = groupPrefs;
     }
   }
 
+  groupPrefs = applySessionLocationToGroupPreferences(groupPrefs, session);
+  let searchGroupPrefs = groupPrefs;
   let presentedRestaurants = await searchAndPresentRestaurants(searchGroupPrefs);
 
   if (presentedRestaurants.length === 0 && !usedFallback) {
