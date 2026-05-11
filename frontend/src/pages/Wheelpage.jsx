@@ -92,6 +92,10 @@ export default function Wheelpage() {
     const isHostRef = useRef(false); // check if player is the host
     const dataRef = useRef(null);
     const currentUserIdRef = useRef(null);
+    const latestSpinRoundIdRef = useRef(null);
+    const sessionStatusRef = useRef(null);
+    const restoredVotingRoundIdRef = useRef(null);
+    const hasRestoredVotingRef = useRef(false);
 
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
@@ -150,11 +154,14 @@ export default function Wheelpage() {
             // console.log("debug vote warning", voteWarning);
     
             // notify all users in the session to spin
-            socket.emit("spin", { 
-                sessionCode, 
-                prizeNumber: newPrize, 
-                finalSpin: ifFinalSpin, 
-                sessionId });
+            socket.emit("spin", {
+              sessionCode,
+              prizeNumber: newPrize,
+              placeId: response.session.currentWheelResult.placeId,
+              finalSpin: ifFinalSpin,
+              sessionId,
+              spinRoundId: response.session.spinRoundId,
+            });
 
         } catch (error) {
             console.error("Failed to spin wheel:", error);
@@ -330,6 +337,9 @@ export default function Wheelpage() {
             const wheelState = await getWheelState(token, id);
             const currentResult = wheelState.session?.currentWheelResult;
             const sessionStatus = wheelState.session?.status;
+            sessionStatusRef.current = sessionStatus;
+            latestSpinRoundIdRef.current =
+              wheelState.session?.spinRoundId || null;
             const sessionData = wheelState.session ?? wheelState;
             const wheelItems = sessionData.wheelItems || [];
             const voted = hasUserVoted(user.id, wheelState.session);
@@ -382,6 +392,9 @@ export default function Wheelpage() {
                 // setShowVotePopup(true);
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
+                    hasRestoredVotingRef.current = true;
+                    restoredVotingRoundIdRef.current =
+                      wheelState.session?.spinRoundId || null;
                     setPrizeNumber(prize);
                     setResult(fetchedData[prize]);
                     setMustSpin(false);
@@ -432,23 +445,37 @@ export default function Wheelpage() {
         if (!token || !sessionCode) return; // use token instead of userid
 
         // listen for spin from host
-        socket.on("spin", ({ prizeNumber, placeId, finalSpin, startAt}) => {
-            const resolvedPrize = prizeNumber !== null
+        socket.on(
+          "spin",
+          ({ prizeNumber, placeId, finalSpin, spinRoundId }) => {
+            if (
+              hasRestoredVotingRef.current &&
+              restoredVotingRoundIdRef.current === spinRoundId
+            ) {
+              return;
+            }
+
+            hasRestoredVotingRef.current = false;
+            restoredVotingRoundIdRef.current = null;
+
+            latestSpinRoundIdRef.current = spinRoundId;
+            sessionStatusRef.current = "spinning";
+
+            const resolvedPrize =
+              prizeNumber !== null && prizeNumber !== undefined
                 ? prizeNumber
-                : dataRef.current?.findIndex(item => item.placeId === placeId) ?? 0;
-            
-            // for start-time sync of spinning time accross different players
-            const delay = startAt - Date.now();
-        
+                : (dataRef.current?.findIndex(
+                    (item) => item.placeId === placeId,
+                  ) ?? 0);
+
             setPrizeNumber(resolvedPrize);
             setFinalSpin(finalSpin);
-            resetRoundState(); 
-        
-            setTimeout(() => {
-                setMustSpin(true);
-                spinActivate(true);
-            }, Math.max(delay, 0));
-        });
+            resetRoundState();
+
+            setMustSpin(true);
+            spinActivate(true);
+          },
+        );
 
         // socket.on("vote_update", (counts) => {
         //     setVotes({ yes: counts.acceptCount, respin: counts.respinCount });
@@ -466,6 +493,10 @@ export default function Wheelpage() {
         });
 
         socket.on("respin_update", async ({ isrespin, finalSpin }) => {
+            if (isrespin) {
+              hasRestoredVotingRef.current = false;
+              restoredVotingRoundIdRef.current = null;
+            }
 
             setRespin(isrespin);
         
@@ -570,6 +601,7 @@ export default function Wheelpage() {
         socket.on("spin_finished", ({ result, finalSpin }) => {
 
             // listeners sync from host result
+            sessionStatusRef.current = finalSpin ? "completed" : "voting";
             if (!isHostRef.current) {
                 setResult(result);
             }
