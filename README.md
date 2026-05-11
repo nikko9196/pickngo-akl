@@ -1,13 +1,15 @@
 # Have A Byte
 
-Have A Byte is a full-stack web project for CS732. This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
+Have A Byte is a full-stack web project for CS732. Our team developed PicknGo AKL, a collaborative restaurant decision-making web application that helps groups discover, shortlist, and randomly select restaurants together through a shared spinning wheel experience.
+
+This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
 
 ## Team Members
 
 - Cheng Cheng (`cche860@aucklanduni.ac.nz`)
 - Annie Lin (`yiln996@aucklanduni.ac.nz`)
-- Nhu Pham (`dpha478@aucklanduni.ac.nz`)
-- Phuong Phan (`ppha961@aucklanduni.ac.nz`)
+- Nhu (Nikko) Pham (`dpha478@aucklanduni.ac.nz`)
+- Phuong (Paige) Phan (`ppha961@aucklanduni.ac.nz`)
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
@@ -28,18 +30,29 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 ### Database and External Services
 - MongoDB Atlas
 - Google Places API
+- Google Maps API
 
 ## Current Session Flow
 
-1. User signs in or continues as a guest
-2. Host creates a room
-3. Participants join with the room code
-4. Host starts the room
-5. Participants answer the active questionnaire
-6. Session moves to `generating`
-7. Recommendation page generates and loads shared restaurant recommendations
-8. Session moves to `selecting`
-9. Each participant can save their shortlisted restaurants
+1. User signs in or continues as a guest.
+2. Host creates a room.
+3. Participants join with the room code.
+4. Host starts the room.
+5. Participants answer the active questionnaire.
+6. Session moves to `generating`.
+7. Recommendation page generates and loads shared restaurant recommendations.
+8. Session moves to `selecting`.
+9. Each participant can save their shortlisted restaurants.
+10. Wheel is built and session moves to `spinning`.
+11. Every marks themeselves as ready to lock their picks.
+12. Host spins the wheel.
+13. Backend selects a result and session moves to `voting`.
+14. Participants vote to accept the result or respin.
+15. Based on the voting result:
+    - If the majority votes to respin, the selected restaurant is removed and the session moves back to `spinning`
+    - If the vote results in a tie, the selected restaurant is also removed and the session moves back to `spinning` to avoid repeated tie re-votes.
+    - If the group accepts the result, or the wheel reaches the final spin, session moves to `completed`.
+18. Final result page shows the selected restaurant.
 
 Current session statuses in the app:
 - `waiting`
@@ -49,9 +62,6 @@ Current session statuses in the app:
 - `spinning`
 - `voting`
 - `completed`
-
-Note:
-- `spinning`, `voting`, and `completed` are part of the current session model, but the main implemented product flow today is up to saved selections.
 
 ## Prerequisites
 
@@ -123,6 +133,7 @@ Frontend variable notes:
 - `VITE_API_BASE_URL`: backend base URL
 - `VITE_GOOGLE_CLIENT_ID`: required only if Google sign-in is enabled
 - `VITE_USE_MOCK_RECOMMENDATIONS`: optional flag for mock recommendation mode; set to `false` to use the real backend
+- `VITE_GOOGLE_MAPS_API_KEY`: required for Google Maps and restaurant location features.
 
 ## Running the App
 
@@ -349,11 +360,22 @@ Key fields:
 - `status`
 - `maxParticipants`
 - `maxSelectionsPerUser`
+- `location`
 - `participants`
   - `userId`
   - `role`
   - `roomDisplayName`
   - `joinedAt`
+  - `isReady`
+- `remindedUserIds`
+- `wheelItems`
+- `spinRoundId`
+- `currentWheelResult`
+- `lastWheelResult`
+- `finalWheelResult`
+- `voteSummary`
+- `lastVoteSummary`
+- `resultRatings`
 - `createdAt`
 - `updatedAt`
 
@@ -365,6 +387,8 @@ Key fields:
 - `_id`
 - `sessionId`
 - `generatedAt`
+- `usedFallback`
+- `fallbackReason`
 - `groupPrefs`
 - `restaurants`
 
