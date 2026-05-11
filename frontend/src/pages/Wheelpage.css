@@ -634,7 +634,7 @@
     overflow: auto;
     padding-top: 12px;
     padding-right: 4px;
-    max-height: calc(100vh - 450px); /*✅ adjust 320px based on space taken by header + tabs + buttons above */
+    max-height: calc(100vh - 450px); /* adjust 320px based on space taken by header + tabs + buttons above */
 }
 
 .wp-tab-content::-webkit-scrollbar { width: 4px; }
@@ -647,13 +647,6 @@
 /* ====== PICKS LIST ====== */
 
 @media (max-width: 800px) {
-    .wp-picks-list {
-        min-width: max-content;
-    }
-
-}
-
-/* @media (max-width: 800px) {
     .picks-dropdown {
         left: 50%;
         right: auto;
@@ -691,7 +684,7 @@
         align-items: start;
         column-gap: 8px;
     }
-} */
+}
 
 .wp-picks-list {
     display: flex;
