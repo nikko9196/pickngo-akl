@@ -167,9 +167,13 @@ group-project-have-a-byte/
 |   |-- public/
 |   |-- src/
 |   |   |-- api/                 # frontend API helpers
+|   |   |-- assets/              # images, icons, and static frontend assets
 |   |   |-- components/          # reusable UI components
 |   |   |-- context/             # auth and shared state
+|   |   |-- hooks/               # reusable custom React hooks
 |   |   |-- pages/               # page-level UI
+|   |   |-- services/            # frontend business logic and helper services
+|   |   |-- styles/              # shared global styling files
 |   |   |-- utils/               # frontend helpers and mocks
 |   |   |-- App.jsx              # frontend route definitions
 |   |   |-- main.jsx             # frontend entry point
@@ -178,14 +182,19 @@ group-project-have-a-byte/
 |-- backend/
 |   |-- scripts/                 # manual backend scripts
 |   |-- src/
-|   |   |-- config/              # backend config
-|   |   |-- controllers/         # route handlers
-|   |   |-- middleware/          # express middleware
-|   |   |-- models/              # mongoose models
-|   |   |-- routes/              # route definitions
-|   |   |-- services/            # business logic
-|   |   |-- utils/               # shared backend helpers
-|   |   |-- app.js               # backend entry file
+|   |   |-- config/              # backend configuration
+|   |   |-- controllers/         # route handlers and route logic
+|   |   |-- middleware/          # Express middleware
+|   |   |-- models/              # Mongoose models
+|   |   |-- routes/              # API route definitions
+|   |   |-- services/            # backend business logic
+|   |   |-- socket/              # Socket.IO event handlers
+|   |   |-- tests/               # backend test suites
+|   |       |-- helpers/         # shared test setup and helper functions
+|   |       |-- integration/     # integration tests
+|   |       |-- unit/            # unit tests
+|   |   |-- utils/               # shared backend utility functions
+|   |   |-- app.js               # Express app entry file
 |   |-- .env.example
 |   |-- package.json
 |-- docs/
