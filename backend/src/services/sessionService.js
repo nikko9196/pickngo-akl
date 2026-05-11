@@ -70,7 +70,6 @@ async function findSessionByCode(sessionCode) {
 
 module.exports = {
   findSessionById,
-  // findSessionByIdFresh,
   checkValidParticipant,
   checkSessionStatus,
   checkValidHost,

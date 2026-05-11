@@ -634,7 +634,7 @@
     overflow: auto;
     padding-top: 12px;
     padding-right: 4px;
-    max-height: calc(100vh - 450px); /*✅ adjust 320px based on space taken by header + tabs + buttons above */
+    max-height: calc(100vh - 450px); /* adjust 320px based on space taken by header + tabs + buttons above */
 }
 
 .wp-tab-content::-webkit-scrollbar { width: 4px; }
@@ -647,10 +647,43 @@
 /* ====== PICKS LIST ====== */
 
 @media (max-width: 800px) {
-    .wp-picks-list {
-        min-width: max-content;
+    .picks-dropdown {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: calc(100vw - 100px);
+        max-width: 430px;
+        overflow-x: hidden;
+        box-sizing: border-box;
     }
 
+    .picks-dropdown .wp-picks-list {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .picks-dropdown .wp-pick-card {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .picks-dropdown .wp-pick-info {
+        min-width: 0;
+    }
+
+    .picks-dropdown .wp-pick-name,
+    .picks-dropdown .wp-pick-address,
+    .picks-dropdown .wp-pick-room {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .picks-dropdown .wp-pick-meta {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: start;
+        column-gap: 8px;
+    }
 }
 
 .wp-picks-list {

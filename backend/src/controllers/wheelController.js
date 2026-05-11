@@ -242,6 +242,7 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
   };
 }
 
+// Build and initialise the wheel for the session:
 async function buildWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -327,6 +328,7 @@ async function buildWheel(req, res) {
   }
 }
 
+// Spin the wheel to get a random restaurant recommendation:
 async function spinWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -399,6 +401,7 @@ async function spinWheel(req, res) {
   }
 }
 
+// Fetch the current wheel state and previous spin result and vote:
 async function getCurrentWheel(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -438,6 +441,7 @@ async function getCurrentWheel(req, res) {
   }
 }
 
+// Fetch the current wheel state for frontend to use:
 async function getWheelState(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
@@ -462,6 +466,7 @@ async function getWheelState(req, res) {
   }
 }
 
+// Get the final wheel result with vote summary and rating summary:
 async function getFinalWheelResult(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
