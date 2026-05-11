@@ -96,6 +96,8 @@ export default function Wheelpage() {
     const sessionStatusRef = useRef(null);
     const restoredVotingRoundIdRef = useRef(null);
     const hasRestoredVotingRef = useRef(false);
+    const voteStartTimeRef = useRef(null);
+    const pendingRestoreResultRef = useRef(null);
 
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
@@ -140,7 +142,6 @@ export default function Wheelpage() {
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
-            
             // find the index in data that matches the backend result
             const newPrize = data.findIndex(item => item.option === restaurantName);
     
@@ -179,9 +180,6 @@ export default function Wheelpage() {
                 return;
             }
     
-            // host updates local state
-            setResult(spinResult);
-    
             // broadcast authoritative result
             socket.emit("spin_finished", {
                 sessionCode,
@@ -189,17 +187,6 @@ export default function Wheelpage() {
                 finalSpin,
                 sessionId
             });
-    
-            // final navigation
-            if (finalSpin) {
-                setTimeout(() => {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: { yes: 0, respin: 0 }
-                        }
-                    });
-                }, 3000);
-            }
         }
     };
 
@@ -308,7 +295,6 @@ export default function Wheelpage() {
             const { session } = await getSessionByCode(token, sessionCode);
             const id = session.id;
             setSessionId(id);
-
             const { readySummary } = await collectReadyStatus(token, id);
 
             setReadyCount(readySummary.readyCount);
@@ -338,7 +324,15 @@ export default function Wheelpage() {
             const wheelItems = sessionData.wheelItems || [];
             const voted = hasUserVoted(user.id, wheelState.session);
             setVoted(voted);
-            
+
+            // ✅ restore CURRENT round live vote counts from getWheelState
+            const currentVoteSummary = wheelState.session?.voteSummary;
+            if (sessionStatus === "voting" && currentVoteSummary) {
+                setVotes({
+                    yes: currentVoteSummary.acceptCount ?? 0,
+                    respin: currentVoteSummary.respinCount ?? 0
+                });
+            }
 
             // ✅ restore latest voting result if user rejoined mid-session
             const wheelLastRound = await reloadWheel(token, id);
@@ -354,21 +348,16 @@ export default function Wheelpage() {
                     }
                 });
 
-                // IMPORTANT: also overwrite live vote state
-                setVotes({
-                    yes: lastRoundVoteSummary.acceptCount ?? 0,
-                    respin: lastRoundVoteSummary.respinCount ?? 0
-                });
             }
 
-            // ✅ restore Reminder status if user rejoined mid-session
+            // restore Reminder status if user rejoined mid-session
             const reminderRes = await getRemind(token, id);
             const remindedUserIdsRes = reminderRes?.remindedUserIds;
             if (Array.isArray(remindedUserIdsRes) && remindedUserIdsRes.length > 0) {
                 setRemindedUserIds(remindedUserIdsRes);
             }
 
-            // ✅ Only build wheel if status is selecting
+            // Only build wheel if status is selecting
             let finalWheelItems = wheelItems;
             if (sessionStatus === 'selecting') {
                 const { session: newBuilt } = await buildWheelApi(token, id);
@@ -382,17 +371,18 @@ export default function Wheelpage() {
             dataRef.current = fetchedData;
 
             if (sessionStatus === "voting" && currentResult?.placeId) {
-                // ✅ wheel already stopped, restore voting UI
-                // setShowVotePopup(true);
+                // wheel already stopped, restore voting UI
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
                     hasRestoredVotingRef.current = true;
                     restoredVotingRoundIdRef.current =
                       wheelState.session?.spinRoundId || null;
                     setPrizeNumber(prize);
-                    setResult(fetchedData[prize]);
+                    // setResult(fetchedData[prize]);
+                    pendingRestoreResultRef.current = fetchedData[prize];
                     setMustSpin(false);
                     spinActivate(false);
+                    setShowVotePopup(true);   // add this so popup shows on rejoin
                 }
             } 
 
@@ -495,7 +485,7 @@ export default function Wheelpage() {
         
             try {
         
-                // ✅ ALWAYS fetch authoritative backend state
+                // fetch authoritative backend state
                 const reload = await reloadWheel(
                     token,
                     sessionIdRef.current
@@ -507,7 +497,7 @@ export default function Wheelpage() {
                 const lastRoundVoteSummary =
                     reload.session?.lastVoteSummary;
         
-                // ✅ restore latest round result safely
+                // restore latest round result safely
                 if (lastRoundResult && lastRoundVoteSummary) {
         
                     const syncedLastResult = {
@@ -531,18 +521,11 @@ export default function Wheelpage() {
                     votesRef.current = syncedLastResult.votes;
                 }
         
-                // ✅ navigate if round ended
+                // navigate if round ended
                 if (!isrespin || finalSpin === true) {
-        
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: {
-                                yes: lastRoundVoteSummary?.acceptCount ?? 0,
-                                respin: lastRoundVoteSummary?.respinCount ?? 0
-                            }
-                        }
-                    });
-        
+                    setTimeout(() => {
+                        navigate(`/sessions/${sessionCode}/result`);
+                    }, 3000); // give non-host 3s to see the result popup before leaving
                     return;
                 }
         
@@ -590,29 +573,39 @@ export default function Wheelpage() {
             setSpinReady(allReady);
             setParticipants(participants);
         });
+        
 
-        socket.on("spin_finished", ({ result, finalSpin }) => {
+        socket.on("spin_finished", ({ result, finalSpin, startTime }) => {
 
             // listeners sync from host result
             sessionStatusRef.current = finalSpin ? "completed" : "voting";
-            if (!isHostRef.current) {
-                setResult(result);
+            
+            // set startTime BEFORE setResult so the timer useEffect sees it
+            if (!finalSpin && startTime) {
+                voteStartTimeRef.current = startTime;
             }
+
+            // now set result for everyone including host
+            setResult(result);
         
             setFinalSpin(finalSpin);
             setMustSpin(false);
             spinActivate(false);
             setHovered(false);
-        
+
             // non-host final navigation
             if (finalSpin && !isHostRef.current) {
-                setTimeout(() => {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: { yes: 0, respin: 0 }
-                        }
-                    });
-                }, 3000);
+                setTimeout(() => navigate(`/sessions/${sessionCode}/result`), 3000);
+            }
+        });
+
+        socket.on("voting_start_time", ({ startTime }) => {
+            voteStartTimeRef.current = startTime; // set before result triggers the timer
+            
+            // now safe to trigger the timer useEffect
+            if (pendingRestoreResultRef.current) {
+                setResult(pendingRestoreResultRef.current);
+                pendingRestoreResultRef.current = null;
             }
         });
         
@@ -624,6 +617,7 @@ export default function Wheelpage() {
             socket.off("wheel_reloaded"); 
             socket.off("ready_update");
             socket.off("spin_finished");
+            socket.off("voting_start_time");
         };
     }, [sessionCode, token]);
 
@@ -638,45 +632,68 @@ export default function Wheelpage() {
 
         setTimeLeft(DURATION);
 
-        // ✅ if final spin, no need for voting timer
+        // if final spin, no need for voting timer
+        // AFTER the finalSpin early-return block
         if (finalSpin) {
             spinActivate(false);
             setShowVotePopup(false);
+            if (isHostRef.current) {                          
+                setTimeout(() => {
+                    navigate(`/sessions/${sessionCode}/result`);
+                }, 3000);
+            }
             return;
         }
-      
-        const countdown = setInterval(async () => {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              clearInterval(countdown);
-              return 0;
+
+        // calculate remaining time based on server's startTime
+        const startTime = voteStartTimeRef.current || Date.now();
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(DURATION * 1000 - elapsed, 0);
+
+        // set initial timeLeft accurately from server start time
+        setTimeLeft(Math.ceil(remaining / 1000));
+
+        // sync countdown to real elapsed time instead of just decrementing
+        const countdown = setInterval(() => {
+            const elapsedNow = Date.now() - startTime;
+            const remainingNow = Math.max(DURATION * 1000 - elapsedNow, 0);
+            const secondsLeft = Math.ceil(remainingNow / 1000);
+            setTimeLeft(secondsLeft);
+            if (secondsLeft <= 0) {
+                clearInterval(countdown);
             }
-            return prev - 1;
-          });
-      
-        }, 1000);
-      
+        }, 500); // poll every 500ms for smoother accuracy
+
+        // schedule host resolution based on actual remaining time
         const timer = setTimeout(async () => {
-            if (!isHostRef.current) return; // use ref not state
-            setShowVotePopup(false); // ✅ hide popup when time ends
+            if (!isHostRef.current) return;
+            setShowVotePopup(false);
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
                 setRespin(shouldRespin);
-                socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin, sessionId: sessionIdRef.current });
-        
+                socket.emit("respin", {
+                    sessionCode,
+                    isrespin: shouldRespin,
+                    finalSpin,
+                    sessionId: sessionIdRef.current
+                });
                 if (!shouldRespin) {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: { votes: votesRef.current}
-                    });
+                    // keep popup visible for 3s so user sees the result before leaving
+                    setTimeout(() => {
+                        setShowVotePopup(false);
+                        navigate(`/sessions/${sessionCode}/result`);
+                    }, 3000);
                 }
-        
                 if (shouldRespin) {
-                    socket.emit("reload_wheel", { sessionCode });
+                    socket.emit("reload_wheel", {
+                        sessionCode,
+                        sessionId: sessionIdRef.current
+                    });
                 }
             } catch (error) {
                 console.error("Vote resolution error:", error.message);
             }
-        }, DURATION * 1000);
+        }, remaining); // uses actual remaining time, not full DURATION
 
         spinActivate(false);
       
@@ -905,7 +922,7 @@ export default function Wheelpage() {
 
                 </div>
 
-            {/* ✅ Desktop: combined picks + ready panel with tabs */}
+            {/* Desktop: combined picks + ready panel with tabs */}
             <div className="wp-desktop-panel">
                 
                 {/* Tab Headers */}
@@ -1090,25 +1107,6 @@ export default function Wheelpage() {
                             </div>
                         )}
 
-                        {finalSpin && 
-                        (   
-                            <div className="wp-result-card">
-                                <p className="wp-popup-text">
-                                🎉 Final result
-                                </p>
-                                <h2 className="wp-result-title">{result.option}</h2>
-
-                                <div className="wp-result-meta">
-                                    <span>⭐ {result.rating}</span>
-                                    <span className="wp-result-price">
-                                        {"$".repeat(result.priceLevel)}
-                                    </span>
-                                </div>
-
-                                <p className="wp-result-address">📍 {result.address}</p>
-                            </div>
-                        )
-                        }
                         <br />
 
                         {!finalSpin && (
@@ -1120,6 +1118,25 @@ export default function Wheelpage() {
                     </div>
                 </div>
             )}
+            {/* Final Spin Result */}
+            {finalSpin && result && (
+                <div className="wp-overlay">
+                    <div className="wp-popup">
+                        <div className="wp-result-card">
+                            <p className="wp-popup-text">🎉 Final result</p>
+                            <h2 className="wp-result-title">{result.option}</h2>
+                            <div className="wp-result-meta">
+                                <span>⭐ {result.rating}</span>
+                                <span className="wp-result-price">
+                                    {"$".repeat(result.priceLevel)}
+                                </span>
+                            </div>
+                            <p className="wp-result-address">📍 {result.address}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Reminder Popup */}
             {showReminderPopup && (
                 <ReminderPopup

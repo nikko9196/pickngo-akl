@@ -10,6 +10,7 @@ async function isSessionHost(sessionId, userId) {
 }
 
 const initSocket = (io) => {
+    const votingStartTimes = {}; 
     io.on("connection", (socket) => {
 
         socket.on("join_session", async ({ sessionCode, userId }) => {
@@ -31,8 +32,14 @@ const initSocket = (io) => {
                         prizeNumber: null,
                         placeId: session.currentWheelResult.placeId,
                         finalSpin: session.finalSpin || false,
-                        spinRoundId: session.spinRoundId || null,  // ✅ added
+                        spinRoundId: session.spinRoundId || null, 
                     });
+
+                    // send the voting start time so rejoining users sync their timer
+                    const startTime = votingStartTimes[session._id?.toString()];
+                    if (startTime) {
+                        socket.emit("voting_start_time", { startTime });
+                    }
                 }
             } catch (error) {
                 console.error("Failed to send session state on join:", error);
@@ -54,9 +61,9 @@ const initSocket = (io) => {
         
                 io.to(sessionCode).emit("spin", {
                     prizeNumber,
-                    placeId,       // ✅ added
+                    placeId,       
                     finalSpin,
-                    spinRoundId,   // ✅ added
+                    spinRoundId,   
                 });        
         
             } catch (error) {
@@ -78,7 +85,7 @@ const initSocket = (io) => {
             }
         });
 
-        // ✅ Host-only: respin decision
+        // Host-only: respin decision
         socket.on("respin", async ({ sessionCode, isrespin, finalSpin, sessionId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
@@ -123,7 +130,7 @@ const initSocket = (io) => {
           }
         });
 
-        // ✅ Host-only: send reminder
+        // Host-only: send reminder
         socket.on("send_reminder", async ({ sessionCode, sessionId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
@@ -143,7 +150,7 @@ const initSocket = (io) => {
             }
         });
 
-        // ✅ Host-only: final wheel result
+        // Host-only: final wheel result
         socket.on("spin_finished", async ({ 
             sessionCode,
             result,
@@ -165,9 +172,17 @@ const initSocket = (io) => {
                     return;
                 }
 
+                // authoritative timestamp from server
+                const startTime = Date.now();
+
+                if (!finalSpin) {
+                    votingStartTimes[sessionId] = startTime; 
+                }
+
                 io.to(sessionCode).emit("spin_finished", {
                     result,
-                    finalSpin
+                    finalSpin,
+                    startTime
                 });
 
             } catch (error) {
