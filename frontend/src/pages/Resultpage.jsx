@@ -10,6 +10,7 @@ import { useAuth } from "../context/useAuth";
 import { getSessionByCode } from "../api/sessions";
 import { useParams } from "react-router-dom";
 import { getCurrentUser } from "../api/auth";
+import Navbar from "../components/Navbar";
 
 const quote = "\"People who love to eat are always the best people.\" — Julia Child";
 
@@ -109,6 +110,8 @@ export default function ResultPage() {
 
     if (!restaurantData) return <p>Loading...</p>; // ✅ add this line here
     return (
+        <main className="final-page-shell">
+        <Navbar />
         <div className="result-page">
 
             <p className="result-title">Final Pick!</p>
@@ -186,5 +189,6 @@ export default function ResultPage() {
             </div>
 
         </div>
+        </main>
     );
 }

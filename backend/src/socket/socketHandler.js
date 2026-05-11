@@ -135,9 +135,44 @@ const initSocket = (io) => {
                     .filter(p => !p.isReady)
                     .map(p => p.userId.toString());
 
-                io.to(sessionCode).emit("reminder_sent", { remindedUserIds });
+                io.to(sessionCode).emit("reminder_sent", remindedUserIds);
             } catch (error) {
                 console.error("Failed to send reminder:", error);
+            }
+        });
+
+        // ✅ Host-only: final wheel result
+        socket.on("spin_finished", async ({ 
+            sessionCode,
+            result,
+            finalSpin,
+            sessionId
+        }) => {
+
+            try {
+
+                const hostCheck = await isSessionHost(
+                    sessionId,
+                    socket.userId
+                );
+
+                if (!hostCheck) {
+                    console.warn(
+                        `Unauthorized spin_finished attempt by userId: ${socket.userId}`
+                    );
+                    return;
+                }
+
+                io.to(sessionCode).emit("spin_finished", {
+                    result,
+                    finalSpin
+                });
+
+            } catch (error) {
+                console.error(
+                    "Failed to verify host for spin_finished:",
+                    error
+                );
             }
         });
     });

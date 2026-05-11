@@ -1,7 +1,4 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const { combineGroupPreferences } = require("../src/services/groupPreferenceService");
+const { combineGroupPreferences } = require("../../../services/groupPreferenceService");
 
 test("combineGroupPreferences builds stable group preferences from participant answers", () => {
   const groupPrefs = combineGroupPreferences([
@@ -46,16 +43,15 @@ test("combineGroupPreferences builds stable group preferences from participant a
     },
   ]);
 
-  assert.deepEqual(groupPrefs.topCuisines, ["japanese", "thai", "cafe"]);
-  assert.equal(groupPrefs.preferredPrice, "$$");
-  assert.deepEqual(groupPrefs.dietary, ["vegetarian", "halal"]);
-  assert.deepEqual(groupPrefs.exclude, ["seafood", "nuts"]);
-  assert.equal(groupPrefs.coffeePreference, "maybe");
-  assert.equal(groupPrefs.openLatePreference, "yes");
-  assert.equal(groupPrefs.serviceMode, "either");
-  assert.deepEqual(groupPrefs.specialRequestKeywords, ["dessert", "parking", "quiet"]);
-  assert.equal(groupPrefs.maxDistanceKm, 6);
-  assert.equal(groupPrefs.latitude, -36.8485);
-  assert.equal(groupPrefs.longitude, 174.7633);
+  expect(groupPrefs.topCuisines).toEqual(["japanese", "thai", "cafe"]);
+  expect(groupPrefs.preferredPrice).toBe("$$");
+  expect(groupPrefs.dietary).toEqual(["vegetarian", "halal"]);
+  expect(groupPrefs.exclude).toEqual(["seafood", "nuts"]);
+  expect(groupPrefs.coffeePreference).toBe("maybe");
+  expect(groupPrefs.openLatePreference).toBe("yes");
+  expect(groupPrefs.serviceMode).toBe("either");
+  expect(groupPrefs.specialRequestKeywords).toEqual(["dessert", "parking", "quiet"]);
+  expect(groupPrefs.maxDistanceKm).toBe(6);
+  expect(groupPrefs.latitude).toBe(-36.8485);
+  expect(groupPrefs.longitude).toBe(174.7633);
 });
-

@@ -305,7 +305,7 @@ function QuestionPage() {
                     style={{ "--create-room-background-image": `url("${aucklandSkyBackground}")` }}
                 />
 
-                <Navbar variant="brand" className="question-page-banner" />
+                <Navbar className="question-page-banner" />
 
                 {isGeneratingRestaurants ? (
                     <section className="question-finished-state">

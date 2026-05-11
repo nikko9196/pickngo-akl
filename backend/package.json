@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "src/app.js",
   "scripts": {
-    "test": "jest",
+    "test": "jest --runInBand",
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
-    "test:unit": "jest tests/unit",
+    "test:unit": "jest src/tests/unit --runInBand",
     "test:integration": "jest tests/integration --runInBand"
   },
   "keywords": [],

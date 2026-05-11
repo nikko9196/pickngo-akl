@@ -17,6 +17,17 @@ import {
 } from "../utils/mockRecommendations";
 import "./RecommendationPage.css";
 
+// import socket and reminder components and hook
+import ReminderPopup from "../components/ReminderPopup";
+import { useReminderPopup } from "../hooks/useReminderPopup";
+import { io } from "socket.io-client";
+import { getCurrentUser } from "../api/auth";
+
+const socket = io(import.meta.env.VITE_API_BASE_URL);
+function isMissingResponsesError(message) {
+  return /questionnaire responses|usable responses/i.test(message ?? "");
+}
+
 const USE_MOCK = import.meta.env.VITE_USE_MOCK_RECOMMENDATIONS === "true";
 
 function RecommendationPage() {
@@ -26,6 +37,8 @@ function RecommendationPage() {
   const initialSession = location.state?.inviteSession || null;
   const { isAuthenticated, isAuthReady, token } = useAuth();
   const autoGenerateAttemptedRef = useRef(false);
+  const generateErrorRef = useRef(null);
+  const lastSuccessfulPollRef = useRef(Date.now());
 
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState([]);
@@ -35,6 +48,7 @@ function RecommendationPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageError, setPageError] = useState("");
+  const [hasWaitedTooLong, setHasWaitedTooLong] = useState(false);
 
   const selectedSet = useMemo(
     () => new Set(selectedPlaceIds),
@@ -52,6 +66,49 @@ function RecommendationPage() {
     !hasSnapshot &&
     !isGenerating;
 
+  // ============================================================
+  // Reminder State and EFFECTS
+ 
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const currentUserIdRef = useRef(null);
+
+  useEffect(() => {
+      const fetchMe = async () => {
+          try {
+              const { user } = await getCurrentUser(token);
+              setCurrentUserId(user.id);
+          } catch (err) {
+              console.error(err);
+          }
+      };
+
+      if (token) {
+          fetchMe();
+      }
+  }, [token]);
+
+  useEffect(() => {
+      currentUserIdRef.current = currentUserId;
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!sessionCode || !currentUserId) return;
+
+    socket.emit("join_session", {
+        sessionCode,
+        userId: currentUserId
+    });
+
+  }, [sessionCode, currentUserId]);
+
+  const {
+      showReminderPopup,
+      setShowReminderPopup,
+  } = useReminderPopup(socket, currentUserIdRef);
+
+  // End of Reminder State and EFFECTS
+  // ============================================================
+
   useEffect(() => {
     if (!isAuthReady) {
       return;
@@ -64,6 +121,8 @@ function RecommendationPage() {
 
   useEffect(() => {
     autoGenerateAttemptedRef.current = false;
+    generateErrorRef.current = null;
+    lastSuccessfulPollRef.current = Date.now();
   }, [session?.id]);
 
   useEffect(() => {
@@ -88,6 +147,29 @@ function RecommendationPage() {
   }, [navigate, session]);
 
   useEffect(() => {
+    if (
+      isHost ||
+      session?.status !== "generating" ||
+      hasRecommendations ||
+      hasSnapshot
+    ) {
+      setHasWaitedTooLong(false);
+      return;
+    }
+
+    const checkIntervalId = window.setInterval(() => {
+      const millisecondsSinceLastPoll = Date.now() - lastSuccessfulPollRef.current;
+      if (millisecondsSinceLastPoll > 30000) {
+        setHasWaitedTooLong(true);
+      }
+    }, 3000);
+
+    return () => {
+      window.clearInterval(checkIntervalId);
+    };
+  }, [isHost, session?.status, hasRecommendations, hasSnapshot]);
+
+  useEffect(() => {
     if (!isAuthReady || !isAuthenticated || !token || !sessionCode) {
       return;
     }
@@ -108,9 +190,10 @@ function RecommendationPage() {
           return;
         }
 
+        lastSuccessfulPollRef.current = Date.now();
         const nextSession = sessionResponse.session;
         setSession(nextSession);
-        setPageError("");
+        setPageError(generateErrorRef.current ?? "");
 
         try {
           const recommendationsResponse = USE_MOCK
@@ -207,6 +290,7 @@ function RecommendationPage() {
 
     setIsGenerating(true);
     setPageError("");
+    generateErrorRef.current = null;
 
     try {
       const response = USE_MOCK
@@ -232,6 +316,10 @@ function RecommendationPage() {
       );
     } catch (error) {
       setPageError(error.message);
+
+      if (isMissingResponsesError(error.message)) {
+        generateErrorRef.current = error.message;
+      }
 
       if (isAutomatic) {
         autoGenerateAttemptedRef.current = true;
@@ -297,18 +385,31 @@ function RecommendationPage() {
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Loading recommendations...</p>
         </div>
+      ) : isMissingResponsesError(pageError) || (!isHost && hasWaitedTooLong) ? (
+        <div className="recommendation-state">
+          <p>
+            Recommendations are not ready yet. You can keep waiting, or return home and re-open this session later.
+          </p>
+          <button
+            className="recommendation-close"
+            type="button"
+            onClick={() => navigate("/")}
+          >
+            Back to Home
+          </button>
+        </div>
       ) : pageError && !hasRecommendations && !hasSnapshot ? (
         <div className="recommendation-state">
           <p className="recommendation-error">{pageError}</p>
           <button
-            className="recommendation-retry"
+            className="recommendation-close"
             type="button"
             onClick={() => window.location.reload()}
           >
             Try again
           </button>
         </div>
-      ) : isGenerating ? (
+      ) : isGenerating || (shouldAutoGenerate && !autoGenerateAttemptedRef.current) ? (
         <div className="recommendation-state">
           <div className="recommendation-spinner" aria-hidden="true" />
           <p>Generating recommendations...</p>
@@ -401,6 +502,15 @@ function RecommendationPage() {
           </div>
         </>
       )}
+      {/* Reminder Popup */}
+      {showReminderPopup && (
+                <ReminderPopup
+                    isHost={isHost}
+                    onClose={() => {
+                        setShowReminderPopup(false);
+                    }}
+                />
+            )}
     </main>
   );
 }
