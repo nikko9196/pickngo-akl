@@ -87,8 +87,8 @@ export default function Wheelpage() {
     const [voteWarning, setVoteWarning] = useState("");
 
     // --- Refs (to capture latest values in async callbacks) ---
-    const resultRef = useRef(result); // Use refs to capture the latest values
-    const votesRef = useRef(votes); // Use refs to capture the latest values
+    const resultRef = useRef(result); 
+    const votesRef = useRef(votes);
     const isHostRef = useRef(false); // check if player is the host
     const dataRef = useRef(null);
     const currentUserIdRef = useRef(null);
@@ -137,7 +137,6 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
-            // console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
@@ -151,7 +150,6 @@ export default function Wheelpage() {
             spinActivate(true);
             setRespin("");
             setVoted(false);
-            // console.log("debug vote warning", voteWarning);
     
             // notify all users in the session to spin
             socket.emit("spin", {
@@ -176,7 +174,6 @@ export default function Wheelpage() {
         if (isHostRef.current) {
     
             const spinResult = data[prizeNumber];
-            // console.log("spinResult:", spinResult);
             if (!spinResult) {
                 console.error("Invalid spin result");
                 return;
@@ -214,7 +211,6 @@ export default function Wheelpage() {
             // re-sync from backend (source of truth)
             const res = await getWheelState(token, sessionId);
             setVoted(hasUserVoted(currentUserIdRef.current, res.session));
-            // console.log("vote reset status after handling Vote:", voted);
     
         } catch (error) {
             console.error("Failed to submit vote:", error);
@@ -242,7 +238,6 @@ export default function Wheelpage() {
     const resetRoundState = () => {
         setResult(null);
         setVoted(false);
-        // console.log("vote reset status for spin", voted);
         setRespin(null);
         setVotes({ yes: 0, respin: 0 });
         setTimeLeft(DURATION);
@@ -309,7 +304,6 @@ export default function Wheelpage() {
         async function loadWheelData() {
         if (isLoadingRef.current) return; // prevent duplicate calls
         isLoadingRef.current = true;
-        // console.log("token:",token);
         try {
             const { session } = await getSessionByCode(token, sessionCode);
             const id = session.id;
@@ -477,9 +471,6 @@ export default function Wheelpage() {
           },
         );
 
-        // socket.on("vote_update", (counts) => {
-        //     setVotes({ yes: counts.acceptCount, respin: counts.respinCount });
-        // });
         socket.on("vote_update", async () => {
             const res = await getWheelState(token, sessionIdRef.current);
         
@@ -496,6 +487,8 @@ export default function Wheelpage() {
             if (isrespin) {
               hasRestoredVotingRef.current = false;
               restoredVotingRoundIdRef.current = null;
+              spinActivate(false);
+              setMustSpin(false);
             }
 
             setRespin(isrespin);
@@ -608,6 +601,7 @@ export default function Wheelpage() {
         
             setFinalSpin(finalSpin);
             setMustSpin(false);
+            spinActivate(false);
             setHovered(false);
         
             // non-host final navigation
@@ -638,9 +632,6 @@ export default function Wheelpage() {
 
         if (!result) return;
 
-        // setShowVotePopup(true);
-        // only show popup if user has not voted
-        // console.log("voted status during voting timer:", voted);
         if (!voted) {
             setShowVotePopup(true);
         }
@@ -719,12 +710,6 @@ export default function Wheelpage() {
         return () => document.removeEventListener("click", handleClickOutside2);
     }, []);
 
-    useEffect(() => {
-        if (lastResult) {
-            // console.log("lastResult:", lastResult);
-        }
-    }, [lastResult]);
-
     const isUserReminded = (userId) => {
         return remindedUserIds?.includes(userId);
     };
@@ -732,16 +717,16 @@ export default function Wheelpage() {
     // Small Reminder Text Message  
     let message = "Lock your picks. Let the wheel decide.";
 
-    if (result) {
+    if (respin) {
+        message = isHost
+            ? "Everyone is waiting for you to spin"
+            : "Waiting for host to spin";
+    }
+    else if (result) {
         message = "";
     } 
     else if (spinactivate) {
         message = "The wheel is deciding ...";
-    }
-    else if (respin) {
-        message = isHost
-            ? "Everyone is waiting for you to spin"
-            : "Waiting for host to spin";
     }
     else if (!isHost && spinready) {
         message = "Waiting for host to spin";
@@ -1029,14 +1014,14 @@ export default function Wheelpage() {
                                 </div>
                                 <img src={cropped_wheel} className="wp-wheel-image" />
                                 <div
-                                    onClick={isHost && getready && !spinactivate ? handleSpin : undefined}
-                                    onMouseEnter={isHost && getready && !spinactivate ? () => setHovered(true) : undefined}
-                                    onMouseLeave={isHost && getready && !spinactivate ? () => setHovered(false) : undefined}
-                                    onTouchStart={isHost && getready && !spinactivate ? () => setHovered(true) : undefined}
+                                    onClick={isHost && spinready && !spinactivate ? handleSpin : undefined}
+                                    onMouseEnter={isHost && spinready && !spinactivate ? () => setHovered(true) : undefined}
+                                    onMouseLeave={isHost && spinready && !spinactivate ? () => setHovered(false) : undefined}
+                                    onTouchStart={isHost && spinready && !spinactivate ? () => setHovered(true) : undefined}
                                     className="wp-spinner"
                                     style={{
                                         transform: hovered ? "scale(1.1)" : "scale(1)",
-                                        cursor: isHost && getready ? "pointer" : "default",
+                                        cursor: isHost && spinready && !spinactivate ? "pointer" : "default",
                                     }}
                                 >
                                     <img src={spinner} alt="spinner" style={{ width: "100%" }} />
@@ -1064,7 +1049,6 @@ export default function Wheelpage() {
                         {!finalSpin && 
                         (
                             <div className="wp-result-card">
-                                {/* <h2 className="wp-result-title">{result.option}</h2> */}
                                 <h2 className="wp-result-title">{result.option}</h2>
 
                                 <div className="wp-result-meta">

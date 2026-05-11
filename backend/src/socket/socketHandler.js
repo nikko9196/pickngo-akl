@@ -25,12 +25,13 @@ const initSocket = (io) => {
                 const session = await findSessionByCode(sessionCode);
                 if (!session) return;
         
-                // ✅ if wheel is mid-spin, send current spin state to the rejoining user
+                // if wheel is mid-spin, send current spin state to the rejoining user
                 if (session.status === "voting" && session.currentWheelResult?.placeId) {
                     socket.emit("spin", {
-                        prizeNumber: null, // they'll need to match by placeId instead
+                        prizeNumber: null,
                         placeId: session.currentWheelResult.placeId,
                         finalSpin: session.finalSpin || false,
+                        spinRoundId: session.spinRoundId || null,  // ✅ added
                     });
                 }
             } catch (error) {
@@ -38,12 +39,12 @@ const initSocket = (io) => {
             }
         });
 
-        socket.on("build_wheel", ({ sessionCode }) => {        // ✅ add this
+        socket.on("build_wheel", ({ sessionCode }) => {
           io.to(sessionCode).emit("wheel_built");
         });
 
-        // ✅ Host-only: spin
-        socket.on("spin", async ({ sessionCode, prizeNumber, finalSpin, sessionId }) => {
+        // Host-only: spin
+        socket.on("spin", async ({ sessionCode, prizeNumber, placeId, finalSpin, sessionId, spinRoundId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
                 if (!hostCheck) {
@@ -53,9 +54,10 @@ const initSocket = (io) => {
         
                 io.to(sessionCode).emit("spin", {
                     prizeNumber,
+                    placeId,       // ✅ added
                     finalSpin,
-                    startAt: Date.now() + 500 // for start-time sync of spinning time
-                });
+                    spinRoundId,   // ✅ added
+                });        
         
             } catch (error) {
                 console.error("Failed to verify host for spin:", error);
