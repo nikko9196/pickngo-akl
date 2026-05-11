@@ -4,6 +4,7 @@ const {
 } = require("../services/sessionService");
 const { getErrorStatus } = require("../utils/errorUtils");
 
+// Submit or update a participant's rating for the final wheel results:
 async function submitResultRating(req, res) {
   const sessionId = req.params.sessionId?.trim();
   const { score } = req.body;
@@ -50,6 +51,7 @@ async function submitResultRating(req, res) {
   }
 }
 
+// Get a summary of all ratings for the final result:
 function getResultRatingSummary(session) {
   const ratings = session.resultRatings || [];
 
