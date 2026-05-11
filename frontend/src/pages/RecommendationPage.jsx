@@ -38,6 +38,7 @@ function RecommendationPage() {
   const { isAuthenticated, isAuthReady, token } = useAuth();
   const autoGenerateAttemptedRef = useRef(false);
   const generateErrorRef = useRef(null);
+  const lastSuccessfulPollRef = useRef(Date.now());
 
   const [session, setSession] = useState(initialSession);
   const [items, setItems] = useState([]);
@@ -121,6 +122,7 @@ function RecommendationPage() {
   useEffect(() => {
     autoGenerateAttemptedRef.current = false;
     generateErrorRef.current = null;
+    lastSuccessfulPollRef.current = Date.now();
   }, [session?.id]);
 
   useEffect(() => {
@@ -155,12 +157,15 @@ function RecommendationPage() {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
-      setHasWaitedTooLong(true);
-    }, 8000);
+    const checkIntervalId = window.setInterval(() => {
+      const millisecondsSinceLastPoll = Date.now() - lastSuccessfulPollRef.current;
+      if (millisecondsSinceLastPoll > 30000) {
+        setHasWaitedTooLong(true);
+      }
+    }, 3000);
 
     return () => {
-      window.clearTimeout(timeoutId);
+      window.clearInterval(checkIntervalId);
     };
   }, [isHost, session?.status, hasRecommendations, hasSnapshot]);
 
@@ -185,6 +190,7 @@ function RecommendationPage() {
           return;
         }
 
+        lastSuccessfulPollRef.current = Date.now();
         const nextSession = sessionResponse.session;
         setSession(nextSession);
         setPageError(generateErrorRef.current ?? "");
@@ -382,7 +388,7 @@ function RecommendationPage() {
       ) : isMissingResponsesError(pageError) || (!isHost && hasWaitedTooLong) ? (
         <div className="recommendation-state">
           <p>
-            No quiz responses yet. Recommendations need at least one answer to work. Please return home and create or join a new room.
+            Recommendations are not ready yet. You can keep waiting, or return home and re-open this session later.
           </p>
           <button
             className="recommendation-close"

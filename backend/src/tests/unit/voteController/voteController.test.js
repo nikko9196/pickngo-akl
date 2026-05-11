@@ -2,13 +2,13 @@ const {
   submitVote,
   resolveVote,
   getVoteSummary,
-} = require("../../controllers/voteController");
+} = require("../../../controllers/voteController");
 
-const sessionService = require("../../services/sessionService");
-const voteService = require("../../services/voteService");
+const sessionService = require("../../../services/sessionService");
+const voteService = require("../../../services/voteService");
 
-jest.mock("../../services/sessionService");
-jest.mock("../../services/voteService");
+jest.mock("../../../services/sessionService");
+jest.mock("../../../services/voteService");
 
 function createMockRes() {
   return {

@@ -1,5 +1,14 @@
-// Mock data for Recommendation module development
-// Remove or replace with real API when Annie's backend is ready
+/**
+ * Mock recommendation data for isolated frontend development.
+ *
+ * Activated by setting `VITE_USE_MOCK_RECOMMENDATIONS=true` in `.env.local`.
+ * Provides stand-in implementations of `getRecommendations` and
+ * `generateRecommendations` so the RecommendationPage UI can be exercised
+ * without a running backend.
+ *
+ * Scope: covers the recommendation display step only. Selection saving,
+ * wheel, and voting still require the real backend.
+ */
 
 const MOCK_ITEMS = [
   {
