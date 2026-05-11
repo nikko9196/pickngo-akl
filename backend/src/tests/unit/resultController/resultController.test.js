@@ -1,7 +1,7 @@
-const { submitResultRating } = require("../../controllers/resultController");
-const sessionService = require("../../services/sessionService");
+const { submitResultRating } = require("../../../controllers/resultController");
+const sessionService = require("../../../services/sessionService");
 
-jest.mock("../../services/sessionService");
+jest.mock("../../../services/sessionService");
 
 function createMockRes() {
   return {
