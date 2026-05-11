@@ -143,6 +143,14 @@ function RecommendationPage() {
         replace: true,
         state: { inviteSession: session },
       });
+      return;
+    }
+
+    if (session.status === "selecting" && session.currentUserReady) {
+      navigate(`/sessions/${session.sessionCode}/wheel`, {
+        replace: true,
+        state: { inviteSession: session },
+      });
     }
   }, [navigate, session]);
 

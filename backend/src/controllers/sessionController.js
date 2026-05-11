@@ -106,10 +106,12 @@ function serializeSession(session, currentUserId) {
     participantCount,
     currentUserRole: currentParticipant?.role || null,
     currentUserRoomDisplayName: currentParticipant?.roomDisplayName || "",
+    currentUserReady: Boolean(currentParticipant?.isReady),
     participants: sessionObject.participants.map((participant) => ({
       userId: getUserIdValue(participant.userId),
       role: participant.role,
       roomDisplayName: participant.roomDisplayName,
+      isReady: Boolean(participant.isReady),
       avatarUrl:
         participant.userId && typeof participant.userId === "object"
           ? participant.userId.avatarUrl || ""
