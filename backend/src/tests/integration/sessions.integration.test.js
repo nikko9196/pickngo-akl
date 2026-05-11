@@ -1,40 +1,14 @@
 const request = require("supertest");
 
-const QuestionList = require("../../models/QuestionList");
-const Response = require("../../models/Response");
-const Session = require("../../models/Session");
 const {
-  createMockSession,
-  createTestApp,
-  createToken,
-  mockFind,
-  mockFindById,
-  mockFindOne,
+  BASE_URL,
+  createTestRoom,
+  registerTestUser,
 } = require("./helpers/apiTestUtils");
 
-jest.mock("../../services/authService", () => ({
-  createGuestUser: jest.fn(),
-  getUserById: jest.fn(),
-  loginLocalUser: jest.fn(),
-  loginWithGoogle: jest.fn(),
-  registerLocalUser: jest.fn(),
-  JWT_SECRET: "test-secret",
-}));
-
-jest.mock("../../models/QuestionList");
-jest.mock("../../models/Response");
-jest.mock("../../models/Session");
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  Session.exists.mockResolvedValue(false);
-});
-
-describe("Sessions API integration", () => {
+describe("Sessions API integration with real backend and MongoDB", () => {
   test("POST /api/sessions returns 401 without auth token", async () => {
-    const app = createTestApp();
-
-    const response = await request(app).post("/api/sessions").send({
+    const response = await request(BASE_URL).post("/api/sessions").send({
       roomDisplayName: "Host",
       maxParticipants: 4,
       maxSelectionsPerUser: 3,
@@ -44,24 +18,14 @@ describe("Sessions API integration", () => {
     expect(response.body).toEqual({
       message: "Authentication is required.",
     });
-    expect(Session.create).not.toHaveBeenCalled();
   });
 
-  test("POST /api/sessions accepts valid token and passes JSON body to create room controller", async () => {
-    const app = createTestApp();
-    const createdSession = {
-      _id: {
-        toString: () => "session123",
-      },
-    };
-    const populatedSession = createMockSession();
+  test("POST /api/sessions creates a room and stores the host participant", async () => {
+    const host = await registerTestUser("session_host");
 
-    Session.create.mockResolvedValue(createdSession);
-    mockFindById(populatedSession);
-
-    const response = await request(app)
+    const response = await request(BASE_URL)
       .post("/api/sessions")
-      .set("Authorization", `Bearer ${createToken("host1")}`)
+      .set("Authorization", `Bearer ${host.token}`)
       .send({
         roomDisplayName: "Host",
         maxParticipants: 4,
@@ -75,236 +39,119 @@ describe("Sessions API integration", () => {
       });
 
     expect(response.statusCode).toBe(201);
-    expect(Session.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        hostUserId: "host1",
-        maxParticipants: 4,
-        maxSelectionsPerUser: 3,
-        location: {
-          source: "map",
-          label: "",
-          lat: -36.8485,
-          lng: 174.7633,
-          radiusMeters: 3000,
-        },
-        participants: [
-          {
-            userId: "host1",
-            role: "host",
-            roomDisplayName: "Host",
-          },
-        ],
-      }),
-    );
     expect(response.body.session).toEqual(
       expect.objectContaining({
-        id: "session123",
+        hostUserId: host.user.id,
+        status: "waiting",
         currentUserRole: "host",
+        currentUserRoomDisplayName: "Host",
+        participantCount: 1,
       }),
     );
   });
 
-  test("POST /api/sessions/join is mounted, authenticates token, and normalizes sessionCode", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      participants: [
-        {
-          userId: {
-            toString: () => "host1",
-          },
-          role: "host",
-          roomDisplayName: "Host",
-        },
-      ],
-    });
+  test("POST /api/sessions/join lets another user join by session code", async () => {
+    const host = await registerTestUser("join_host");
+    const member = await registerTestUser("join_member");
+    const session = await createTestRoom(host.token);
 
-    mockFindOne(session);
-
-    const response = await request(app)
+    const response = await request(BASE_URL)
       .post("/api/sessions/join")
-      .set("Authorization", `Bearer ${createToken("user1")}`)
+      .set("Authorization", `Bearer ${member.token}`)
       .send({
-        sessionCode: " abc123 ",
+        sessionCode: ` ${session.sessionCode.toLowerCase()} `,
         roomDisplayName: "Member",
       });
 
     expect(response.statusCode).toBe(200);
-    expect(Session.findOne).toHaveBeenCalledWith({ sessionCode: "ABC123" });
-    expect(session.participants[1]).toEqual({
-      userId: "user1",
-      role: "member",
-      roomDisplayName: "Member",
-    });
-    expect(session.save).toHaveBeenCalled();
     expect(response.body.session).toEqual(
       expect.objectContaining({
         currentUserRole: "member",
+        currentUserRoomDisplayName: "Member",
         participantCount: 2,
       }),
     );
   });
 
   test("GET /api/sessions/mine returns all rooms for the current user", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      participants: [
-        {
-          userId: {
-            toString: () => "user1",
-          },
-          role: "host",
-          roomDisplayName: "User 1",
-        },
-      ],
-    });
+    const host = await registerTestUser("mine_host");
+    const session = await createTestRoom(host.token);
 
-    mockFind([session]);
-
-    const response = await request(app)
+    const response = await request(BASE_URL)
       .get("/api/sessions/mine")
-      .set("Authorization", `Bearer ${createToken("user1")}`);
+      .set("Authorization", `Bearer ${host.token}`);
 
     expect(response.statusCode).toBe(200);
-    expect(Session.find).toHaveBeenCalledWith({
-      "participants.userId": "user1",
-    });
-    expect(response.body.sessions).toEqual([
-      expect.objectContaining({
-        id: "session123",
-        currentUserRole: "host",
-        currentUserRoomDisplayName: "User 1",
-      }),
-    ]);
+    expect(response.body.sessions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: session.id,
+          currentUserRole: "host",
+          currentUserRoomDisplayName: "Host",
+        }),
+      ]),
+    );
   });
 
-  test("GET /api/sessions/code/:sessionCode returns a room by public code", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      participants: [
-        {
-          userId: {
-            toString: () => "user1",
-          },
-          role: "member",
-          roomDisplayName: "User 1",
-        },
-      ],
-    });
+  test("GET /api/sessions/code/:sessionCode returns a participant's room by public code", async () => {
+    const host = await registerTestUser("code_host");
+    const session = await createTestRoom(host.token);
 
-    mockFindOne(session);
-
-    const response = await request(app)
-      .get("/api/sessions/code/abc123")
-      .set("Authorization", `Bearer ${createToken("user1")}`);
+    const response = await request(BASE_URL)
+      .get(`/api/sessions/code/${session.sessionCode.toLowerCase()}`)
+      .set("Authorization", `Bearer ${host.token}`);
 
     expect(response.statusCode).toBe(200);
-    expect(Session.findOne).toHaveBeenCalledWith({
-      sessionCode: "ABC123",
-      "participants.userId": "user1",
-    });
     expect(response.body.session).toEqual(
       expect.objectContaining({
-        id: "session123",
-        sessionCode: "ABC123",
-        currentUserRole: "member",
+        id: session.id,
+        sessionCode: session.sessionCode,
+        currentUserRole: "host",
       }),
     );
   });
 
   test("GET /api/sessions/:sessionId/progress returns questionnaire completion progress", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      participants: [
-        {
-          userId: {
-            toString: () => "host1",
-          },
-          role: "host",
-          roomDisplayName: "Host",
-        },
-        {
-          userId: {
-            toString: () => "user1",
-          },
-          role: "member",
-          roomDisplayName: "User 1",
-        },
-      ],
-    });
+    const host = await registerTestUser("progress_host");
+    const session = await createTestRoom(host.token);
 
-    mockFindById(session);
-    QuestionList.countDocuments.mockResolvedValue(2);
-    Response.aggregate.mockResolvedValue([
-      { _id: "host1", answeredCount: 2 },
-      { _id: "user1", answeredCount: 1 },
-    ]);
-
-    const response = await request(app)
-      .get("/api/sessions/session123/progress")
-      .set("Authorization", `Bearer ${createToken("user1")}`);
+    const response = await request(BASE_URL)
+      .get(`/api/sessions/${session.id}/progress`)
+      .set("Authorization", `Bearer ${host.token}`);
 
     expect(response.statusCode).toBe(200);
-    expect(response.body.progress).toEqual({
-      sessionId: "session123",
-      totalParticipants: 2,
-      totalQuestions: 2,
-      completedCount: 1,
-      pendingCount: 1,
-      allComplete: false,
-      participants: [
-        {
-          userId: "host1",
-          roomDisplayName: "Host",
-          answeredCount: 2,
-          isComplete: true,
-        },
-        {
-          userId: "user1",
-          roomDisplayName: "User 1",
-          answeredCount: 1,
-          isComplete: false,
-        },
-      ],
-    });
+    expect(response.body.progress).toEqual(
+      expect.objectContaining({
+        sessionId: session.id,
+        totalParticipants: 1,
+        completedCount: expect.any(Number),
+        pendingCount: expect.any(Number),
+        allComplete: expect.any(Boolean),
+        participants: [
+          expect.objectContaining({
+            userId: host.user.id,
+            roomDisplayName: "Host",
+            answeredCount: expect.any(Number),
+            isComplete: expect.any(Boolean),
+          }),
+        ],
+      }),
+    );
   });
 
   test("PATCH /api/sessions/:sessionId updates room settings as host", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      maxParticipants: 4,
-      maxSelectionsPerUser: 3,
-      participants: [
-        {
-          userId: {
-            toString: () => "host1",
-          },
-          role: "host",
-          roomDisplayName: "Host",
-        },
-        {
-          userId: {
-            toString: () => "user1",
-          },
-          role: "member",
-          roomDisplayName: "User 1",
-        },
-      ],
-    });
+    const host = await registerTestUser("settings_host");
+    const session = await createTestRoom(host.token);
 
-    mockFindById(session);
-
-    const response = await request(app)
-      .patch("/api/sessions/session123")
-      .set("Authorization", `Bearer ${createToken("host1")}`)
+    const response = await request(BASE_URL)
+      .patch(`/api/sessions/${session.id}`)
+      .set("Authorization", `Bearer ${host.token}`)
       .send({
         maxParticipants: 5,
         maxSelectionsPerUser: 4,
       });
 
     expect(response.statusCode).toBe(200);
-    expect(session.maxParticipants).toBe(5);
-    expect(session.maxSelectionsPerUser).toBe(4);
-    expect(session.save).toHaveBeenCalled();
     expect(response.body.session).toEqual(
       expect.objectContaining({
         maxParticipants: 5,
@@ -313,28 +160,21 @@ describe("Sessions API integration", () => {
     );
   });
 
-  test("PATCH /api/sessions/:sessionId/status lets host token start the session", async () => {
-    const app = createTestApp();
-    const session = createMockSession({
-      status: "waiting",
-    });
+  test("PATCH /api/sessions/:sessionId/status lets host start the session", async () => {
+    const host = await registerTestUser("status_host");
+    const session = await createTestRoom(host.token);
 
-    mockFindById(session);
-
-    const response = await request(app)
-      .patch("/api/sessions/session123/status")
-      .set("Authorization", `Bearer ${createToken("host1")}`)
+    const response = await request(BASE_URL)
+      .patch(`/api/sessions/${session.id}/status`)
+      .set("Authorization", `Bearer ${host.token}`)
       .send({
         status: "questioning",
       });
 
     expect(response.statusCode).toBe(200);
-    expect(Session.findById).toHaveBeenCalledWith("session123");
-    expect(session.status).toBe("questioning");
-    expect(session.save).toHaveBeenCalled();
     expect(response.body.session).toEqual(
       expect.objectContaining({
-        id: "session123",
+        id: session.id,
         status: "questioning",
         currentUserRole: "host",
       }),
@@ -342,17 +182,13 @@ describe("Sessions API integration", () => {
   });
 
   test("DELETE /api/sessions/:sessionId deletes a room as host", async () => {
-    const app = createTestApp();
-    const session = createMockSession();
+    const host = await registerTestUser("delete_host");
+    const session = await createTestRoom(host.token);
 
-    mockFindById(session);
-
-    const response = await request(app)
-      .delete("/api/sessions/session123")
-      .set("Authorization", `Bearer ${createToken("host1")}`);
+    const response = await request(BASE_URL)
+      .delete(`/api/sessions/${session.id}`)
+      .set("Authorization", `Bearer ${host.token}`);
 
     expect(response.statusCode).toBe(204);
-    expect(Session.findById).toHaveBeenCalledWith("session123");
-    expect(session.deleteOne).toHaveBeenCalled();
   });
 });

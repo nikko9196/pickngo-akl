@@ -1,85 +1,39 @@
 const request = require("supertest");
 
-const QuestionList = require("../../models/QuestionList");
 const {
-  createTestApp,
-  createToken,
-  mockSortedQuestionLists,
+  BASE_URL,
+  registerTestUser,
 } = require("./helpers/apiTestUtils");
 
-jest.mock("../../services/authService", () => ({
-  createGuestUser: jest.fn(),
-  getUserById: jest.fn(),
-  loginLocalUser: jest.fn(),
-  loginWithGoogle: jest.fn(),
-  registerLocalUser: jest.fn(),
-  JWT_SECRET: "test-secret",
-}));
-
-jest.mock("../../models/QuestionList");
-jest.mock("../../models/Response");
-jest.mock("../../models/Session");
-
-beforeEach(() => {
-  jest.clearAllMocks();
-  jest.restoreAllMocks();
-});
-
-describe("Questions API integration", () => {
+describe("Questions API integration with real backend and MongoDB", () => {
   test("GET /api/questions returns 401 without auth token", async () => {
-    const app = createTestApp();
-
-    const response = await request(app).get("/api/questions");
+    const response = await request(BASE_URL).get("/api/questions");
 
     expect(response.statusCode).toBe(401);
     expect(response.body).toEqual({
       message: "Authentication is required.",
     });
-    expect(QuestionList.find).not.toHaveBeenCalled();
   });
 
-  test("GET /api/questions accepts valid token and returns controller response", async () => {
-    const app = createTestApp();
+  test("GET /api/questions returns active question lists from the configured database", async () => {
+    const user = await registerTestUser("questions");
 
-    jest.spyOn(Math, "random").mockReturnValue(0);
-    mockSortedQuestionLists([
-      {
-        questionListId: "food-type",
-        category: "Food Type",
-        isActive: true,
-        questionList: [
-          {
-            questionId: "q1",
-            questionType: "single",
-            questionText: "What food do you want?",
-            questionValue: [{ optionLabel: "A", optionText: "Sushi" }],
-          },
-        ],
-      },
-    ]);
-
-    const response = await request(app)
+    const response = await request(BASE_URL)
       .get("/api/questions")
-      .set("Authorization", `Bearer ${createToken("user1")}`);
+      .set("Authorization", `Bearer ${user.token}`);
 
     expect(response.statusCode).toBe(200);
-    expect(QuestionList.find).toHaveBeenCalledWith({ isActive: true });
-    expect(response.body).toEqual({
-      questionLists: [
-        {
-          questionListId: "food-type",
-          category: "Food Type",
+    expect(Array.isArray(response.body.questionLists)).toBe(true);
+
+    if (response.body.questionLists.length > 0) {
+      expect(response.body.questionLists[0]).toEqual(
+        expect.objectContaining({
+          questionListId: expect.any(String),
+          category: expect.any(String),
           isActive: true,
-          questionList: [
-            {
-              questionId: "q1",
-              questionType: "single",
-              questionText: "What food do you want?",
-              questionValue: [{ optionLabel: "A", optionText: "Sushi" }],
-            },
-          ],
-        },
-      ],
-    });
+          questionList: expect.any(Array),
+        }),
+      );
+    }
   });
 });

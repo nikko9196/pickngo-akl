@@ -1,93 +1,40 @@
 const request = require("supertest");
 
-const QuestionList = require("../../models/QuestionList");
-const Response = require("../../models/Response");
 const {
-  createMockSession,
-  createTestApp,
-  createToken,
-  mockFindByIdSelect,
+  BASE_URL,
+  createTestRoom,
+  registerTestUser,
 } = require("./helpers/apiTestUtils");
 
-jest.mock("../../services/authService", () => ({
-  createGuestUser: jest.fn(),
-  getUserById: jest.fn(),
-  loginLocalUser: jest.fn(),
-  loginWithGoogle: jest.fn(),
-  registerLocalUser: jest.fn(),
-  JWT_SECRET: "test-secret",
-}));
+describe("Questionnaire Responses API integration with real backend and MongoDB", () => {
+  test("POST /api/sessions/:sessionId/responses submits or updates one participant answer", async () => {
+    const host = await registerTestUser("response_host");
+    const session = await createTestRoom(host.token);
 
-jest.mock("../../models/QuestionList");
-jest.mock("../../models/Response");
-jest.mock("../../models/Session");
+    await request(BASE_URL)
+      .patch(`/api/sessions/${session.id}/status`)
+      .set("Authorization", `Bearer ${host.token}`)
+      .send({
+        status: "questioning",
+      });
 
-beforeEach(() => {
-  jest.clearAllMocks();
-});
-
-describe("Questionnaire Responses API integration", () => {
-  test("POST /api/sessions/:sessionId/responses submits one participant answer", async () => {
-    const app = createTestApp();
-    const savedResponse = {
-      sessionId: "session123",
-      userId: "user1",
-      questionId: "q1",
-      answer: "Sushi",
-      skipped: false,
-      createdAt: "2026-01-01T00:00:00.000Z",
-    };
-    const progressSession = createMockSession({
-      status: "questioning",
-      participants: [
-        {
-          userId: {
-            toString: () => "user1",
-          },
-          role: "member",
-          roomDisplayName: "User 1",
-        },
-      ],
-    });
-
-    Response.findOneAndUpdate.mockResolvedValue(savedResponse);
-    mockFindByIdSelect(progressSession);
-    QuestionList.countDocuments.mockResolvedValue(2);
-    Response.aggregate.mockResolvedValue([{ _id: "user1", answeredCount: 1 }]);
-
-    const response = await request(app)
-      .post("/api/sessions/session123/responses")
-      .set("Authorization", `Bearer ${createToken("user1")}`)
+    const response = await request(BASE_URL)
+      .post(`/api/sessions/${session.id}/responses`)
+      .set("Authorization", `Bearer ${host.token}`)
       .send({
         questionId: " q1 ",
         answer: " Sushi ",
       });
 
     expect(response.statusCode).toBe(200);
-    expect(Response.findOneAndUpdate).toHaveBeenCalledWith(
-      {
-        sessionId: "session123",
-        userId: "user1",
+    expect(response.body.response).toEqual(
+      expect.objectContaining({
+        sessionId: session.id,
+        userId: host.user.id,
         questionId: "q1",
-      },
-      {
-        $set: {
-          answer: "Sushi",
-          skipped: false,
-        },
-        $setOnInsert: {
-          sessionId: "session123",
-          userId: "user1",
-          questionId: "q1",
-        },
-      },
-      {
-        returnDocument: "after",
-        upsert: true,
-        runValidators: true,
-        setDefaultsOnInsert: true,
-      },
+        answer: "Sushi",
+        skipped: false,
+      }),
     );
-    expect(response.body.response).toEqual(savedResponse);
   });
 });
