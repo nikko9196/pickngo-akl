@@ -4,7 +4,7 @@ const {
   BASE_URL,
   createTestRoom,
   registerTestUser,
-} = require("./helpers/apiTestUtils");
+} = require("../helpers/apiTestUtils");
 
 describe("Questionnaire Responses API integration with real backend and MongoDB", () => {
   test("POST /api/sessions/:sessionId/responses submits or updates one participant answer", async () => {

@@ -4,7 +4,7 @@ const {
   BASE_URL,
   createTestRoom,
   registerTestUser,
-} = require("./helpers/apiTestUtils");
+} = require("../helpers/apiTestUtils");
 
 describe("Sessions API integration with real backend and MongoDB", () => {
   test("POST /api/sessions returns 401 without auth token", async () => {

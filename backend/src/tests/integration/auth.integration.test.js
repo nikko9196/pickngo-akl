@@ -3,7 +3,7 @@ const request = require("supertest");
 const {
   BASE_URL,
   registerTestUser,
-} = require("./helpers/apiTestUtils");
+} = require("../helpers/apiTestUtils");
 
 describe("Auth API integration with real backend and MongoDB", () => {
   test("POST /api/auth/register creates a local user", async () => {

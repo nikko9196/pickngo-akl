@@ -3,7 +3,7 @@ const request = require("supertest");
 const {
   BASE_URL,
   registerTestUser,
-} = require("./helpers/apiTestUtils");
+} = require("../helpers/apiTestUtils");
 
 describe("Questions API integration with real backend and MongoDB", () => {
   test("GET /api/questions returns 401 without auth token", async () => {
