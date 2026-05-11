@@ -238,6 +238,7 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
     currentWheelResult,
     finalWheelResult,
     voteSummary: buildVoteSummary(session),
+    spinRoundId: session.spinRoundId || null,
   };
 }
 
@@ -305,6 +306,7 @@ async function buildWheel(req, res) {
       votedUserIds: [],
     };
     session.lastVoteSummary = null;
+    session.spinRoundId = null;
 
     await session.save();
 
@@ -349,6 +351,7 @@ async function spinWheel(req, res) {
 
     const randomIndex = Math.floor(Math.random() * session.wheelItems.length);
     const selectedItem = session.wheelItems[randomIndex];
+    const spinRoundId = Date.now().toString();
     const { selectionLookup, snapshotLookup } =
       await buildWheelContext(session);
     const detailedResult = getRestaurantDetails({
@@ -367,6 +370,7 @@ async function spinWheel(req, res) {
 
     if (isFinalSpin) {
       session.finalWheelResult = session.currentWheelResult;
+      session.spinRoundId = spinRoundId;
       session.status = "completed";
     } else {
       session.status = "voting";
@@ -385,6 +389,7 @@ async function spinWheel(req, res) {
         currentWheelResult: detailedResult,
         finalSpin: isFinalSpin,
         status: session.status,
+        spinRoundId,
       },
     });
   } catch (error) {

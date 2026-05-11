@@ -10,6 +10,7 @@ async function isSessionHost(sessionId, userId) {
 }
 
 const initSocket = (io) => {
+    const votingStartTimes = {}; 
     io.on("connection", (socket) => {
 
         socket.on("join_session", async ({ sessionCode, userId }) => {
@@ -25,25 +26,32 @@ const initSocket = (io) => {
                 const session = await findSessionByCode(sessionCode);
                 if (!session) return;
         
-                // ✅ if wheel is mid-spin, send current spin state to the rejoining user
+                // if wheel is mid-spin, send current spin state to the rejoining user
                 if (session.status === "voting" && session.currentWheelResult?.placeId) {
                     socket.emit("spin", {
-                        prizeNumber: null, // they'll need to match by placeId instead
+                        prizeNumber: null,
                         placeId: session.currentWheelResult.placeId,
                         finalSpin: session.finalSpin || false,
+                        spinRoundId: session.spinRoundId || null, 
                     });
+
+                    // send the voting start time so rejoining users sync their timer
+                    const startTime = votingStartTimes[session._id?.toString()];
+                    if (startTime) {
+                        socket.emit("voting_start_time", { startTime });
+                    }
                 }
             } catch (error) {
                 console.error("Failed to send session state on join:", error);
             }
         });
 
-        socket.on("build_wheel", ({ sessionCode }) => {        // ✅ add this
+        socket.on("build_wheel", ({ sessionCode }) => {
           io.to(sessionCode).emit("wheel_built");
         });
 
-        // ✅ Host-only: spin
-        socket.on("spin", async ({ sessionCode, prizeNumber, finalSpin, sessionId }) => {
+        // Host-only: spin
+        socket.on("spin", async ({ sessionCode, prizeNumber, placeId, finalSpin, sessionId, spinRoundId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
                 if (!hostCheck) {
@@ -53,9 +61,10 @@ const initSocket = (io) => {
         
                 io.to(sessionCode).emit("spin", {
                     prizeNumber,
+                    placeId,       
                     finalSpin,
-                    startAt: Date.now() + 500 // for start-time sync of spinning time
-                });
+                    spinRoundId,   
+                });        
         
             } catch (error) {
                 console.error("Failed to verify host for spin:", error);
@@ -76,7 +85,7 @@ const initSocket = (io) => {
             }
         });
 
-        // ✅ Host-only: respin decision
+        // Host-only: respin decision
         socket.on("respin", async ({ sessionCode, isrespin, finalSpin, sessionId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
@@ -121,7 +130,7 @@ const initSocket = (io) => {
           }
         });
 
-        // ✅ Host-only: send reminder
+        // Host-only: send reminder
         socket.on("send_reminder", async ({ sessionCode, sessionId }) => {
             try {
                 const hostCheck = await isSessionHost(sessionId, socket.userId);
@@ -141,7 +150,7 @@ const initSocket = (io) => {
             }
         });
 
-        // ✅ Host-only: final wheel result
+        // Host-only: final wheel result
         socket.on("spin_finished", async ({ 
             sessionCode,
             result,
@@ -163,9 +172,17 @@ const initSocket = (io) => {
                     return;
                 }
 
+                // authoritative timestamp from server
+                const startTime = Date.now();
+
+                if (!finalSpin) {
+                    votingStartTimes[sessionId] = startTime; 
+                }
+
                 io.to(sessionCode).emit("spin_finished", {
                     result,
-                    finalSpin
+                    finalSpin,
+                    startTime
                 });
 
             } catch (error) {

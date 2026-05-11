@@ -87,11 +87,17 @@ export default function Wheelpage() {
     const [voteWarning, setVoteWarning] = useState("");
 
     // --- Refs (to capture latest values in async callbacks) ---
-    const resultRef = useRef(result); // Use refs to capture the latest values
-    const votesRef = useRef(votes); // Use refs to capture the latest values
+    const resultRef = useRef(result); 
+    const votesRef = useRef(votes);
     const isHostRef = useRef(false); // check if player is the host
     const dataRef = useRef(null);
     const currentUserIdRef = useRef(null);
+    const latestSpinRoundIdRef = useRef(null);
+    const sessionStatusRef = useRef(null);
+    const restoredVotingRoundIdRef = useRef(null);
+    const hasRestoredVotingRef = useRef(false);
+    const voteStartTimeRef = useRef(null);
+    const pendingRestoreResultRef = useRef(null);
 
     // --- Dropdown State ---
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
@@ -133,11 +139,9 @@ export default function Wheelpage() {
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
-            // console.log(token);
             const restaurantName = response.session.currentWheelResult.name;
             const ifFinalSpin = response.session?.finalSpin;
             setFinalSpin(ifFinalSpin);
-            
             // find the index in data that matches the backend result
             const newPrize = data.findIndex(item => item.option === restaurantName);
     
@@ -147,14 +151,16 @@ export default function Wheelpage() {
             spinActivate(true);
             setRespin("");
             setVoted(false);
-            // console.log("debug vote warning", voteWarning);
     
             // notify all users in the session to spin
-            socket.emit("spin", { 
-                sessionCode, 
-                prizeNumber: newPrize, 
-                finalSpin: ifFinalSpin, 
-                sessionId });
+            socket.emit("spin", {
+              sessionCode,
+              prizeNumber: newPrize,
+              placeId: response.session.currentWheelResult.placeId,
+              finalSpin: ifFinalSpin,
+              sessionId,
+              spinRoundId: response.session.spinRoundId,
+            });
 
         } catch (error) {
             console.error("Failed to spin wheel:", error);
@@ -169,14 +175,10 @@ export default function Wheelpage() {
         if (isHostRef.current) {
     
             const spinResult = data[prizeNumber];
-            // console.log("spinResult:", spinResult);
             if (!spinResult) {
                 console.error("Invalid spin result");
                 return;
             }
-    
-            // host updates local state
-            setResult(spinResult);
     
             // broadcast authoritative result
             socket.emit("spin_finished", {
@@ -185,17 +187,6 @@ export default function Wheelpage() {
                 finalSpin,
                 sessionId
             });
-    
-            // final navigation
-            if (finalSpin) {
-                setTimeout(() => {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: { yes: 0, respin: 0 }
-                        }
-                    });
-                }, 3000);
-            }
         }
     };
 
@@ -207,7 +198,6 @@ export default function Wheelpage() {
             // re-sync from backend (source of truth)
             const res = await getWheelState(token, sessionId);
             setVoted(hasUserVoted(currentUserIdRef.current, res.session));
-            // console.log("vote reset status after handling Vote:", voted);
     
         } catch (error) {
             console.error("Failed to submit vote:", error);
@@ -235,7 +225,6 @@ export default function Wheelpage() {
     const resetRoundState = () => {
         setResult(null);
         setVoted(false);
-        // console.log("vote reset status for spin", voted);
         setRespin(null);
         setVotes({ yes: 0, respin: 0 });
         setTimeLeft(DURATION);
@@ -302,12 +291,10 @@ export default function Wheelpage() {
         async function loadWheelData() {
         if (isLoadingRef.current) return; // prevent duplicate calls
         isLoadingRef.current = true;
-        // console.log("token:",token);
         try {
             const { session } = await getSessionByCode(token, sessionCode);
             const id = session.id;
             setSessionId(id);
-
             const { readySummary } = await collectReadyStatus(token, id);
 
             setReadyCount(readySummary.readyCount);
@@ -330,11 +317,22 @@ export default function Wheelpage() {
             const wheelState = await getWheelState(token, id);
             const currentResult = wheelState.session?.currentWheelResult;
             const sessionStatus = wheelState.session?.status;
+            sessionStatusRef.current = sessionStatus;
+            latestSpinRoundIdRef.current =
+              wheelState.session?.spinRoundId || null;
             const sessionData = wheelState.session ?? wheelState;
             const wheelItems = sessionData.wheelItems || [];
             const voted = hasUserVoted(user.id, wheelState.session);
             setVoted(voted);
-            
+
+            // ✅ restore CURRENT round live vote counts from getWheelState
+            const currentVoteSummary = wheelState.session?.voteSummary;
+            if (sessionStatus === "voting" && currentVoteSummary) {
+                setVotes({
+                    yes: currentVoteSummary.acceptCount ?? 0,
+                    respin: currentVoteSummary.respinCount ?? 0
+                });
+            }
 
             // ✅ restore latest voting result if user rejoined mid-session
             const wheelLastRound = await reloadWheel(token, id);
@@ -350,21 +348,16 @@ export default function Wheelpage() {
                     }
                 });
 
-                // IMPORTANT: also overwrite live vote state
-                setVotes({
-                    yes: lastRoundVoteSummary.acceptCount ?? 0,
-                    respin: lastRoundVoteSummary.respinCount ?? 0
-                });
             }
 
-            // ✅ restore Reminder status if user rejoined mid-session
+            // restore Reminder status if user rejoined mid-session
             const reminderRes = await getRemind(token, id);
             const remindedUserIdsRes = reminderRes?.remindedUserIds;
             if (Array.isArray(remindedUserIdsRes) && remindedUserIdsRes.length > 0) {
                 setRemindedUserIds(remindedUserIdsRes);
             }
 
-            // ✅ Only build wheel if status is selecting
+            // Only build wheel if status is selecting
             let finalWheelItems = wheelItems;
             if (sessionStatus === 'selecting') {
                 const { session: newBuilt } = await buildWheelApi(token, id);
@@ -378,14 +371,18 @@ export default function Wheelpage() {
             dataRef.current = fetchedData;
 
             if (sessionStatus === "voting" && currentResult?.placeId) {
-                // ✅ wheel already stopped, restore voting UI
-                // setShowVotePopup(true);
+                // wheel already stopped, restore voting UI
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
+                    hasRestoredVotingRef.current = true;
+                    restoredVotingRoundIdRef.current =
+                      wheelState.session?.spinRoundId || null;
                     setPrizeNumber(prize);
-                    setResult(fetchedData[prize]);
+                    // setResult(fetchedData[prize]);
+                    pendingRestoreResultRef.current = fetchedData[prize];
                     setMustSpin(false);
                     spinActivate(false);
+                    setShowVotePopup(true);   // add this so popup shows on rejoin
                 }
             } 
 
@@ -432,27 +429,38 @@ export default function Wheelpage() {
         if (!token || !sessionCode) return; // use token instead of userid
 
         // listen for spin from host
-        socket.on("spin", ({ prizeNumber, placeId, finalSpin, startAt}) => {
-            const resolvedPrize = prizeNumber !== null
+        socket.on(
+          "spin",
+          ({ prizeNumber, placeId, finalSpin, spinRoundId }) => {
+            if (
+              hasRestoredVotingRef.current &&
+              restoredVotingRoundIdRef.current === spinRoundId
+            ) {
+              return;
+            }
+
+            hasRestoredVotingRef.current = false;
+            restoredVotingRoundIdRef.current = null;
+
+            latestSpinRoundIdRef.current = spinRoundId;
+            sessionStatusRef.current = "spinning";
+
+            const resolvedPrize =
+              prizeNumber !== null && prizeNumber !== undefined
                 ? prizeNumber
-                : dataRef.current?.findIndex(item => item.placeId === placeId) ?? 0;
-            
-            // for start-time sync of spinning time accross different players
-            const delay = startAt - Date.now();
-        
+                : (dataRef.current?.findIndex(
+                    (item) => item.placeId === placeId,
+                  ) ?? 0);
+
             setPrizeNumber(resolvedPrize);
             setFinalSpin(finalSpin);
-            resetRoundState(); 
-        
-            setTimeout(() => {
-                setMustSpin(true);
-                spinActivate(true);
-            }, Math.max(delay, 0));
-        });
+            resetRoundState();
 
-        // socket.on("vote_update", (counts) => {
-        //     setVotes({ yes: counts.acceptCount, respin: counts.respinCount });
-        // });
+            setMustSpin(true);
+            spinActivate(true);
+          },
+        );
+
         socket.on("vote_update", async () => {
             const res = await getWheelState(token, sessionIdRef.current);
         
@@ -466,12 +474,18 @@ export default function Wheelpage() {
         });
 
         socket.on("respin_update", async ({ isrespin, finalSpin }) => {
+            if (isrespin) {
+              hasRestoredVotingRef.current = false;
+              restoredVotingRoundIdRef.current = null;
+              spinActivate(false);
+              setMustSpin(false);
+            }
 
             setRespin(isrespin);
         
             try {
         
-                // ✅ ALWAYS fetch authoritative backend state
+                // fetch authoritative backend state
                 const reload = await reloadWheel(
                     token,
                     sessionIdRef.current
@@ -483,7 +497,7 @@ export default function Wheelpage() {
                 const lastRoundVoteSummary =
                     reload.session?.lastVoteSummary;
         
-                // ✅ restore latest round result safely
+                // restore latest round result safely
                 if (lastRoundResult && lastRoundVoteSummary) {
         
                     const syncedLastResult = {
@@ -507,18 +521,11 @@ export default function Wheelpage() {
                     votesRef.current = syncedLastResult.votes;
                 }
         
-                // ✅ navigate if round ended
+                // navigate if round ended
                 if (!isrespin || finalSpin === true) {
-        
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: {
-                                yes: lastRoundVoteSummary?.acceptCount ?? 0,
-                                respin: lastRoundVoteSummary?.respinCount ?? 0
-                            }
-                        }
-                    });
-        
+                    setTimeout(() => {
+                        navigate(`/sessions/${sessionCode}/result`);
+                    }, 3000); // give non-host 3s to see the result popup before leaving
                     return;
                 }
         
@@ -566,27 +573,39 @@ export default function Wheelpage() {
             setSpinReady(allReady);
             setParticipants(participants);
         });
+        
 
-        socket.on("spin_finished", ({ result, finalSpin }) => {
+        socket.on("spin_finished", ({ result, finalSpin, startTime }) => {
 
             // listeners sync from host result
-            if (!isHostRef.current) {
-                setResult(result);
+            sessionStatusRef.current = finalSpin ? "completed" : "voting";
+            
+            // set startTime BEFORE setResult so the timer useEffect sees it
+            if (!finalSpin && startTime) {
+                voteStartTimeRef.current = startTime;
             }
+
+            // now set result for everyone including host
+            setResult(result);
         
             setFinalSpin(finalSpin);
             setMustSpin(false);
+            spinActivate(false);
             setHovered(false);
-        
+
             // non-host final navigation
             if (finalSpin && !isHostRef.current) {
-                setTimeout(() => {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: {
-                            votes: { yes: 0, respin: 0 }
-                        }
-                    });
-                }, 3000);
+                setTimeout(() => navigate(`/sessions/${sessionCode}/result`), 3000);
+            }
+        });
+
+        socket.on("voting_start_time", ({ startTime }) => {
+            voteStartTimeRef.current = startTime; // set before result triggers the timer
+            
+            // now safe to trigger the timer useEffect
+            if (pendingRestoreResultRef.current) {
+                setResult(pendingRestoreResultRef.current);
+                pendingRestoreResultRef.current = null;
             }
         });
         
@@ -598,6 +617,7 @@ export default function Wheelpage() {
             socket.off("wheel_reloaded"); 
             socket.off("ready_update");
             socket.off("spin_finished");
+            socket.off("voting_start_time");
         };
     }, [sessionCode, token]);
 
@@ -606,54 +626,74 @@ export default function Wheelpage() {
 
         if (!result) return;
 
-        // setShowVotePopup(true);
-        // only show popup if user has not voted
-        // console.log("voted status during voting timer:", voted);
         if (!voted) {
             setShowVotePopup(true);
         }
 
         setTimeLeft(DURATION);
 
-        // ✅ if final spin, no need for voting timer
+        // if final spin, no need for voting timer
+        // AFTER the finalSpin early-return block
         if (finalSpin) {
             spinActivate(false);
             setShowVotePopup(false);
+            if (isHostRef.current) {                          
+                setTimeout(() => {
+                    navigate(`/sessions/${sessionCode}/result`);
+                }, 3000);
+            }
             return;
         }
-      
-        const countdown = setInterval(async () => {
-          setTimeLeft(prev => {
-            if (prev <= 1) {
-              clearInterval(countdown);
-              return 0;
+
+        // calculate remaining time based on server's startTime
+        const startTime = voteStartTimeRef.current || Date.now();
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(DURATION * 1000 - elapsed, 0);
+
+        // set initial timeLeft accurately from server start time
+        setTimeLeft(Math.ceil(remaining / 1000));
+
+        // sync countdown to real elapsed time instead of just decrementing
+        const countdown = setInterval(() => {
+            const elapsedNow = Date.now() - startTime;
+            const remainingNow = Math.max(DURATION * 1000 - elapsedNow, 0);
+            const secondsLeft = Math.ceil(remainingNow / 1000);
+            setTimeLeft(secondsLeft);
+            if (secondsLeft <= 0) {
+                clearInterval(countdown);
             }
-            return prev - 1;
-          });
-      
-        }, 1000);
-      
+        }, 500); // poll every 500ms for smoother accuracy
+
+        // schedule host resolution based on actual remaining time
         const timer = setTimeout(async () => {
-            if (!isHostRef.current) return; // use ref not state
-            setShowVotePopup(false); // ✅ hide popup when time ends
+            if (!isHostRef.current) return;
+            setShowVotePopup(false);
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
                 setRespin(shouldRespin);
-                socket.emit("respin", { sessionCode, isrespin: shouldRespin, finalSpin, sessionId: sessionIdRef.current });
-        
+                socket.emit("respin", {
+                    sessionCode,
+                    isrespin: shouldRespin,
+                    finalSpin,
+                    sessionId: sessionIdRef.current
+                });
                 if (!shouldRespin) {
-                    navigate(`/sessions/${sessionCode}/result`, {
-                        state: { votes: votesRef.current}
-                    });
+                    // keep popup visible for 3s so user sees the result before leaving
+                    setTimeout(() => {
+                        setShowVotePopup(false);
+                        navigate(`/sessions/${sessionCode}/result`);
+                    }, 3000);
                 }
-        
                 if (shouldRespin) {
-                    socket.emit("reload_wheel", { sessionCode });
+                    socket.emit("reload_wheel", {
+                        sessionCode,
+                        sessionId: sessionIdRef.current
+                    });
                 }
             } catch (error) {
                 console.error("Vote resolution error:", error.message);
             }
-        }, DURATION * 1000);
+        }, remaining); // uses actual remaining time, not full DURATION
 
         spinActivate(false);
       
@@ -687,12 +727,6 @@ export default function Wheelpage() {
         return () => document.removeEventListener("click", handleClickOutside2);
     }, []);
 
-    useEffect(() => {
-        if (lastResult) {
-            // console.log("lastResult:", lastResult);
-        }
-    }, [lastResult]);
-
     const isUserReminded = (userId) => {
         return remindedUserIds?.includes(userId);
     };
@@ -700,16 +734,16 @@ export default function Wheelpage() {
     // Small Reminder Text Message  
     let message = "Lock your picks. Let the wheel decide.";
 
-    if (result) {
+    if (respin) {
+        message = isHost
+            ? "Everyone is waiting for you to spin"
+            : "Waiting for host to spin";
+    }
+    else if (result) {
         message = "";
     } 
     else if (spinactivate) {
         message = "The wheel is deciding ...";
-    }
-    else if (respin) {
-        message = isHost
-            ? "Everyone is waiting for you to spin"
-            : "Waiting for host to spin";
     }
     else if (!isHost && spinready) {
         message = "Waiting for host to spin";
@@ -888,7 +922,7 @@ export default function Wheelpage() {
 
                 </div>
 
-            {/* ✅ Desktop: combined picks + ready panel with tabs */}
+            {/* Desktop: combined picks + ready panel with tabs */}
             <div className="wp-desktop-panel">
                 
                 {/* Tab Headers */}
@@ -997,14 +1031,14 @@ export default function Wheelpage() {
                                 </div>
                                 <img src={cropped_wheel} className="wp-wheel-image" />
                                 <div
-                                    onClick={isHost && getready && !spinactivate ? handleSpin : undefined}
-                                    onMouseEnter={isHost && getready && !spinactivate ? () => setHovered(true) : undefined}
-                                    onMouseLeave={isHost && getready && !spinactivate ? () => setHovered(false) : undefined}
-                                    onTouchStart={isHost && getready && !spinactivate ? () => setHovered(true) : undefined}
+                                    onClick={isHost && spinready && !spinactivate ? handleSpin : undefined}
+                                    onMouseEnter={isHost && spinready && !spinactivate ? () => setHovered(true) : undefined}
+                                    onMouseLeave={isHost && spinready && !spinactivate ? () => setHovered(false) : undefined}
+                                    onTouchStart={isHost && spinready && !spinactivate ? () => setHovered(true) : undefined}
                                     className="wp-spinner"
                                     style={{
                                         transform: hovered ? "scale(1.1)" : "scale(1)",
-                                        cursor: isHost && getready ? "pointer" : "default",
+                                        cursor: isHost && spinready && !spinactivate ? "pointer" : "default",
                                     }}
                                 >
                                     <img src={spinner} alt="spinner" style={{ width: "100%" }} />
@@ -1032,7 +1066,6 @@ export default function Wheelpage() {
                         {!finalSpin && 
                         (
                             <div className="wp-result-card">
-                                {/* <h2 className="wp-result-title">{result.option}</h2> */}
                                 <h2 className="wp-result-title">{result.option}</h2>
 
                                 <div className="wp-result-meta">
@@ -1074,25 +1107,6 @@ export default function Wheelpage() {
                             </div>
                         )}
 
-                        {finalSpin && 
-                        (   
-                            <div className="wp-result-card">
-                                <p className="wp-popup-text">
-                                🎉 Final result
-                                </p>
-                                <h2 className="wp-result-title">{result.option}</h2>
-
-                                <div className="wp-result-meta">
-                                    <span>⭐ {result.rating}</span>
-                                    <span className="wp-result-price">
-                                        {"$".repeat(result.priceLevel)}
-                                    </span>
-                                </div>
-
-                                <p className="wp-result-address">📍 {result.address}</p>
-                            </div>
-                        )
-                        }
                         <br />
 
                         {!finalSpin && (
@@ -1104,6 +1118,25 @@ export default function Wheelpage() {
                     </div>
                 </div>
             )}
+            {/* Final Spin Result */}
+            {finalSpin && result && (
+                <div className="wp-overlay">
+                    <div className="wp-popup">
+                        <div className="wp-result-card">
+                            <p className="wp-popup-text">🎉 Final result</p>
+                            <h2 className="wp-result-title">{result.option}</h2>
+                            <div className="wp-result-meta">
+                                <span>⭐ {result.rating}</span>
+                                <span className="wp-result-price">
+                                    {"$".repeat(result.priceLevel)}
+                                </span>
+                            </div>
+                            <p className="wp-result-address">📍 {result.address}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Reminder Popup */}
             {showReminderPopup && (
                 <ReminderPopup

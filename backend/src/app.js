@@ -16,11 +16,6 @@ const voteRoutes = require("./routes/voteRoutes");
 const readyRoutes = require("./routes/readyRoutes");
 const resultRoutes = require("./routes/resultRoutes");
 
-// --- Paige test ----
-// const userdecision = require("./mock-api/userdecisionRoutes");
-// const userhost = require("./mock-api/userRoutes");
-// -------
-
 // initSocket
 const { initSocket } = require("./socket/socketHandler");
 
@@ -39,11 +34,6 @@ app.use("/api/sessions", wheelRoutes);
 app.use("/api/sessions", voteRoutes);
 app.use("/api/sessions", readyRoutes);
 app.use("/api/sessions", resultRoutes);
-
-// --- Paige test ----
-// app.use('/api/decision', userdecision);
-// app.use('/api/host', userhost);
-// -------
 
 // --- init socket.io ---
 const server = http.createServer(app);

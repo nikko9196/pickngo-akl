@@ -16,7 +16,6 @@ const quote = "\"People who love to eat are always the best people.\" — Julia 
 
 export default function ResultPage() {
     const navigate = useNavigate();
-    // const { votes  } = location.state;
     const { sessionCode } = useParams();
     const { token } = useAuth();
     const [currentUserId, setCurrentUserId] = useState(null);
@@ -56,8 +55,8 @@ export default function ResultPage() {
             try {
                 const { session: sessionInfo } = await getSessionByCode(token, sessionCode);
                 setSessionId(sessionInfo.id);
-                
-                // ✅ restore final result if user rejoined / reload
+
+                // restore final result if user rejoined / reload
                 const { session } = await getFinalWheelResult(token, sessionInfo.id);
     
                 const { name, address, cuisine, rating, priceLevel, photos } = session.finalWheelResult;
@@ -95,7 +94,7 @@ export default function ResultPage() {
     useEffect(() => {
         if (restaurantData?.userRating) {
             setRating(restaurantData.userRating);
-            setRated(true); // 🔒 lock the UI
+            setRated(true); // lock the UI
         }
     }, [restaurantData]);
 
@@ -108,7 +107,7 @@ export default function ResultPage() {
     }, []);
 
 
-    if (!restaurantData) return <p>Loading...</p>; // ✅ add this line here
+    if (!restaurantData) return <p>Loading...</p>; // add this line here
     return (
         <main className="final-page-shell">
         <Navbar />
@@ -153,7 +152,7 @@ export default function ResultPage() {
                                     onClick={!rated ? async () => {
                                         setRating(star);
                                         setRated(true);
-                                        await handleSendRating(star); // ✅ send immediately
+                                        await handleSendRating(star); // send immediately
                                     } : undefined}
                                     style={{
                                         fontSize: "30px",
@@ -169,7 +168,7 @@ export default function ResultPage() {
                             ))}
                         </div>
                     </div>
-                    {/* ✅ Return to Home */}
+                    {/* Return to Home */}
                     <div className="result-home-wrapper">
                         <button
                             className="result-home-button"

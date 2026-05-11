@@ -97,7 +97,7 @@ const locationSchema = new mongoose.Schema(
       default: 3000,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const sessionSchema = new mongoose.Schema(
@@ -162,6 +162,10 @@ const sessionSchema = new mongoose.Schema(
     wheelItems: {
       type: [wheelItemSchema],
       default: [],
+    },
+    spinRoundId: {
+      type: String,
+      default: null,
     },
     currentWheelResult: {
       type: wheelResultSchema,
