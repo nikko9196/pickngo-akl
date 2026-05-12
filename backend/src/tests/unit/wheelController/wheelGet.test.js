@@ -290,7 +290,7 @@ describe("wheelController.getWheelState", () => {
     });
   });
 
-  // Test: Returns full wheel state successfully:
+  // Test: Returns full wheel state successfully, including isFinalSpin logic check when only two unique restaurants remain:
   test("Returns full wheel state successfully.", async () => {
     const req = {
       params: { sessionId: "session123" },
@@ -386,8 +386,46 @@ describe("wheelController.getWheelState", () => {
           votedCount: 2,
           totalParticipants: 2,
         },
+        spinRoundId: null,
+        isFinalSpin: true,
       },
     });
+  });
+
+  // Test: isFinalSpin logic when more than two unique restaurants remain:
+  test("Returns isFinalSpin false when more than two unique restaurants remain.", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession({
+      status: "voting",
+      wheelItems: [
+        { recommendationSnapshotId: "snapshot1", placeId: "place1" },
+        { recommendationSnapshotId: "snapshot1", placeId: "place2" },
+        { recommendationSnapshotId: "snapshot1", placeId: "place3" },
+      ],
+      currentWheelResult: {
+        recommendationSnapshotId: "snapshot1",
+        placeId: "place1",
+      },
+    });
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {});
+
+    await getWheelState(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        session: expect.objectContaining({
+          isFinalSpin: false,
+        }),
+      }),
+    );
   });
 
   // Test: Fallback error handling:
@@ -477,8 +515,8 @@ describe("wheelController.getFinalWheelResult", () => {
     });
   });
 
-  // Test: Returns final wheel result successfully:
-  test("Returns final wheel result successfully.", async () => {
+  // Test: Final result accepted by vote keeps vote summary:
+  test("Keeps vote summary when final result was accepted by vote.", async () => {
     const req = {
       params: { sessionId: "session123" },
       userId: "user1",
@@ -487,6 +525,62 @@ describe("wheelController.getFinalWheelResult", () => {
 
     const mockSession = createMockSession({
       status: "completed",
+      wheelItems: [
+        { recommendationSnapshotId: "snapshot1", placeId: "place1" },
+        { recommendationSnapshotId: "snapshot1", placeId: "place2" },
+        { recommendationSnapshotId: "snapshot1", placeId: "place3" },
+      ],
+      finalWheelResult: {
+        recommendationSnapshotId: "snapshot1",
+        placeId: "place1",
+      },
+      voteSummary: {
+        acceptCount: 2,
+        respinCount: 1,
+        votedUserIds: ["host1", "user1"],
+      },
+    });
+
+    sessionService.findSessionById.mockResolvedValue(mockSession);
+    sessionService.checkValidParticipant.mockImplementation(() => {});
+    mockLeanFind(RecommendationSnapshot, [
+      {
+        _id: "snapshot1",
+        restaurants: [
+          {
+            placeId: "place1",
+            name: "Accepted Restaurant",
+          },
+        ],
+      },
+    ]);
+
+    await getFinalWheelResult(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json.mock.calls[0][0].session.voteSummary).toEqual({
+      acceptCount: 2,
+      respinCount: 1,
+      votedUserIds: ["host1", "user1"],
+      votedCount: 2,
+      totalParticipants: 2,
+    });
+  });
+
+  // Test: Final result due to the last spin with only two unique restaurants resets vote summary:
+  test("Returns final wheel result and resets vote summary for final spin.", async () => {
+    const req = {
+      params: { sessionId: "session123" },
+      userId: "user1",
+    };
+    const res = createMockRes();
+
+    const mockSession = createMockSession({
+      status: "completed",
+      wheelItems: [
+        { recommendationSnapshotId: "snapshot1", placeId: "place1" },
+        { recommendationSnapshotId: "snapshot1", placeId: "place2" },
+      ],
       finalWheelResult: {
         recommendationSnapshotId: "snapshot1",
         placeId: "place1",
@@ -537,10 +631,10 @@ describe("wheelController.getFinalWheelResult", () => {
           priceLevel: 3,
         }),
         voteSummary: {
-          acceptCount: 2,
-          respinCount: 1,
-          votedUserIds: ["host1", "user1"],
-          votedCount: 2,
+          acceptCount: 0,
+          respinCount: 0,
+          votedUserIds: [],
+          votedCount: 0,
           totalParticipants: 2,
         },
         resultRatingSummary: {

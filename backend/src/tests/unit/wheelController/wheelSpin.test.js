@@ -277,6 +277,7 @@ describe("wheelController.spinWheel", () => {
         }),
         finalSpin: false,
         status: "voting",
+        spinRoundId: expect.any(String),
       },
     });
   });
@@ -332,6 +333,7 @@ describe("wheelController.spinWheel", () => {
         }),
         finalSpin: true,
         status: "completed",
+        spinRoundId: expect.any(String),
       },
     });
   });
