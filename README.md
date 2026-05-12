@@ -515,8 +515,44 @@ You can also pass a custom query:
 node scripts/test-google-places-api.js "japanese restaurant auckland cbd"
 ```
 
+## Backend Tests
+
+Backend tests are located in `backend/src/tests`.
+
+#### Before running integration tests:
+Integration tests use the real backend server and API routes.
+
+Start the backend server first:
+```bash
+cd backend
+npm run dev
+```
+Then open another terminal and run the full backend Jest test suite, including:
+- Unit tests
+- Integration tests
+```bash
+npm run test
+```
+You can also run specific test suites separately:
+#### Runs unit tests only:
+```bash
+npm run test:unit
+```
+#### Runs integration tests only:
+```bash
+npm run test:integration
+```
+
 ## Additional Documentation
 
 - Recommendation and selection API details: [docs/RECOMMENDATIONS_API.md](docs/RECOMMENDATIONS_API.md)
+
+- Backend testing documentation:
+  - `docs/backend-testing-documentation/`
+  - Contains MongoDB Compass screenshots and backend/database verification evidence used during development and manual testing.
+
+- Frontend testing documentation:
+  - `docs/frontend-testing-documentation/`
+  - Contains frontend testing discussions, issue-tracking screenshots from Discord, and additional frontend debugging and UI testing references.
 
 ![Have A Byte](./Have%20A%20Byte.png)
