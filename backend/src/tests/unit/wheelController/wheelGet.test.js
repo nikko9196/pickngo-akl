@@ -386,6 +386,8 @@ describe("wheelController.getWheelState", () => {
           votedCount: 2,
           totalParticipants: 2,
         },
+        spinRoundId: null,
+        isFinalSpin: true,
       },
     });
   });
@@ -537,10 +539,10 @@ describe("wheelController.getFinalWheelResult", () => {
           priceLevel: 3,
         }),
         voteSummary: {
-          acceptCount: 2,
-          respinCount: 1,
-          votedUserIds: ["host1", "user1"],
-          votedCount: 2,
+          acceptCount: 0,
+          respinCount: 0,
+          votedUserIds: [],
+          votedCount: 0,
           totalParticipants: 2,
         },
         resultRatingSummary: {
