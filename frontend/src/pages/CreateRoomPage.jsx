@@ -9,6 +9,7 @@ import "./RoomPage.css";
 
 const DEFAULT_MAP_CENTER = { lat: -36.8485, lng: 174.7633 };
 const DEFAULT_LOCATION_RADIUS_METERS = 3000;
+const LOCATION_REQUIRED_MESSAGE = "Please choose a room location.";
 let googleMapsLoadPromise;
 
 function loadGoogleMaps() {
@@ -144,7 +145,7 @@ function CreateRoomPage() {
 
         try {
             if (!roomLocation) {
-                throw new Error("Please choose a room location.");
+                throw new Error(LOCATION_REQUIRED_MESSAGE);
             }
 
             const maxParticipants = Number(maxParticipantsInput);
@@ -377,9 +378,11 @@ function CreateRoomPage() {
                             </label>
 
                             <div className="room-location-field">
-                                <span>Room location</span>
+                                <span>
+                                    Room location <span className="required-marker">*</span>
+                                </span>
                                 <label className="room-radius-field">
-                                    <span>Search radius</span>
+                                    <span>Search radius (m)</span>
                                     <input
                                         type="number"
                                         min="100"
@@ -410,13 +413,19 @@ function CreateRoomPage() {
                                 </p>
                             </div>
 
+                            {errorMessage === LOCATION_REQUIRED_MESSAGE ? (
+                                <p className="auth-status error location-error">{errorMessage}</p>
+                            ) : null}
+
                             <button className="cta-button auth-submit" type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? "Creating..." : "Confirm"}
                             </button>
                         </form>
 
                         {statusMessage ? <p className="auth-status success">{statusMessage}</p> : null}
-                        {errorMessage ? <p className="auth-status error">{errorMessage}</p> : null}
+                        {errorMessage && errorMessage !== LOCATION_REQUIRED_MESSAGE ? (
+                            <p className="auth-status error">{errorMessage}</p>
+                        ) : null}
                     </aside>
                 </section>
             </section>

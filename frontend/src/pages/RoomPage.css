@@ -211,6 +211,10 @@
   font-weight: 800;
 }
 
+.room-page-frame .auth-form .room-location-field .required-marker {
+  color: #b42318;
+}
+
 .room-radius-field {
   display: flex;
   flex-direction: column;
@@ -337,6 +341,10 @@
 
 .auth-status.success {
   color: #0a7a3b;
+}
+
+.location-error {
+  margin-top: 0;
 }
 
 .room-map-backdrop {
