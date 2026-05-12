@@ -182,8 +182,11 @@ function HomePage() {
             case "questioning":
                 return `/sessions/${room.sessionCode}/question`;
             case "generating":
-            case "selecting":
                 return `/sessions/${room.sessionCode}/recommendation`;
+            case "selecting":
+                return room.currentUserReady
+                    ? `/sessions/${room.sessionCode}/wheel`
+                    : `/sessions/${room.sessionCode}/recommendation`;
             case "spinning":
             case "voting":
                 return `/sessions/${room.sessionCode}/wheel`;

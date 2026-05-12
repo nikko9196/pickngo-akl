@@ -55,6 +55,7 @@ function createSessionObject(overrides = {}) {
         },
         role: "host",
         roomDisplayName: "Host",
+        isReady: false,
         joinedAt: new Date("2026-01-01T00:00:00.000Z"),
       },
       {
@@ -63,6 +64,7 @@ function createSessionObject(overrides = {}) {
         },
         role: "member",
         roomDisplayName: "User 1",
+        isReady: true,
         joinedAt: new Date("2026-01-01T00:00:00.000Z"),
       },
     ],
@@ -128,6 +130,7 @@ describe("sessionController.getMySessions", () => {
           id: "session123",
           currentUserRole: "member",
           currentUserRoomDisplayName: "User 1",
+          currentUserReady: true,
         }),
       ],
     });
@@ -200,6 +203,13 @@ describe("sessionController.getSessionByCode", () => {
         id: "session123",
         sessionCode: "ABC123",
         currentUserRole: "member",
+        currentUserReady: true,
+        participants: expect.arrayContaining([
+          expect.objectContaining({
+            userId: "user1",
+            isReady: true,
+          }),
+        ]),
       }),
     });
   });
