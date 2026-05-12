@@ -1,20 +1,22 @@
 # Have A Byte
 
-Have A Byte is a full-stack web project for CS732. This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
+Have A Byte is a full-stack web project for CS732. Our team developed PicknGo AKL, a collaborative restaurant decision-making web application that helps groups discover, shortlist, and randomly select restaurants together through a shared spinning wheel experience.
+
+This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
 
 ## Team Members
 
 - Cheng Cheng (`cche860@aucklanduni.ac.nz`)
 - Annie Lin (`yiln996@aucklanduni.ac.nz`)
-- Nhu Pham (`dpha478@aucklanduni.ac.nz`)
-- Phuong Phan (`ppha961@aucklanduni.ac.nz`)
+- Nhu (Nikko) Pham (`dpha478@aucklanduni.ac.nz`)
+- Phuong (Paige) Phan (`ppha961@aucklanduni.ac.nz`)
 - Vincent Su (`hsu901@aucklanduni.ac.nz`)
 - Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
 
 ## Tech Stack
 
 ### Frontend
-- React 19
+- React 18
 - React Router DOM 7
 - Vite 8
 
@@ -28,18 +30,29 @@ Have A Byte is a full-stack web project for CS732. This repository currently con
 ### Database and External Services
 - MongoDB Atlas
 - Google Places API
+- Google Maps API
 
 ## Current Session Flow
 
-1. User signs in or continues as a guest
-2. Host creates a room
-3. Participants join with the room code
-4. Host starts the room
-5. Participants answer the active questionnaire
-6. Session moves to `generating`
-7. Recommendation page generates and loads shared restaurant recommendations
-8. Session moves to `selecting`
-9. Each participant can save their shortlisted restaurants
+1. User signs in or continues as a guest.
+2. Host creates a room.
+3. Participants join with the room code.
+4. Host starts the room.
+5. Participants answer the active questionnaire.
+6. Session moves to `generating`.
+7. Recommendation page generates and loads shared restaurant recommendations.
+8. Session moves to `selecting`.
+9. Each participant can save their shortlisted restaurants.
+10. Wheel is built and session moves to `spinning`.
+11. Every marks themselves as ready to lock their picks.
+12. Host spins the wheel.
+13. Backend selects a result and session moves to `voting`.
+14. Participants vote to accept the result or respin.
+15. Based on the voting result:
+    - If the majority votes to respin, the selected restaurant is removed and the session moves back to `spinning`
+    - If the vote results in a tie, the selected restaurant is also removed and the session moves back to `spinning` to avoid repeated tie re-votes.
+    - If the group accepts the result, or the wheel reaches the final spin, session moves to `completed`.
+16. Final result page shows the selected restaurant.
 
 Current session statuses in the app:
 - `waiting`
@@ -50,12 +63,9 @@ Current session statuses in the app:
 - `voting`
 - `completed`
 
-Note:
-- `spinning`, `voting`, and `completed` are part of the current session model, but the main implemented product flow today is up to saved selections.
-
 ## Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20.19+ or 22.12+
 - npm 9 or higher
 - MongoDB Atlas connection string
 - Google Places API key
@@ -116,6 +126,7 @@ VITE_PORT=5173
 VITE_API_BASE_URL=http://localhost:5001
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 VITE_USE_MOCK_RECOMMENDATIONS=false
+VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
 Frontend variable notes:
@@ -123,6 +134,7 @@ Frontend variable notes:
 - `VITE_API_BASE_URL`: backend base URL
 - `VITE_GOOGLE_CLIENT_ID`: required only if Google sign-in is enabled
 - `VITE_USE_MOCK_RECOMMENDATIONS`: optional flag for mock recommendation mode; set to `false` to use the real backend
+- `VITE_GOOGLE_MAPS_API_KEY`: required for Google Maps and restaurant location features.
 
 ## Running the App
 
@@ -156,9 +168,13 @@ group-project-have-a-byte/
 |   |-- public/
 |   |-- src/
 |   |   |-- api/                 # frontend API helpers
+|   |   |-- assets/              # images, icons, and static frontend assets
 |   |   |-- components/          # reusable UI components
 |   |   |-- context/             # auth and shared state
+|   |   |-- hooks/               # reusable custom React hooks
 |   |   |-- pages/               # page-level UI
+|   |   |-- services/            # frontend business logic and helper services
+|   |   |-- styles/              # shared global styling files
 |   |   |-- utils/               # frontend helpers and mocks
 |   |   |-- App.jsx              # frontend route definitions
 |   |   |-- main.jsx             # frontend entry point
@@ -167,14 +183,19 @@ group-project-have-a-byte/
 |-- backend/
 |   |-- scripts/                 # manual backend scripts
 |   |-- src/
-|   |   |-- config/              # backend config
-|   |   |-- controllers/         # route handlers
-|   |   |-- middleware/          # express middleware
-|   |   |-- models/              # mongoose models
-|   |   |-- routes/              # route definitions
-|   |   |-- services/            # business logic
-|   |   |-- utils/               # shared backend helpers
-|   |   |-- app.js               # backend entry file
+|   |   |-- config/              # backend configuration
+|   |   |-- controllers/         # route handlers and route logic
+|   |   |-- middleware/          # Express middleware
+|   |   |-- models/              # Mongoose models
+|   |   |-- routes/              # API route definitions
+|   |   |-- services/            # backend business logic
+|   |   |-- socket/              # Socket.IO event handlers
+|   |   |-- tests/               # backend test suites
+|   |       |-- helpers/         # shared test setup and helper functions
+|   |       |-- integration/     # integration tests
+|   |       |-- unit/            # unit tests
+|   |   |-- utils/               # shared backend utility functions
+|   |   |-- app.js               # Express app entry file
 |   |-- .env.example
 |   |-- package.json
 |-- docs/
@@ -193,6 +214,8 @@ Main frontend routes currently implemented:
 - `/sessions/:sessionCode`
 - `/sessions/:sessionCode/question`
 - `/sessions/:sessionCode/recommendation`
+- `/sessions/:sessionCode/wheel`
+- `/sessions/:sessionCode/result`
 
 ## Current API
 
@@ -227,6 +250,8 @@ Notes:
   - join a room using `sessionCode`
 - `GET /api/sessions/mine`
   - get all rooms for the current user
+- `GET /api/sessions/:sessionId/host`
+  - check whether the current user is the room host
 - `GET /api/sessions/code/:sessionCode`
   - get a room by public code
 - `GET /api/sessions/:sessionId/progress`
@@ -242,6 +267,8 @@ Notes:
 
 - `POST /api/sessions/:sessionId/responses`
   - submit or update one participant answer
+- `GET /api/sessions/:sessionId/responses/me`
+  - fetch the current user's questionnaire responses
 
 ### Recommendations
 
@@ -258,6 +285,50 @@ Notes:
   - fetch the current user's saved shortlist
 - `GET /api/sessions/:sessionId/selections`
   - fetch all saved shortlists for the room
+
+### Ready Status
+
+- `POST /api/sessions/:sessionId/ready`
+  - mark the current participant as ready after clicking the ready button
+- `POST /api/sessions/:sessionId/ready/all`
+  - mark all participants as ready
+- `GET /api/sessions/:sessionId/ready`
+  - fetch the current ready status summary for the session
+
+
+### Reminder
+
+- `POST /api/sessions/:sessionId/reminder`
+  - send reminder notifications to participants who are not ready
+- `GET /api/sessions/:sessionId/reminder`
+  - fetch the current reminder status, including reminded participant IDs and ready status summary
+
+### Wheel
+
+- `POST /api/sessions/:sessionId/wheel/build`
+  - build and initialise the wheel using saved restaurant selections
+- `POST /api/sessions/:sessionId/wheel/spin`
+  - spin the wheel and generate a restaurant result
+- `GET /api/sessions/:sessionId/wheel`
+  - fetch the current wheel items and previous spin result summary
+- `GET /api/sessions/:sessionId/wheel/state`
+  - fetch the current live wheel state for frontend synchronisation
+- `GET /api/sessions/:sessionId/wheel/result`
+  - fetch the final selected restaurant result
+
+### Vote
+- `POST /api/sessions/:sessionId/vote`
+  - submit a vote to accept the result or respin the wheel
+- `POST /api/sessions/:sessionId/vote/result`
+  - resolve the vote result and determine whether the session should respin or complete
+- `GET /api/sessions/:sessionId/vote`
+  - fetch the current vote summary for the session
+
+### Result Rating
+
+- `POST /api/sessions/:sessionId/result/rating`
+  - submit a participant rating for the final restaurant result
+
 
 ## Recommendation and Selection Flow
 
@@ -349,11 +420,22 @@ Key fields:
 - `status`
 - `maxParticipants`
 - `maxSelectionsPerUser`
+- `location`
 - `participants`
   - `userId`
   - `role`
   - `roomDisplayName`
   - `joinedAt`
+  - `isReady`
+- `remindedUserIds`
+- `wheelItems`
+- `spinRoundId`
+- `currentWheelResult`
+- `lastWheelResult`
+- `finalWheelResult`
+- `voteSummary`
+- `lastVoteSummary`
+- `resultRatings`
 - `createdAt`
 - `updatedAt`
 
@@ -365,6 +447,8 @@ Key fields:
 - `_id`
 - `sessionId`
 - `generatedAt`
+- `usedFallback`
+- `fallbackReason`
 - `groupPrefs`
 - `restaurants`
 
@@ -432,8 +516,44 @@ You can also pass a custom query:
 node scripts/test-google-places-api.js "japanese restaurant auckland cbd"
 ```
 
+## Backend Tests
+
+Backend tests are located in `backend/src/tests`.
+
+#### Before running integration tests:
+Integration tests use the real backend server and API routes.
+
+Start the backend server first:
+```bash
+cd backend
+npm run dev
+```
+Then open another terminal and run the full backend Jest test suite, including:
+- Unit tests
+- Integration tests
+```bash
+npm run test
+```
+You can also run specific test suites separately:
+#### Runs unit tests only:
+```bash
+npm run test:unit
+```
+#### Runs integration tests only:
+```bash
+npm run test:integration
+```
+
 ## Additional Documentation
 
 - Recommendation and selection API details: [docs/RECOMMENDATIONS_API.md](docs/RECOMMENDATIONS_API.md)
+
+- Backend testing documentation:
+  - `docs/backend-testing-documentation/`
+  - Contains MongoDB Compass screenshots and backend/database verification evidence used during development and manual testing.
+
+- Frontend testing documentation:
+  - `docs/frontend-testing-documentation/`
+  - Contains frontend testing discussions, issue-tracking screenshots from Discord, and additional frontend debugging and UI testing references.
 
 ![Have A Byte](./Have%20A%20Byte.png)
