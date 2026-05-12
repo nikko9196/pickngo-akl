@@ -53,6 +53,7 @@ async function resolveVote(req, res) {
   }
 }
 
+// CURRENT VOTE SUMMARY:
 async function getVoteSummary(req, res) {
   const sessionId = req.params.sessionId?.trim();
 
