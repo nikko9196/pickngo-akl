@@ -9,6 +9,8 @@ import "./RoomPage.css";
 
 const DEFAULT_MAP_CENTER = { lat: -36.8485, lng: 174.7633 };
 const DEFAULT_LOCATION_RADIUS_METERS = 3000;
+const DISPLAY_NAME_REQUIRED_MESSAGE = "Room display name is required.";
+const LOCATION_REQUIRED_MESSAGE = "Please choose a room location.";
 let googleMapsLoadPromise;
 
 function loadGoogleMaps() {
@@ -143,8 +145,12 @@ function CreateRoomPage() {
         setIsSubmitting(true);
 
         try {
+            if (!roomDisplayName.trim()) {
+                throw new Error(DISPLAY_NAME_REQUIRED_MESSAGE);
+            }
+
             if (!roomLocation) {
-                throw new Error("Please choose a room location.");
+                throw new Error(LOCATION_REQUIRED_MESSAGE);
             }
 
             const maxParticipants = Number(maxParticipantsInput);
@@ -339,7 +345,9 @@ function CreateRoomPage() {
 
                         <form className="auth-form create-room-form" onSubmit={handleSubmit}>
                             <label>
-                                <span>How others will see you in the room</span>
+                                <span>
+                                    How others will see you in the room <span className="required-marker">*</span>
+                                </span>
                                 <input
                                     type="text"
                                     maxLength="30"
@@ -377,9 +385,11 @@ function CreateRoomPage() {
                             </label>
 
                             <div className="room-location-field">
-                                <span>Room location</span>
+                                <span>
+                                    Room location <span className="required-marker">*</span>
+                                </span>
                                 <label className="room-radius-field">
-                                    <span>Search radius</span>
+                                    <span>Search radius (m)</span>
                                     <input
                                         type="number"
                                         min="100"
@@ -410,13 +420,20 @@ function CreateRoomPage() {
                                 </p>
                             </div>
 
+                            {[DISPLAY_NAME_REQUIRED_MESSAGE, LOCATION_REQUIRED_MESSAGE].includes(errorMessage) ? (
+                                <p className="auth-status error location-error">{errorMessage}</p>
+                            ) : null}
+
                             <button className="cta-button auth-submit" type="submit" disabled={isSubmitting}>
                                 {isSubmitting ? "Creating..." : "Confirm"}
                             </button>
                         </form>
 
                         {statusMessage ? <p className="auth-status success">{statusMessage}</p> : null}
-                        {errorMessage ? <p className="auth-status error">{errorMessage}</p> : null}
+                        {errorMessage &&
+                        ![DISPLAY_NAME_REQUIRED_MESSAGE, LOCATION_REQUIRED_MESSAGE].includes(errorMessage) ? (
+                            <p className="auth-status error">{errorMessage}</p>
+                        ) : null}
                     </aside>
                 </section>
             </section>
