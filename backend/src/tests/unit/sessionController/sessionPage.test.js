@@ -399,7 +399,7 @@ describe("sessionController.getSessionProgress", () => {
 });
 
 describe("sessionController.updateSession", () => {
-  test("Allows host to update room settings before selection starts", async () => {
+  test("Allows host to update room settings while waiting", async () => {
     const req = {
       userId: "host1",
       params: { sessionId: "session123" },
@@ -409,7 +409,7 @@ describe("sessionController.updateSession", () => {
       },
     };
     const res = createMockRes();
-    const session = createMockSession({ status: "questioning" });
+    const session = createMockSession({ status: "waiting" });
 
     mockFindById(session);
 
@@ -426,12 +426,40 @@ describe("sessionController.updateSession", () => {
     });
   });
 
-  test("Prevents changing selections per user after selection starts", async () => {
+  test("Prevents changing max participants after the room starts", async () => {
     const req = {
       userId: "host1",
       params: { sessionId: "session123" },
       body: {
         maxParticipants: 5,
+        maxSelectionsPerUser: 3,
+      },
+    };
+    const res = createMockRes();
+    const session = createMockSession({
+      status: "questioning",
+      maxParticipants: 4,
+      maxSelectionsPerUser: 3,
+    });
+
+    mockFindById(session);
+
+    await updateSession(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Max participants can only be changed while the room is waiting.",
+    });
+    expect(session.maxParticipants).toBe(4);
+    expect(session.save).not.toHaveBeenCalled();
+  });
+
+  test("Prevents changing selections per user after selection starts", async () => {
+    const req = {
+      userId: "host1",
+      params: { sessionId: "session123" },
+      body: {
+        maxParticipants: 4,
         maxSelectionsPerUser: 2,
       },
     };

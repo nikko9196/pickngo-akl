@@ -26,6 +26,7 @@ const SESSION_STATUSES = [
   "completed",
 ];
 const SELECTION_LIMIT_LOCKED_STATUSES = ["selecting", "spinning", "voting", "completed"];
+const PARTICIPANT_LIMIT_EDITABLE_STATUS = "waiting";
 
 function generateSessionCode() {
   let code = "";
@@ -397,6 +398,15 @@ async function updateSession(req, res) {
 
     if (session.hostUserId.toString() !== req.userId) {
       return res.status(403).json({ message: "Only the room creator can update this room." });
+    }
+
+    if (
+      session.status !== PARTICIPANT_LIMIT_EDITABLE_STATUS &&
+      maxParticipants !== session.maxParticipants
+    ) {
+      return res.status(409).json({
+        message: "Max participants can only be changed while the room is waiting.",
+      });
     }
 
     if (
