@@ -230,6 +230,10 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
         item: session.finalWheelResult,
       })
     : null;
+  
+  const uniquePlaceIds = getUniquePlaceIds(session.wheelItems || []);
+
+  const isFinalSpin = session.status === "voting" && uniquePlaceIds.length <= 2;
 
   return {
     id: session._id.toString(),
@@ -239,6 +243,7 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
     finalWheelResult,
     voteSummary: buildVoteSummary(session),
     spinRoundId: session.spinRoundId || null,
+    isFinalSpin,
   };
 }
 
@@ -488,12 +493,25 @@ async function getFinalWheelResult(req, res) {
       item: session.finalWheelResult,
     });
 
+    const uniquePlaceIds = getUniquePlaceIds(session.wheelItems || []);
+    const isFinalSpin = uniquePlaceIds.length <= 2;
+
+    const voteSummary = isFinalSpin
+      ? {
+          acceptCount: 0,
+          respinCount: 0,
+          votedUserIds: [],
+          votedCount: 0,
+          totalParticipants: session.participants.length,
+        }
+      : buildVoteSummary(session);
+
     return res.status(200).json({
       session: {
         id: session._id.toString(),
         status: session.status,
         finalWheelResult: finalResult,
-        voteSummary: buildVoteSummary(session),
+        voteSummary,
         resultRatingSummary: getResultRatingSummary(session),
       },
     });

@@ -5,7 +5,6 @@ const jwt = require("jsonwebtoken");
 async function isSessionHost(sessionId, userId) {
     const session = await findSessionById(sessionId);
     if (!session) return false;
-    console.log("isHost:", session.hostUserId.toString() === userId);
     return session.hostUserId.toString() === userId;
 }
 
@@ -101,10 +100,6 @@ const initSocket = (io) => {
 
         socket.on("reload_wheel", ({ sessionCode }) => {
           io.to(sessionCode).emit("wheel_reloaded");
-        });
-
-        socket.on("disconnect", () => {
-            console.log(`user ${socket.userId} disconnected`);
         });
 
         socket.on("ready", async ({ sessionCode, sessionId }) => {
