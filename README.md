@@ -16,7 +16,7 @@ This repository currently contains a React frontend, an Express backend, and a M
 ## Tech Stack
 
 ### Frontend
-- React 19
+- React 18
 - React Router DOM 7
 - Vite 8
 
@@ -44,7 +44,7 @@ This repository currently contains a React frontend, an Express backend, and a M
 8. Session moves to `selecting`.
 9. Each participant can save their shortlisted restaurants.
 10. Wheel is built and session moves to `spinning`.
-11. Every marks themeselves as ready to lock their picks.
+11. Every marks themselves as ready to lock their picks.
 12. Host spins the wheel.
 13. Backend selects a result and session moves to `voting`.
 14. Participants vote to accept the result or respin.
@@ -52,7 +52,7 @@ This repository currently contains a React frontend, an Express backend, and a M
     - If the majority votes to respin, the selected restaurant is removed and the session moves back to `spinning`
     - If the vote results in a tie, the selected restaurant is also removed and the session moves back to `spinning` to avoid repeated tie re-votes.
     - If the group accepts the result, or the wheel reaches the final spin, session moves to `completed`.
-18. Final result page shows the selected restaurant.
+16. Final result page shows the selected restaurant.
 
 Current session statuses in the app:
 - `waiting`
@@ -65,7 +65,7 @@ Current session statuses in the app:
 
 ## Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20.19+ or 22.12+
 - npm 9 or higher
 - MongoDB Atlas connection string
 - Google Places API key
@@ -126,6 +126,7 @@ VITE_PORT=5173
 VITE_API_BASE_URL=http://localhost:5001
 VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 VITE_USE_MOCK_RECOMMENDATIONS=false
+VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 ```
 
 Frontend variable notes:
@@ -285,7 +286,7 @@ Notes:
 - `GET /api/sessions/:sessionId/selections`
   - fetch all saved shortlists for the room
 
-## Ready Status:
+### Ready Status
 
 - `POST /api/sessions/:sessionId/ready`
   - mark the current participant as ready after clicking the ready button
@@ -295,7 +296,7 @@ Notes:
   - fetch the current ready status summary for the session
 
 
-### Reminder:
+### Reminder
 
 - `POST /api/sessions/:sessionId/reminder`
   - send reminder notifications to participants who are not ready
@@ -323,7 +324,7 @@ Notes:
 - `GET /api/sessions/:sessionId/vote`
   - fetch the current vote summary for the session
 
-### Result Rating:
+### Result Rating
 
 - `POST /api/sessions/:sessionId/result/rating`
   - submit a participant rating for the final restaurant result
