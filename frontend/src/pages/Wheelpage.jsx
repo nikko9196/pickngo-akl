@@ -371,20 +371,67 @@ export default function Wheelpage() {
             dataRef.current = fetchedData;
 
             if (sessionStatus === "voting" && currentResult?.placeId) {
-                // wheel already stopped, restore voting UI
+                console.log("entered voting restore block");
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
+                console.log("prize:", prize);
+                console.log("isHostRef.current:", isHostRef.current);
                 if (prize >= 0) {
-                    hasRestoredVotingRef.current = true;
-                    restoredVotingRoundIdRef.current =
-                      wheelState.session?.spinRoundId || null;
                     setPrizeNumber(prize);
-                    // setResult(fetchedData[prize]);
-                    pendingRestoreResultRef.current = fetchedData[prize];
                     setMustSpin(false);
                     spinActivate(false);
-                    setShowVotePopup(true);   // add this so popup shows on rejoin
+            
+                    if (isHostRef.current) {
+                        // normal voting round — re-broadcast spin_finished to reset timer for everyone
+                        console.log("emitting spin_finished from voting restore block");
+                        socket.emit("spin_finished", {
+                            sessionCode,
+                            result: fetchedData[prize],
+                            finalSpin: false, // ✅ always false here — finalSpin goes to "completed" block
+                            sessionId: id
+                        });
+                    } else {
+                        // non-host restore path — wait for voting_start_time before setting result
+                        hasRestoredVotingRef.current = true;
+                        restoredVotingRoundIdRef.current = wheelState.session?.spinRoundId || null;
+                        pendingRestoreResultRef.current = fetchedData[prize];
+                        setShowVotePopup(true);
+                    }
                 }
-            } 
+            }
+
+            // ✅ add this — handle completed (finalSpin) restore
+            if (sessionStatus === "completed" && currentResult?.placeId) {
+                console.log("isFinalSpin:", wheelState.session?.isFinalSpin);
+                console.log("entered completed block, isHost:", isHostRef.current);
+                const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
+                console.log("prize:", prize);
+                if (prize >= 0) {
+                    setPrizeNumber(prize);
+                    setMustSpin(false);
+                    spinActivate(false);
+            
+                    if (isHostRef.current) {
+                        console.log("emitting spin_finished from completed block, id:", id);
+                        // ✅ delay to allow non-host wheel animation to complete first
+                        setTimeout(() => {
+                            socket.emit("spin_finished", {
+                                sessionCode,
+                                result: fetchedData[prize],
+                                finalSpin: true,
+                                sessionId: id
+                            });
+                        }, 5000); // wait for wheel animation to finish
+                        setFinalSpin(true);
+                        setResult(fetchedData[prize]);
+                        setTimeout(() => navigate(`/sessions/${sessionCode}/result`), 3000);
+                    } else {
+                        // non-host — navigate directly
+                        setFinalSpin(true);
+                        setResult(fetchedData[prize]);
+                        setTimeout(() => navigate(`/sessions/${sessionCode}/result`), 3000);
+                    }
+                }
+            }
 
             // // Re-emit join_session so backend can send current spin state
             socket.emit("join_session", { sessionCode, userId: user.id });
