@@ -12,14 +12,8 @@ import taglineImage from "../assets/Tagline 1.png";
 import { useAuth } from "../context/useAuth";
 import "./HomePage.css";
 
-const SELECTION_LIMIT_LOCKED_STATUSES = ["selecting", "spinning", "voting", "completed"];
-
-function isParticipantLimitLocked(room) {
+function isRoomSettingsLocked(room) {
     return room?.status !== "waiting";
-}
-
-function isSelectionLimitLocked(room) {
-    return SELECTION_LIMIT_LOCKED_STATUSES.includes(room?.status);
 }
 
 function HomePage() {
@@ -135,14 +129,13 @@ function HomePage() {
 
         try {
             const room = roomsById[roomId];
-            const participantLimitLocked = isParticipantLimitLocked(room);
-            const selectionLimitLocked = isSelectionLimitLocked(room);
+            const roomSettingsLocked = isRoomSettingsLocked(room);
             const roomDraft = roomDrafts[roomId] || {};
             const { session } = await updateSession(token, roomId, {
-                maxParticipants: participantLimitLocked
+                maxParticipants: roomSettingsLocked
                     ? Number(room?.maxParticipants ?? 2)
                     : Number(roomDraft.maxParticipants),
-                maxSelectionsPerUser: selectionLimitLocked
+                maxSelectionsPerUser: roomSettingsLocked
                     ? Number(room?.maxSelectionsPerUser ?? 3)
                     : Number(roomDraft.maxSelectionsPerUser),
             });
@@ -267,8 +260,7 @@ function HomePage() {
                                     {rooms.map((room) => {
                                         const isHost = room.currentUserRole === "host";
                                         const isBusy = activeRoomId === room.id;
-                                        const participantLimitLocked = isParticipantLimitLocked(room);
-                                        const selectionLimitLocked = isSelectionLimitLocked(room);
+                                        const roomSettingsLocked = isRoomSettingsLocked(room);
 
                                         return (
                                             <article className="room-card" key={room.id}>
@@ -288,13 +280,13 @@ function HomePage() {
                                                                 type="number"
                                                                 min="2"
                                                                 max="50"
-                                                                disabled={participantLimitLocked}
+                                                                disabled={roomSettingsLocked}
                                                                 value={roomDrafts[room.id]?.maxParticipants ?? String(room.maxParticipants)}
                                                                 onChange={(event) =>
                                                                     handleRoomDraftChange(room.id, "maxParticipants", event.target.value)
                                                                 }
                                                             />
-                                                            {participantLimitLocked ? (
+                                                            {roomSettingsLocked ? (
                                                                 <small className="room-card-field-note">
                                                                     Locked after room starts.
                                                                 </small>
@@ -306,7 +298,7 @@ function HomePage() {
                                                                 type="number"
                                                                 min="1"
                                                                 max="10"
-                                                                disabled={selectionLimitLocked}
+                                                                disabled={roomSettingsLocked}
                                                                 value={
                                                                     roomDrafts[room.id]?.maxSelectionsPerUser ??
                                                                     String(room.maxSelectionsPerUser ?? 3)
@@ -319,9 +311,9 @@ function HomePage() {
                                                                     )
                                                                 }
                                                             />
-                                                            {selectionLimitLocked ? (
+                                                            {roomSettingsLocked ? (
                                                                 <small className="room-card-field-note">
-                                                                    Locked after selection starts.
+                                                                    Locked after room starts.
                                                                 </small>
                                                             ) : null}
                                                         </label>

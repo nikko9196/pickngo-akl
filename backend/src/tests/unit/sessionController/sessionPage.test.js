@@ -448,13 +448,13 @@ describe("sessionController.updateSession", () => {
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Max participants can only be changed while the room is waiting.",
+      message: "Room settings can only be changed while the room is waiting.",
     });
     expect(session.maxParticipants).toBe(4);
     expect(session.save).not.toHaveBeenCalled();
   });
 
-  test("Prevents changing selections per user after selection starts", async () => {
+  test("Prevents changing selections per user after the room starts", async () => {
     const req = {
       userId: "host1",
       params: { sessionId: "session123" },
@@ -465,7 +465,7 @@ describe("sessionController.updateSession", () => {
     };
     const res = createMockRes();
     const session = createMockSession({
-      status: "selecting",
+      status: "questioning",
       maxSelectionsPerUser: 5,
     });
 
@@ -475,7 +475,7 @@ describe("sessionController.updateSession", () => {
 
     expect(res.status).toHaveBeenCalledWith(409);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Selections per user cannot be changed after selection starts.",
+      message: "Room settings can only be changed while the room is waiting.",
     });
     expect(session.maxSelectionsPerUser).toBe(5);
     expect(session.save).not.toHaveBeenCalled();

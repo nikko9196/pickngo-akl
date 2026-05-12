@@ -25,8 +25,7 @@ const SESSION_STATUSES = [
   "voting",
   "completed",
 ];
-const SELECTION_LIMIT_LOCKED_STATUSES = ["selecting", "spinning", "voting", "completed"];
-const PARTICIPANT_LIMIT_EDITABLE_STATUS = "waiting";
+const ROOM_SETTINGS_EDITABLE_STATUS = "waiting";
 
 function generateSessionCode() {
   let code = "";
@@ -401,20 +400,12 @@ async function updateSession(req, res) {
     }
 
     if (
-      session.status !== PARTICIPANT_LIMIT_EDITABLE_STATUS &&
-      maxParticipants !== session.maxParticipants
+      session.status !== ROOM_SETTINGS_EDITABLE_STATUS &&
+      (maxParticipants !== session.maxParticipants ||
+        maxSelectionsPerUser !== session.maxSelectionsPerUser)
     ) {
       return res.status(409).json({
-        message: "Max participants can only be changed while the room is waiting.",
-      });
-    }
-
-    if (
-      SELECTION_LIMIT_LOCKED_STATUSES.includes(session.status) &&
-      maxSelectionsPerUser !== session.maxSelectionsPerUser
-    ) {
-      return res.status(409).json({
-        message: "Selections per user cannot be changed after selection starts.",
+        message: "Room settings can only be changed while the room is waiting.",
       });
     }
 
