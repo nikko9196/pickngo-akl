@@ -556,4 +556,4 @@ npm run test:integration
   - `docs/frontend-testing-documentation/`
   - Contains frontend testing discussions, issue-tracking screenshots from Discord, and additional frontend debugging and UI testing references.
 
-![Have A Byte](./Have%20A%20Byte.png)
+![Have A Byte](./Banner_PicknGoAKL.jpg)

@@ -719,7 +719,7 @@ export default function Wheelpage() {
                 if (!shouldRespin) {
                     // keep popup visible for 3s so user sees the result before leaving
                     setTimeout(() => {
-                        // setShowVotePopup(false);
+                        
                         navigate(`/sessions/${sessionCode}/result`);
                     }, 3000);
                 }
