@@ -25,6 +25,7 @@ const SESSION_STATUSES = [
   "voting",
   "completed",
 ];
+const SELECTION_LIMIT_LOCKED_STATUSES = ["selecting", "spinning", "voting", "completed"];
 
 function generateSessionCode() {
   let code = "";
@@ -396,6 +397,15 @@ async function updateSession(req, res) {
 
     if (session.hostUserId.toString() !== req.userId) {
       return res.status(403).json({ message: "Only the room creator can update this room." });
+    }
+
+    if (
+      SELECTION_LIMIT_LOCKED_STATUSES.includes(session.status) &&
+      maxSelectionsPerUser !== session.maxSelectionsPerUser
+    ) {
+      return res.status(409).json({
+        message: "Selections per user cannot be changed after selection starts.",
+      });
     }
 
     if (maxParticipants < session.participants.length) {
