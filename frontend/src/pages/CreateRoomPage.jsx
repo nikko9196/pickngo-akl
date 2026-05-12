@@ -9,6 +9,7 @@ import "./RoomPage.css";
 
 const DEFAULT_MAP_CENTER = { lat: -36.8485, lng: 174.7633 };
 const DEFAULT_LOCATION_RADIUS_METERS = 3000;
+const DISPLAY_NAME_REQUIRED_MESSAGE = "Room display name is required.";
 const LOCATION_REQUIRED_MESSAGE = "Please choose a room location.";
 let googleMapsLoadPromise;
 
@@ -144,6 +145,10 @@ function CreateRoomPage() {
         setIsSubmitting(true);
 
         try {
+            if (!roomDisplayName.trim()) {
+                throw new Error(DISPLAY_NAME_REQUIRED_MESSAGE);
+            }
+
             if (!roomLocation) {
                 throw new Error(LOCATION_REQUIRED_MESSAGE);
             }
@@ -340,7 +345,9 @@ function CreateRoomPage() {
 
                         <form className="auth-form create-room-form" onSubmit={handleSubmit}>
                             <label>
-                                <span>How others will see you in the room</span>
+                                <span>
+                                    How others will see you in the room <span className="required-marker">*</span>
+                                </span>
                                 <input
                                     type="text"
                                     maxLength="30"
@@ -413,7 +420,7 @@ function CreateRoomPage() {
                                 </p>
                             </div>
 
-                            {errorMessage === LOCATION_REQUIRED_MESSAGE ? (
+                            {[DISPLAY_NAME_REQUIRED_MESSAGE, LOCATION_REQUIRED_MESSAGE].includes(errorMessage) ? (
                                 <p className="auth-status error location-error">{errorMessage}</p>
                             ) : null}
 
@@ -423,7 +430,8 @@ function CreateRoomPage() {
                         </form>
 
                         {statusMessage ? <p className="auth-status success">{statusMessage}</p> : null}
-                        {errorMessage && errorMessage !== LOCATION_REQUIRED_MESSAGE ? (
+                        {errorMessage &&
+                        ![DISPLAY_NAME_REQUIRED_MESSAGE, LOCATION_REQUIRED_MESSAGE].includes(errorMessage) ? (
                             <p className="auth-status error">{errorMessage}</p>
                         ) : null}
                     </aside>
