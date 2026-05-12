@@ -213,6 +213,8 @@ Main frontend routes currently implemented:
 - `/sessions/:sessionCode`
 - `/sessions/:sessionCode/question`
 - `/sessions/:sessionCode/recommendation`
+- `/sessions/:sessionCode/wheel`
+- `/sessions/:sessionCode/result`
 
 ## Current API
 
@@ -247,6 +249,8 @@ Notes:
   - join a room using `sessionCode`
 - `GET /api/sessions/mine`
   - get all rooms for the current user
+- `GET /api/sessions/:sessionId/host`
+  - check whether the current user is the room host
 - `GET /api/sessions/code/:sessionCode`
   - get a room by public code
 - `GET /api/sessions/:sessionId/progress`
@@ -262,6 +266,8 @@ Notes:
 
 - `POST /api/sessions/:sessionId/responses`
   - submit or update one participant answer
+- `GET /api/sessions/:sessionId/responses/me`
+  - fetch the current user's questionnaire responses
 
 ### Recommendations
 
@@ -278,6 +284,50 @@ Notes:
   - fetch the current user's saved shortlist
 - `GET /api/sessions/:sessionId/selections`
   - fetch all saved shortlists for the room
+
+## Ready Status:
+
+- `POST /api/sessions/:sessionId/ready`
+  - mark the current participant as ready after clicking the ready button
+- `POST /api/sessions/:sessionId/ready/all`
+  - mark all participants as ready
+- `GET /api/sessions/:sessionId/ready`
+  - fetch the current ready status summary for the session
+
+
+### Reminder:
+
+- `POST /api/sessions/:sessionId/reminder`
+  - send reminder notifications to participants who are not ready
+- `GET /api/sessions/:sessionId/reminder`
+  - fetch the current reminder status, including reminded participant IDs and ready status summary
+
+### Wheel
+
+- `POST /api/sessions/:sessionId/wheel/build`
+  - build and initialise the wheel using saved restaurant selections
+- `POST /api/sessions/:sessionId/wheel/spin`
+  - spin the wheel and generate a restaurant result
+- `GET /api/sessions/:sessionId/wheel`
+  - fetch the current wheel items and previous spin result summary
+- `GET /api/sessions/:sessionId/wheel/state`
+  - fetch the current live wheel state for frontend synchronisation
+- `GET /api/sessions/:sessionId/wheel/result`
+  - fetch the final selected restaurant result
+
+### Vote
+- `POST /api/sessions/:sessionId/vote`
+  - submit a vote to accept the result or respin the wheel
+- `POST /api/sessions/:sessionId/vote/result`
+  - resolve the vote result and determine whether the session should respin or complete
+- `GET /api/sessions/:sessionId/vote`
+  - fetch the current vote summary for the session
+
+### Result Rating:
+
+- `POST /api/sessions/:sessionId/result/rating`
+  - submit a participant rating for the final restaurant result
+
 
 ## Recommendation and Selection Flow
 
