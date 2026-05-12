@@ -230,6 +230,10 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
         item: session.finalWheelResult,
       })
     : null;
+  
+  const uniquePlaceIds = getUniquePlaceIds(session.wheelItems || []);
+
+  const isFinalSpin = session.status === "voting" && uniquePlaceIds.length <= 2;
 
   return {
     id: session._id.toString(),
@@ -239,6 +243,7 @@ function buildWheelStatePayload({ session, selectionLookup, snapshotLookup }) {
     finalWheelResult,
     voteSummary: buildVoteSummary(session),
     spinRoundId: session.spinRoundId || null,
+    isFinalSpin,
   };
 }
 
