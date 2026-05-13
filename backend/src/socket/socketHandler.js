@@ -45,7 +45,7 @@ const initSocket = (io) => {
         const token = socket.handshake.auth.token;
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            socket.userId = decoded.sub; // ← change decoded.userId to decoded.sub
+            socket.userId = decoded.sub;
             next();
         } catch (err) {
             console.error(`Auth failed: ${err.message}`);
