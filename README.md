@@ -4,6 +4,9 @@ Have A Byte is a full-stack web project for CS732. Our team developed PicknGo AK
 
 This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
 
+## Live Demo
+The application is deployed on AWS and is accessible at:
+🔗 https://pickngo732.duckdns.org/
 ## Team Members
 
 - Cheng Cheng (`cche860@aucklanduni.ac.nz`)
@@ -42,14 +45,15 @@ This repository currently contains a React frontend, an Express backend, and a M
 6. Session moves to `generating`.
 7. Recommendation page generates and loads shared restaurant recommendations.
 8. Session moves to `selecting`.
-9. Each participant can save their shortlisted restaurants.
+9. Each participant can save their shortlisted restaurants and reselect by clicking the repick button.
 10. Wheel is built and session moves to `spinning`.
 11. Every marks themselves as ready to lock their picks.
-12. Host spins the wheel.
+11. Host can click the remind button under the "Ready/Total Players" button/tab to remind players who are not ready.
+12. Host spins the wheel (only when all players are ready).
 13. Backend selects a result and session moves to `voting`.
-14. Participants vote to accept the result or respin.
+14. Participants vote to accept the result or respin within the limited duration (15 seconds).
 15. Based on the voting result:
-    - If the majority votes to respin, the selected restaurant is removed and the session moves back to `spinning`
+    - If the majority votes to respin, the selected restaurant is removed and the session moves back to `spinning` and the rejected selection is removed from the wheel (when there are only 2 distinct options left on the wheel, whatever the option selected by the wheel will be the final result).
     - If the vote results in a tie, the selected restaurant is also removed and the session moves back to `spinning` to avoid repeated tie re-votes.
     - If the group accepts the result, or the wheel reaches the final spin, session moves to `completed`.
 16. Final result page shows the selected restaurant.
@@ -119,7 +123,7 @@ cd ../frontend
 npm install
 ```
 
-Create `frontend/.env`:
+Copy [frontend/.env.example](frontend/.env.example) to `frontend/.env` and fill in the values:
 
 ```env
 VITE_PORT=5173
@@ -515,6 +519,11 @@ You can also pass a custom query:
 ```bash
 node scripts/test-google-places-api.js "japanese restaurant auckland cbd"
 ```
+## Frontend Tests
+
+All manual test cases are noted in this document:
+> https://docs.google.com/spreadsheets/d/1Fy3PTTIEZXq9acQ6YNAxqfAjKyWo7BSx
+
 
 ## Backend Tests
 
