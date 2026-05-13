@@ -322,7 +322,12 @@ function HomePage() {
                                                                 </small>
                                                             ) : null}
                                                         </label>
-                                                        <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRoomUpdate(room.id)}
+                                                            disabled={isBusy || roomSettingsLocked}
+                                                            title={roomSettingsLocked ? "Room settings can only be changed while waiting." : undefined}
+                                                        >
                                                             Save
                                                         </button>
                                                         <button
