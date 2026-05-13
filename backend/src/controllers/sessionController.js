@@ -26,6 +26,7 @@ const SESSION_STATUSES = [
   "completed",
 ];
 const ROOM_SETTINGS_EDITABLE_STATUS = "waiting";
+const DELETABLE_SESSION_STATUSES = ["waiting", "completed"];
 
 function generateSessionCode() {
   let code = "";
@@ -436,6 +437,12 @@ async function deleteSession(req, res) {
 
     if (session.hostUserId.toString() !== req.userId) {
       return res.status(403).json({ message: "Only the room creator can delete this room." });
+    }
+
+    if (!DELETABLE_SESSION_STATUSES.includes(session.status)) {
+      return res.status(409).json({
+        message: "Rooms can only be deleted while waiting or completed.",
+      });
     }
 
     await session.deleteOne();

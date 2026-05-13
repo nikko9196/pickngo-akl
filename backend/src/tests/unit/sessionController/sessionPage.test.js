@@ -1,5 +1,6 @@
 const {
   checkIsHost,
+  deleteSession,
   getMySessions,
   getSessionByCode,
   getSessionProgress,
@@ -20,6 +21,7 @@ function createMockRes() {
   return {
     status: jest.fn().mockReturnThis(),
     json: jest.fn(),
+    send: jest.fn(),
   };
 }
 
@@ -80,6 +82,7 @@ function createMockSession(overrides = {}) {
   const session = {
     ...sessionObject,
     save: jest.fn().mockResolvedValue(true),
+    deleteOne: jest.fn().mockResolvedValue(true),
   };
 
   session.toObject = jest.fn(() => ({
@@ -626,6 +629,61 @@ describe("sessionController.updateSessionStatus", () => {
     expect(res.json).toHaveBeenCalledWith({
       message: "Status save failed.",
     });
+  });
+});
+
+describe("sessionController.deleteSession", () => {
+  test("Allows host to delete a waiting room", async () => {
+    const req = {
+      userId: "host1",
+      params: { sessionId: "session123" },
+    };
+    const res = createMockRes();
+    const session = createMockSession({ status: "waiting" });
+
+    mockFindById(session);
+
+    await deleteSession(req, res);
+
+    expect(session.deleteOne).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.send).toHaveBeenCalled();
+  });
+
+  test("Allows host to delete a completed room", async () => {
+    const req = {
+      userId: "host1",
+      params: { sessionId: "session123" },
+    };
+    const res = createMockRes();
+    const session = createMockSession({ status: "completed" });
+
+    mockFindById(session);
+
+    await deleteSession(req, res);
+
+    expect(session.deleteOne).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(204);
+    expect(res.send).toHaveBeenCalled();
+  });
+
+  test("Prevents host from deleting a room in progress", async () => {
+    const req = {
+      userId: "host1",
+      params: { sessionId: "session123" },
+    };
+    const res = createMockRes();
+    const session = createMockSession({ status: "selecting" });
+
+    mockFindById(session);
+
+    await deleteSession(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Rooms can only be deleted while waiting or completed.",
+    });
+    expect(session.deleteOne).not.toHaveBeenCalled();
   });
 });
 

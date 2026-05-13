@@ -7,6 +7,7 @@ import { getSessionByCode, getSessionProgress } from "../api/sessions";
 import aucklandSkyBackground from "../assets/background - auckland - sky transparent 1.png";
 import loadingIllustration from "../assets/loading 1.png";
 import Navbar from "../components/Navbar";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useAuth } from "../context/useAuth";
 import "./QuestionPage.css";
 
@@ -24,6 +25,7 @@ function QuestionPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
     const [progress, setProgress] = useState(null);
+    const [isRoomDeleted, setIsRoomDeleted] = useState(false);
     const [selectedOptionId, setSelectedOptionId] = useState("");
     const [selectedOptionIds, setSelectedOptionIds] = useState([]);
     const [textAnswer, setTextAnswer] = useState("");
@@ -108,6 +110,10 @@ function QuestionPage() {
                 setErrorMessage("");
             } catch (error) {
                 if (!ignore) {
+                    if (error.status === 404) {
+                        setIsRoomDeleted(true);
+                        return;
+                    }
                     setErrorMessage(error.message);
                 }
             } finally {
@@ -181,6 +187,10 @@ function QuestionPage() {
                 setCurrentQuestionIndex(nextQuestionIndex);
             } catch (error) {
                 if (!ignore) {
+                    if (error.status === 404) {
+                        setIsRoomDeleted(true);
+                        return;
+                    }
                     setErrorMessage(error.message);
                 }
             }
@@ -401,6 +411,7 @@ function QuestionPage() {
                 )}
 
             </section>
+            {isRoomDeleted ? <RoomDeletedModal /> : null}
         </main>
     );
 }

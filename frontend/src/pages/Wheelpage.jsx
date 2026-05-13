@@ -21,14 +21,20 @@ import foodPatternBackground from "../assets/background - pattern - food 1.png";
 import Navbar from "../components/Navbar";
 import loadingIllustration from "../assets/loading 1.png";
 import ReminderPopup from "../components/ReminderPopup";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useReminderPopup } from "../hooks/useReminderPopup";
 
 // ============================================================
 // CONSTANTS
 // ============================================================
-const socket = io(import.meta.env.VITE_API_BASE_URL);
+
+/** Duration of the voting countdown timer in seconds. */
 const DURATION = 15 // seconds - duration for voting
 
+/**
+ * Ordered list of background colors for wheel segments.
+ * Colors cycle via modulo if there are more segments than colors.
+ */
 const wheelcolors = [
     '#2D4A8A', // deep blue
     '#1B8A5A', // emerald
@@ -50,60 +56,151 @@ const wheelcolors = [
 // ============================================================
 // COMPONENT
 // ============================================================
-export default function Wheelpage() {
 
+/**
+ * WheelPage — the main game screen for a session.
+ *
+ * Responsibilities:
+ * - Connects to the Socket.IO server using a JWT token for authentication.
+ * - Loads and displays the spin wheel with restaurant options for the session.
+ * - Handles the full spin lifecycle: spin → animation → result → voting → respin or result page.
+ * - Syncs real-time state (spin, votes, ready status, reminders) across all participants via socket events.
+ * - Restores UI state for users who rejoin mid-session (mid-spin, mid-vote, completed).
+ * - Host-exclusive actions: spin the wheel, resolve votes, send reminders.
+ *
+ * Socket events emitted:
+ *   join_session, build_wheel, spin, vote, ready, send_reminder,
+ *   spin_finished, respin, reload_wheel
+ *
+ * Socket events listened to:
+ *   spin, vote_update, respin_update, wheel_built, wheel_reloaded,
+ *   ready_update, spin_finished, voting_start_time, reminder_sent
+ */
+export default function Wheelpage() {
 
     const navigate = useNavigate();
     const { sessionCode } = useParams();
     const { token } = useAuth();
 
-    // --- Wheel State ---
+    /**
+     * Socket.IO client instance stored as a ref so it persists across renders
+     * without causing re-renders when it changes.
+     * Initialized in a useEffect once the token is available.
+     */
+    const socket = useRef(null); 
+
+    /**
+     * Initializes the Socket.IO connection once the JWT token is available.
+     * Passes the token in the handshake auth object for server-side JWT verification.
+     * Disconnects and cleans up the socket when the component unmounts or token changes.
+     */
+    useEffect(() => {
+        if (!token) return;
+        socket.current = io(import.meta.env.VITE_API_BASE_URL, {
+            auth: { token }
+        });
+        return () => socket.current.disconnect();
+    }, [token]);
+
+    // ── Wheel State ────────────────────────────────────────────
+    /** Controls whether the react-custom-roulette wheel starts spinning. */
     const [mustSpin, setMustSpin] = useState(false);
+    /** Index into `data` that the wheel will land on. */
     const [prizeNumber, setPrizeNumber] = useState(0);
+    /** The winning wheel item object after the spin completes. Null while spinning or idle. */
     const [result, setResult] = useState(null);
+    /** True while the wheel is actively spinning; disables spin button and other controls. */
     const [spinactivate, spinActivate] = useState(false);
+    /** Tracks hover state on the spin button for the scale animation. */
     const [hovered, setHovered] = useState(false);
-    const [data, setData] = useState(null);       
+    /** Array of mapped wheel segment objects used by react-custom-roulette. */
+    const [data, setData] = useState(null);
+    /** MongoDB session ID fetched on load; used for API calls. */
     const [sessionId, setSessionId] = useState(null);
+    /** Ref mirror of sessionId; safe to read inside socket callbacks and timeouts. */
     const sessionIdRef = useRef(null); // for socket listeners and timeouts
+    /** Whether the current spin is the final deciding spin (no more respins). */
     const [finalSpin, setFinalSpin] = useState(null);
 
-    // --- User State ---
+    // ── User State ─────────────────────────────────────────────
+    /** Whether the current user has clicked READY. */
     const [getready, setReady] = useState(false);
+    /** Whether the current user is the session host. */
     const [isHost, setIsHost] = useState(false); 
+    /** Whether all participants are ready (unlocks the spin button for the host). */
     const [spinready, setSpinReady] = useState(false); 
+    /** Number of participants who have marked themselves as ready. */
     const [readyCount, setReadyCount] = useState(0);
+    /** Total number of participants in the session. */
     const [totalParticipants, setTotalParticipants] = useState(0);
+    /** Full participant list with ready status, used for the ready dropdown. */
     const [participants, setParticipants] = useState([]);
+    /** The current user's MongoDB userId string. */
     const [currentUserId, setCurrentUserId] = useState(null);
 
-    // --- Vote State ---
+    // ── Vote State ─────────────────────────────────────────────
+    /** Whether the current user has already submitted a vote in this round. */
     const [voted, setVoted] = useState(false);
+    /** Live vote counts for the current round. */
     const [votes, setVotes] = useState({ yes: 0, respin: 0});
+    /** Respin decision after voting: true = respin, false = accept result, null = not decided yet. */
     const [respin, setRespin] = useState(null); // to pass parameters true as respin and false as happy
+    /** Seconds remaining in the current vote countdown. */
     const [timeLeft, setTimeLeft] = useState(DURATION);
+    /** The result and vote counts from the previous round, shown as "Last Pick" on screen. */
     const [lastResult, setLastResult] = useState(null);
+    /** Controls visibility of the voting popup after a spin result is set. */
     const [showVotePopup, setShowVotePopup] = useState(false);
+    /** Warning message shown when a user tries to vote twice. */
     const [voteWarning, setVoteWarning] = useState("");
 
-    // --- Refs (to capture latest values in async callbacks) ---
+    // ── Refs ───────────────────────────────────────────────────
+    /** Ref mirror of `result`; safe to read inside async callbacks. */
     const resultRef = useRef(result); 
+    /** Ref mirror of `votes`; safe to read inside async callbacks. */
     const votesRef = useRef(votes);
+    /** Ref mirror of `isHost`; safe to read inside socket listeners and timers. */
     const isHostRef = useRef(false); // check if player is the host
+    /** Ref mirror of `data`; safe to read inside socket listeners without stale closure. */
     const dataRef = useRef(null);
+    /** Ref mirror of `currentUserId`; safe to read inside socket listeners. */
     const currentUserIdRef = useRef(null);
+    /** Tracks the spinRoundId of the most recent spin to prevent duplicate state restores. */
     const latestSpinRoundIdRef = useRef(null);
+    /** Tracks the current session status ("selecting", "voting", "spinning", "completed"). */
     const sessionStatusRef = useRef(null);
+    /**
+     * spinRoundId of a voting round that was restored on rejoin.
+     * Used to suppress duplicate "spin" socket events for the already-restored round.
+     */
     const restoredVotingRoundIdRef = useRef(null);
+    /** True if a voting round was restored from server state on rejoin (not triggered by a live spin event). */
     const hasRestoredVotingRef = useRef(false);
+    /**
+     * Server-authoritative timestamp (Date.now()) of when the current voting round started.
+     * Used to sync the countdown timer across all clients, including rejoining users.
+     */
     const voteStartTimeRef = useRef(null);
+    /**
+     * Holds the restored result object for a non-host rejoining mid-vote.
+     * The result is not shown immediately — it waits for the "voting_start_time"
+     * socket event to arrive first so the countdown timer is synced before display.
+     */
     const pendingRestoreResultRef = useRef(null);
 
-    // --- Dropdown State ---
+    // ── Dropdown State ─────────────────────────────────────────
+    /** Controls visibility of the ready status dropdown. */
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
+    /** Controls visibility of the group picks dropdown (mobile). */
     const [showGroupPicks, setShowGroupPicks] = useState(false);
+    const [isRoomDeleted, setIsRoomDeleted] = useState(false);
 
-    // --- Reminder State ---
+    // ── Reminder State ─────────────────────────────────────────
+    /**
+     * Reminder popup state managed by the useReminderPopup hook.
+     * showReminderPopup: whether to display the reminder popup for this user.
+     * remindedUserIds: list of userIds who have been sent a reminder this session.
+     */
     const {
         showReminderPopup,
         setShowReminderPopup, 
@@ -111,9 +208,15 @@ export default function Wheelpage() {
         setRemindedUserIds
     } = useReminderPopup(socket, currentUserIdRef);
 
-    // --- Tab ---
+    /** Active tab on the desktop side panel: 'picks' or 'members'. */
     const [activeTab, setActiveTab] = useState('picks');
     
+    /**
+     * Transforms raw session wheel items from the API into the format
+     * expected by react-custom-roulette and the vote/result UI.
+     * @param {Array} items - Raw wheel items from the backend session object.
+     * @returns {Array} Mapped wheel segment objects with style, truncated labels, and metadata.
+     */
     const mapWheelItems = (items) => {
         if (!Array.isArray(items)) return [];
     
@@ -133,9 +236,16 @@ export default function Wheelpage() {
             }
         }));
     };
+
     // ============================================================
     // HANDLERS
     // ============================================================
+
+    /**
+     * HOST ONLY — Initiates a spin by calling the backend API to determine the result,
+     * then emits a "spin" socket event to trigger the wheel animation on all clients.
+     * The backend is the source of truth for which segment is selected.
+     */
     const handleSpin = async () => {
         try {
             const response = await spinWheel(token, sessionId);
@@ -153,7 +263,7 @@ export default function Wheelpage() {
             setVoted(false);
     
             // notify all users in the session to spin
-            socket.emit("spin", {
+            socket.current.emit("spin", {
               sessionCode,
               prizeNumber: newPrize,
               placeId: response.session.currentWheelResult.placeId,
@@ -167,6 +277,13 @@ export default function Wheelpage() {
         }
     };
 
+    /**
+     * Called by react-custom-roulette's onStopSpinning callback when the
+     * wheel animation completes on the host's client.
+     * HOST ONLY — emits "spin_finished" with the authoritative result so all
+     * clients can display the result and start the voting timer.
+     * Non-hosts do nothing here; they receive the result via the socket event.
+     */
     const handleStop = () => {
         setMustSpin(false);
         setHovered(false);
@@ -181,7 +298,7 @@ export default function Wheelpage() {
             }
     
             // broadcast authoritative result
-            socket.emit("spin_finished", {
+            socket.current.emit("spin_finished", {
                 sessionCode,
                 result: spinResult,
                 finalSpin,
@@ -190,10 +307,16 @@ export default function Wheelpage() {
         }
     };
 
+    /**
+     * Submits the current user's vote (accept or respin) to the backend,
+     * then emits a "vote" socket event so all clients receive updated vote counts.
+     * Re-syncs the voted state from the backend to prevent double-voting.
+     * @param {'accept' | 'respin'} choice - The user's vote choice.
+     */
     const handleVote = async (choice) => {
         try {
             await submitVoteApi(token, sessionId, choice);
-            socket.emit("vote", { sessionCode, sessionId });
+            socket.current.emit("vote", { sessionCode, sessionId });
     
             // re-sync from backend (source of truth)
             const res = await getWheelState(token, sessionId);
@@ -211,17 +334,25 @@ export default function Wheelpage() {
         }
     };
 
+    /**
+     * Marks the current user as ready, calls the backend to persist the state,
+     * and emits a "ready" socket event so all clients receive the updated ready count.
+     */
     const handleReady = async () => {
         try {
             setReady(true);
             await sendReady(token, sessionId);
-            socket.emit("ready", {sessionCode,sessionId});
+            socket.current.emit("ready", {sessionCode,sessionId});
     
         } catch (err) {
             console.error(err);
         }
     };
 
+    /**
+     * Resets all per-round vote state back to defaults.
+     * Called at the start of each new spin to clear the previous round's data.
+     */
     const resetRoundState = () => {
         setResult(null);
         setVoted(false);
@@ -231,17 +362,30 @@ export default function Wheelpage() {
         setVoteWarning(null);
     };
     
+    /**
+     * Truncates a string to a maximum length, appending "…" if truncated.
+     * Used to keep wheel segment labels short enough to fit on the wheel.
+     * @param {string} text - The text to truncate.
+     * @param {number} maxLength - Maximum character length before truncation.
+     * @returns {string} The (possibly truncated) string.
+     */
     const truncate = (text, maxLength = 15) => {
         return text.length > maxLength
             ? text.slice(0, maxLength) + "…"
             : text;
     };
 
+    /**
+     * HOST ONLY — Sends a reminder to all participants who have not yet marked
+     * themselves as ready. Calls the backend to record the reminded user IDs,
+     * then emits a "send_reminder" socket event so the reminder popup appears
+     * on the screens of the relevant participants.
+     */
     const handleSendReminder = async () => {
         try {
             const res = await sendRemind(token, sessionId);
     
-            socket.emit("send_reminder", {
+            socket.current.emit("send_reminder", {
                 sessionCode,
                 sessionId
             });
@@ -252,23 +396,35 @@ export default function Wheelpage() {
         }
     };
 
+    /**
+     * Checks whether a given user has already voted in the current round.
+     * @param {string} userId - The user's ID to check.
+     * @param {Object} session - The session object from the backend.
+     * @returns {boolean} True if the user's ID is in the voteSummary.votedUserIds list.
+     */
     const hasUserVoted = (userId, session) => {
         return session?.voteSummary?.votedUserIds?.includes(userId);
     };
+
     // ============================================================
     // EFFECTS
     // ============================================================
 
+    /** Keeps dataRef in sync with the data state for use inside socket callbacks. */
     useEffect(() => { dataRef.current = data; }, [data]);
 
-    // keep sessionIdRef and sessionId in sync
+    /** Keeps sessionIdRef in sync with sessionId for use inside socket callbacks and timers. */
     useEffect(() => { sessionIdRef.current = sessionId; }, [sessionId]);
 
+    /** Keeps currentUserIdRef in sync with currentUserId for use inside socket callbacks. */
     useEffect(() => {
         currentUserIdRef.current = currentUserId;
     }, [currentUserId]);
 
-    // fetch current user
+    /**
+     * Fetches the current user's ID once the token is available.
+     * Stored in state and ref for use in vote checking and socket callbacks.
+     */
     useEffect(() => {
         const fetchMe = async () => {
             try {
@@ -284,9 +440,19 @@ export default function Wheelpage() {
         }
     }, [token]);
 
+    /** Prevents loadWheelData from running twice in React StrictMode or concurrent renders. */
     const isLoadingRef = useRef(false); // add with other refs
 
-    // fetch wheel data inside useEffect
+    /**
+     * Main data loading effect. Runs once on mount (when token and sessionCode are available).
+     * Responsibilities:
+     * 1. Fetches session, participants, wheel items, vote state, and reminder state from the backend.
+     * 2. Builds the wheel if the session is in "selecting" status, or reloads existing items.
+     * 3. Restores UI state for users rejoining mid-vote or mid-session:
+     *    - "voting" status: restores the current result and vote counts; host re-broadcasts spin_finished.
+     *    - "completed" status: restores the final result and navigates to the result page.
+     * 4. Emits "join_session" so the backend can push current spin state to this socket.
+     */
     useEffect(() => {
         async function loadWheelData() {
         if (isLoadingRef.current) return; // prevent duplicate calls
@@ -362,7 +528,7 @@ export default function Wheelpage() {
             if (sessionStatus === 'selecting') {
                 const { session: newBuilt } = await buildWheelApi(token, id);
                 finalWheelItems = newBuilt.wheelItems;
-                socket.emit("build_wheel", { sessionCode });
+                socket.current.emit("build_wheel", { sessionCode });
             }
 
             const fetchedData = mapWheelItems(finalWheelItems);
@@ -370,6 +536,7 @@ export default function Wheelpage() {
             setData(fetchedData);
             dataRef.current = fetchedData;
 
+            // Restore state for a user who rejoined during an active voting round.
             if (sessionStatus === "voting" && currentResult?.placeId) {
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
@@ -379,7 +546,7 @@ export default function Wheelpage() {
             
                     if (isHostRef.current) {
                         // normal voting round — re-broadcast spin_finished to reset timer for everyone
-                        socket.emit("spin_finished", {
+                        socket.current.emit("spin_finished", {
                             sessionCode,
                             result: fetchedData[prize],
                             finalSpin: false, // ✅ always false here — finalSpin goes to "completed" block
@@ -387,6 +554,7 @@ export default function Wheelpage() {
                         });
                     } else {
                         // non-host restore path — wait for voting_start_time before setting result
+                        // so the countdown timer is synced to the server start time.
                         hasRestoredVotingRef.current = true;
                         restoredVotingRoundIdRef.current = wheelState.session?.spinRoundId || null;
                         pendingRestoreResultRef.current = fetchedData[prize];
@@ -395,7 +563,7 @@ export default function Wheelpage() {
                 }
             }
 
-            // restore session if host reloads during spinning of the final spin
+            // Restore state for a user who rejoined after the session completed (final spin).
             if (sessionStatus === "completed" && currentResult?.placeId) {
                 const prize = fetchedData.findIndex(item => item.placeId === currentResult.placeId);
                 if (prize >= 0) {
@@ -406,7 +574,7 @@ export default function Wheelpage() {
                     if (isHostRef.current) {
                         // delay to allow non-host wheel animation to complete first
                         setTimeout(() => {
-                            socket.emit("spin_finished", {
+                            socket.current.emit("spin_finished", {
                                 sessionCode,
                                 result: fetchedData[prize],
                                 finalSpin: true,
@@ -425,28 +593,41 @@ export default function Wheelpage() {
                 }
             }
 
-            // // Re-emit join_session so backend can send current spin state
-            socket.emit("join_session", { sessionCode, userId: user.id });
+            // Re-emit join_session so the backend can push current spin/voting state
+            // to this socket if the session is mid-round.
+            if (socket.current) {
+                socket.current.emit("join_session", { sessionCode });
+            }
 
             isLoadingRef.current = false; // reset on error to allow retry
 
         } catch (error) {
+            if (error.status === 404) {
+                setIsRoomDeleted(true);
+                return;
+            }
             console.error("Failed to load wheel data:", error);
             isLoadingRef.current = false; // reset on error to allow retry
         }
     }
 
+    // initial load
     if (token && sessionCode) {
         loadWheelData();
     }
     }, [token, sessionCode]);
 
-    // Keep refs updated with latest state values
+    /** Keeps votesRef in sync with votes for use inside async callbacks. */
     useEffect(() => { votesRef.current = votes; }, [votes]);
+    /** Keeps resultRef in sync with result for use inside async callbacks. */
     useEffect(() => { resultRef.current = result; }, [result]);
+    /** Keeps isHostRef in sync with isHost for use inside socket listeners and timers. */
     useEffect(() => { isHostRef.current = isHost; }, [isHost]);
 
-    // Check if user is host (runs after userid is set)
+    /**
+     * Checks whether the current user is the host of this session.
+     * Runs after sessionId is set. Updates isHost state and the isHostRef.
+     */
     useEffect(() => {
         if (!token || !sessionId) return;
     
@@ -463,14 +644,30 @@ export default function Wheelpage() {
         checkHost();
     }, [token, sessionId]);
 
-    // Socket listeners (runs after userid is set)
+    /**
+     * Attaches all Socket.IO event listeners once the socket is initialized.
+     * Guarded by socket.current null check since the socket init effect and this
+     * effect both depend on [token] and may race each other.
+     * Cleans up all listeners on unmount or when dependencies change to prevent duplicates.
+     *
+     * Listeners:
+     * - "spin": starts the wheel animation when the host spins.
+     * - "vote_update": re-fetches vote counts from the backend when any user votes.
+     * - "respin_update": handles the host's respin/accept decision after voting ends.
+     * - "wheel_built": non-hosts use this to load wheel data after the host builds the wheel.
+     * - "wheel_reloaded": reloads wheel items after a respin removes the previous result.
+     * - "ready_update": updates the ready count and participant list for all users.
+     * - "spin_finished": sets the authoritative result and starts the vote timer for all users.
+     * - "voting_start_time": syncs the vote countdown timer for users who rejoin mid-vote.
+     */
     useEffect(() => {
-        if (!token || !sessionCode) return; // use token instead of userid
+        if (!token || !sessionCode || !socket.current) return;
 
         // listen for spin from host
-        socket.on(
+        socket.current.on(
           "spin",
           ({ prizeNumber, placeId, finalSpin, spinRoundId }) => {
+            // Suppress duplicate spin events for a round already restored from server state.
             if (
               hasRestoredVotingRef.current &&
               restoredVotingRoundIdRef.current === spinRoundId
@@ -484,6 +681,8 @@ export default function Wheelpage() {
             latestSpinRoundIdRef.current = spinRoundId;
             sessionStatusRef.current = "spinning";
 
+            // Use prizeNumber if provided; fall back to finding the segment by placeId
+            // (e.g. when rejoining and the host's prizeNumber is not available).
             const resolvedPrize =
               prizeNumber !== null && prizeNumber !== undefined
                 ? prizeNumber
@@ -500,7 +699,8 @@ export default function Wheelpage() {
           },
         );
 
-        socket.on("vote_update", async () => {
+        /** Re-fetches vote counts from the backend when any participant submits a vote. */
+        socket.current.on("vote_update", async () => {
             const res = await getWheelState(token, sessionIdRef.current);
         
             const votedNow = hasUserVoted(currentUserIdRef.current, res.session);
@@ -512,7 +712,13 @@ export default function Wheelpage() {
             });
         });
 
-        socket.on("respin_update", async ({ isrespin, finalSpin }) => {
+        /**
+         * Handles the host's respin/accept decision broadcast after the voting timer expires.
+         * - If respin: resets spin state so the host can spin again.
+         * - If accepted or final spin: navigates all clients to the result page.
+         * Also syncs the last round's result for the "Last Pick" display.
+         */
+        socket.current.on("respin_update", async ({ isrespin, finalSpin }) => {
             if (isrespin) {
               hasRestoredVotingRef.current = false;
               restoredVotingRoundIdRef.current = null;
@@ -577,8 +783,8 @@ export default function Wheelpage() {
             }
         });
 
-        // listen for wheel built - loads wheel data for non-host users
-        socket.on("wheel_built", async () => {
+        /** Non-hosts use this event to load wheel data after the host builds the wheel. */
+        socket.current.on("wheel_built", async () => {
             try {
                 const { session } = await getSessionByCode(token, sessionCode);
 
@@ -595,8 +801,8 @@ export default function Wheelpage() {
             }
         });
 
-        // listen for wheel reload when respin
-        socket.on("wheel_reloaded", async () => {
+        /** Reloads wheel items after a respin removes the previous result from the pool. */
+        socket.current.on("wheel_reloaded", async () => {
             try {
                 const { session } = await reloadWheel(token, sessionIdRef.current); // use ref
                 const fetchedData = mapWheelItems(session.wheelItems);
@@ -606,20 +812,26 @@ export default function Wheelpage() {
             }
         });
 
-        socket.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
+        /** Updates the ready count and participant list for all users when someone marks ready. */
+        socket.current.on("ready_update", ({ readyCount, totalParticipants, allReady, participants }) => {
             setReadyCount(readyCount);
             setTotalParticipants(totalParticipants);
             setSpinReady(allReady);
             setParticipants(participants);
         });
         
-
-        socket.on("spin_finished", ({ result, finalSpin, startTime }) => {
+        /**
+         * Receives the authoritative spin result from the host after the wheel stops.
+         * Sets the result for all clients (including the host) and starts the vote timer.
+         * For the final spin, non-hosts are navigated to the result page after 3 seconds.
+         */
+        socket.current.on("spin_finished", ({ result, finalSpin, startTime }) => {
 
             // listeners sync from host result
             sessionStatusRef.current = finalSpin ? "completed" : "voting";
             
-            // set startTime BEFORE setResult so the timer useEffect sees it
+            // Store startTime before setting result so the voting timer useEffect
+            // can read it synchronously when it fires.
             if (!finalSpin && startTime) {
                 voteStartTimeRef.current = startTime;
             }
@@ -638,7 +850,12 @@ export default function Wheelpage() {
             }
         });
 
-        socket.on("voting_start_time", ({ startTime }) => {
+        /**
+         * Receives the server-authoritative voting start time for users rejoining mid-vote.
+         * Sets the timer ref first, then triggers the pending result display so the
+         * countdown is synced before the vote popup appears.
+         */
+        socket.current.on("voting_start_time", ({ startTime }) => {
             voteStartTimeRef.current = startTime; // set before result triggers the timer
             
             // now safe to trigger the timer useEffect
@@ -649,18 +866,28 @@ export default function Wheelpage() {
         });
         
         return () => {
-            socket.off("spin");
-            socket.off("vote_update");
-            socket.off("respin_update");
-            socket.off("wheel_built"); 
-            socket.off("wheel_reloaded"); 
-            socket.off("ready_update");
-            socket.off("spin_finished");
-            socket.off("voting_start_time");
+            socket.current.off("spin");
+            socket.current.off("vote_update");
+            socket.current.off("respin_update");
+            socket.current.off("wheel_built"); 
+            socket.current.off("wheel_reloaded"); 
+            socket.current.off("ready_update");
+            socket.current.off("spin_finished");
+            socket.current.off("voting_start_time");
         };
     }, [sessionCode, token]);
 
-    // Voting timer (runs after result is set)
+    /**
+     * Voting timer effect. Runs whenever `result` changes.
+     *
+     * - Shows the vote popup if the user hasn't voted yet.
+     * - If this is the final spin, skips the timer and navigates the host to the result page.
+     * - Otherwise, calculates the remaining time using the server-authoritative startTime,
+     *   starts a countdown interval, and schedules the host's vote resolution timeout.
+     * - HOST ONLY: when the timer expires, calls ifRespin() to determine the outcome,
+     *   then emits "respin" and optionally "reload_wheel".
+     * - Cleans up the interval and timeout on unmount or when result changes.
+     */
     useEffect(() => {
 
         if (!result) return;
@@ -703,14 +930,15 @@ export default function Wheelpage() {
             }
         }, 500); // poll every 500ms for smoother accuracy
 
-        // schedule host resolution based on actual remaining time
+        // Schedule host vote resolution based on actual remaining time, not full DURATION,
+        // so rejoining hosts resolve at the correct time rather than restarting the timer.
         const timer = setTimeout(async () => {
             if (!isHostRef.current) return;
             setShowVotePopup(false);
             try {
                 const shouldRespin = await ifRespin(token, sessionIdRef.current);
                 setRespin(shouldRespin);
-                socket.emit("respin", {
+                socket.current.emit("respin", {
                     sessionCode,
                     isrespin: shouldRespin,
                     finalSpin,
@@ -724,7 +952,7 @@ export default function Wheelpage() {
                     }, 3000);
                 }
                 if (shouldRespin) {
-                    socket.emit("reload_wheel", {
+                    socket.current.emit("reload_wheel", {
                         sessionCode,
                         sessionId: sessionIdRef.current
                     });
@@ -742,6 +970,10 @@ export default function Wheelpage() {
         };
     }, [result]);
 
+    /**
+     * Closes the ready dropdown when the user clicks outside of it.
+     * Specifically ignores clicks on the dropdown trigger button itself.
+     */
     useEffect(() => {
         const handleClickOutside1 = (e) => {
             if (!e.target.closest(".ready-dropdown") &&
@@ -754,6 +986,10 @@ export default function Wheelpage() {
         return () => document.removeEventListener("click", handleClickOutside1);
     }, []);
 
+    /**
+     * Closes the group picks dropdown when the user clicks outside of it.
+     * Specifically ignores clicks on the dropdown trigger button itself.
+     */
     useEffect(() => {
         const handleClickOutside2 = (e) => {
             if (!e.target.closest(".picks-dropdown") &&
@@ -766,11 +1002,19 @@ export default function Wheelpage() {
         return () => document.removeEventListener("click", handleClickOutside2);
     }, []);
 
+    /**
+     * Checks whether a participant has been sent a reminder this session.
+     * @param {string} userId - The participant's userId to check.
+     * @returns {boolean} True if the userId is in the remindedUserIds list.
+     */
     const isUserReminded = (userId) => {
         return remindedUserIds?.includes(userId);
     };
 
-    // Small Reminder Text Message  
+    /**
+     * Derives the status message shown below the wheel based on the current game state.
+     * Priority order: respin > result > spinning > host/non-host ready > waiting.
+     */
     let message = "Lock your picks. Let the wheel decide.";
 
     if (respin) {
@@ -1097,7 +1341,7 @@ export default function Wheelpage() {
                     </div>
                 </div>
             </div>
-            {/* Voting Popup */}
+            {/* Voting Popup — shown after each non-final spin result */}
             {showVotePopup && !respin && result && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
@@ -1157,7 +1401,7 @@ export default function Wheelpage() {
                     </div>
                 </div>
             )}
-            {/* Final Spin Result */}
+            {/* Final Spin Result — shown when the session is complete */}
             {finalSpin && result && (
                 <div className="wp-overlay">
                     <div className="wp-popup">
@@ -1176,15 +1420,15 @@ export default function Wheelpage() {
                 </div>
             )}
 
-            {/* Reminder Popup */}
+            {/* Reminder Popup — shown to participants who haven't marked ready */}
             {showReminderPopup && (
                 <ReminderPopup
                     isHost={isHost}
                     onClose={() => setShowReminderPopup(false)}
                 />
             )}
+            {isRoomDeleted ? <RoomDeletedModal /> : null}
         </div>
         </main>
     );
 }
-

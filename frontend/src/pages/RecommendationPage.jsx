@@ -10,6 +10,7 @@ import {
 import { getSessionByCode } from "../api/sessions";
 import Navbar from "../components/Navbar";
 import RestaurantCard from "../components/RestaurantCard";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useAuth } from "../context/useAuth";
 import {
   mockGenerateRecommendations,
@@ -23,7 +24,6 @@ import { useReminderPopup } from "../hooks/useReminderPopup";
 import { io } from "socket.io-client";
 import { getCurrentUser } from "../api/auth";
 
-const socket = io(import.meta.env.VITE_API_BASE_URL);
 function isMissingResponsesError(message) {
   return /questionnaire responses|usable responses/i.test(message ?? "");
 }
@@ -49,6 +49,7 @@ function RecommendationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageError, setPageError] = useState("");
   const [hasWaitedTooLong, setHasWaitedTooLong] = useState(false);
+  const [isRoomDeleted, setIsRoomDeleted] = useState(false);
 
   const selectedSet = useMemo(
     () => new Set(selectedPlaceIds),
@@ -68,10 +69,12 @@ function RecommendationPage() {
 
   // ============================================================
   // Reminder State and EFFECTS
- 
+
+  const socket = useRef(null);
   const [currentUserId, setCurrentUserId] = useState(null);
   const currentUserIdRef = useRef(null);
 
+  /** Fetch current user's ID once token is available. */
   useEffect(() => {
       const fetchMe = async () => {
           try {
@@ -81,25 +84,33 @@ function RecommendationPage() {
               console.error(err);
           }
       };
-
-      if (token) {
-          fetchMe();
-      }
+      if (token) fetchMe();
   }, [token]);
 
+  /** Keep currentUserIdRef in sync for use inside socket callbacks. */
   useEffect(() => {
       currentUserIdRef.current = currentUserId;
   }, [currentUserId]);
 
+  /**
+   * Initializes the Socket.IO connection once token is available,
+   * then joins the session room after the socket is connected.
+   * Passes the token in the handshake auth for server-side JWT verification.
+   * Disconnects cleanly on unmount or when token/sessionCode changes.
+   */
   useEffect(() => {
-    if (!sessionCode || !currentUserId) return;
+      if (!token || !sessionCode) return;
 
-    socket.emit("join_session", {
-        sessionCode,
-        userId: currentUserId
-    });
+      socket.current = io(import.meta.env.VITE_API_BASE_URL, {
+          auth: { token }
+      });
 
-  }, [sessionCode, currentUserId]);
+      socket.current.on("connect", () => {
+          socket.current.emit("join_session", { sessionCode });
+      });
+
+      return () => socket.current.disconnect();
+  }, [token, sessionCode]);
 
   const {
       showReminderPopup,
@@ -255,6 +266,10 @@ function RecommendationPage() {
         }
       } catch (error) {
         if (!ignore) {
+          if (error.status === 404) {
+            setIsRoomDeleted(true);
+            return;
+          }
           setPageError(error.message);
         }
       } finally {
@@ -519,6 +534,7 @@ function RecommendationPage() {
                     }}
                 />
             )}
+      {isRoomDeleted ? <RoomDeletedModal /> : null}
     </main>
   );
 }
