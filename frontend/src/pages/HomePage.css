@@ -356,6 +356,11 @@
   cursor: pointer;
 }
 
+.room-card-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .room-card-actions button.danger {
   background: #b42318;
 }

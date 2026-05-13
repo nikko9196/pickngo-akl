@@ -21,6 +21,7 @@ import foodPatternBackground from "../assets/background - pattern - food 1.png";
 import Navbar from "../components/Navbar";
 import loadingIllustration from "../assets/loading 1.png";
 import ReminderPopup from "../components/ReminderPopup";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useReminderPopup } from "../hooks/useReminderPopup";
 
 // ============================================================
@@ -192,6 +193,7 @@ export default function Wheelpage() {
     const [showReadyDropdown, setShowReadyDropdown] = useState(false);
     /** Controls visibility of the group picks dropdown (mobile). */
     const [showGroupPicks, setShowGroupPicks] = useState(false);
+    const [isRoomDeleted, setIsRoomDeleted] = useState(false);
 
     // ── Reminder State ─────────────────────────────────────────
     /**
@@ -600,6 +602,10 @@ export default function Wheelpage() {
             isLoadingRef.current = false; // reset on error to allow retry
 
         } catch (error) {
+            if (error.status === 404) {
+                setIsRoomDeleted(true);
+                return;
+            }
             console.error("Failed to load wheel data:", error);
             isLoadingRef.current = false; // reset on error to allow retry
         }
@@ -1421,6 +1427,7 @@ export default function Wheelpage() {
                     onClose={() => setShowReminderPopup(false)}
                 />
             )}
+            {isRoomDeleted ? <RoomDeletedModal /> : null}
         </div>
         </main>
     );

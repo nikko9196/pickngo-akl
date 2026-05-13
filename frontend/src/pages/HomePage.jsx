@@ -16,6 +16,10 @@ function isRoomSettingsLocked(room) {
     return room?.status !== "waiting";
 }
 
+function canDeleteRoom(room) {
+    return ["waiting", "completed"].includes(room?.status);
+}
+
 function HomePage() {
     const navigate = useNavigate();
     const accountMenuRef = useRef(null);
@@ -261,6 +265,7 @@ function HomePage() {
                                         const isHost = room.currentUserRole === "host";
                                         const isBusy = activeRoomId === room.id;
                                         const roomSettingsLocked = isRoomSettingsLocked(room);
+                                        const deleteDisabled = isBusy || !canDeleteRoom(room);
 
                                         return (
                                             <article className="room-card" key={room.id}>
@@ -317,7 +322,12 @@ function HomePage() {
                                                                 </small>
                                                             ) : null}
                                                         </label>
-                                                        <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRoomUpdate(room.id)}
+                                                            disabled={isBusy || roomSettingsLocked}
+                                                            title={roomSettingsLocked ? "Room settings can only be changed while waiting." : undefined}
+                                                        >
                                                             Save
                                                         </button>
                                                         <button
@@ -326,7 +336,13 @@ function HomePage() {
                                                         >
                                                             Open
                                                         </button>
-                                                        <button type="button" className="danger" onClick={() => requestRoomDelete(room.id)} disabled={isBusy}>
+                                                        <button
+                                                            type="button"
+                                                            className="danger"
+                                                            onClick={() => requestRoomDelete(room.id)}
+                                                            disabled={deleteDisabled}
+                                                            title={!canDeleteRoom(room) ? "Rooms can only be deleted while waiting or completed." : undefined}
+                                                        >
                                                             Delete
                                                         </button>
                                                     </div>

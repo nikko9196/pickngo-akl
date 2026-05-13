@@ -4,6 +4,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { getSessionByCode, updateSessionStatus } from "../api/sessions";
 import aucklandSkyBackground from "../assets/background - auckland - sky transparent 1.png";
 import Navbar from "../components/Navbar";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useAuth } from "../context/useAuth";
 import "./SessionPage.css";
 
@@ -22,6 +23,7 @@ function SessionPage() {
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(
         location.state?.inviteSession?.currentUserRole === "host"
     );
+    const [isRoomDeleted, setIsRoomDeleted] = useState(false);
     const [brokenAvatarUrls, setBrokenAvatarUrls] = useState({});
 
     useEffect(() => {
@@ -58,6 +60,10 @@ function SessionPage() {
                 setErrorMessage("");
             } catch (error) {
                 if (!ignore) {
+                    if (error.status === 404) {
+                        setIsRoomDeleted(true);
+                        return;
+                    }
                     setErrorMessage(error.message);
                 }
             } finally {
@@ -341,6 +347,8 @@ function SessionPage() {
                     </section>
                 </div>
             ) : null}
+
+            {isRoomDeleted ? <RoomDeletedModal /> : null}
         </main>
     );
 }

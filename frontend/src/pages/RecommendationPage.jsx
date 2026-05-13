@@ -10,6 +10,7 @@ import {
 import { getSessionByCode } from "../api/sessions";
 import Navbar from "../components/Navbar";
 import RestaurantCard from "../components/RestaurantCard";
+import RoomDeletedModal from "../components/RoomDeletedModal";
 import { useAuth } from "../context/useAuth";
 import {
   mockGenerateRecommendations,
@@ -48,6 +49,7 @@ function RecommendationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pageError, setPageError] = useState("");
   const [hasWaitedTooLong, setHasWaitedTooLong] = useState(false);
+  const [isRoomDeleted, setIsRoomDeleted] = useState(false);
 
   const selectedSet = useMemo(
     () => new Set(selectedPlaceIds),
@@ -264,6 +266,10 @@ function RecommendationPage() {
         }
       } catch (error) {
         if (!ignore) {
+          if (error.status === 404) {
+            setIsRoomDeleted(true);
+            return;
+          }
           setPageError(error.message);
         }
       } finally {
@@ -528,6 +534,7 @@ function RecommendationPage() {
                     }}
                 />
             )}
+      {isRoomDeleted ? <RoomDeletedModal /> : null}
     </main>
   );
 }
