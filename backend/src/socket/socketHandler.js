@@ -1,5 +1,6 @@
 const { findSessionById, findSessionByCode } = require('../services/sessionService');
 const jwt = require("jsonwebtoken");
+const { JWT_SECRET } = require("../services/authService");
 
 /**
  * Checks whether a given userId is the host of a session.
@@ -42,14 +43,19 @@ const initSocket = (io) => {
      * Rejects the connection with "Unauthorized" if the token is missing or invalid.
      */
     io.use((socket, next) => {
-        const token = socket.handshake.auth.token;
+        const token = socket.handshake.auth?.token;
+
+        if (!token) {
+            return next(new Error("Unauthorized"));
+        }
+
         try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, JWT_SECRET);
             socket.userId = decoded.sub;
-            next();
+            return next();
         } catch (err) {
             console.error(`Auth failed: ${err.message}`);
-            next(new Error("Unauthorized"));
+            return next(new Error("Unauthorized"));
         }
     });
 
