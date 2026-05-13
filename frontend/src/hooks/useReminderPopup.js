@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 
-export function useReminderPopup(socket, currentUserIdRef) {
+export function useReminderPopup(socketRef, currentUserIdRef) {
     const [showReminderPopup, setShowReminderPopup] = useState(false);
     const [remindedUserIds, setRemindedUserIds] = useState([]);
 
     useEffect(() => {
-        if (!socket) return;
+        if (!socketRef?.current) return;
 
         const handler = (remindedUserIds) => {
             setRemindedUserIds(remindedUserIds);
@@ -20,12 +20,12 @@ export function useReminderPopup(socket, currentUserIdRef) {
             }
         };
 
-        socket.on("reminder_sent", handler);
+        socketRef.current.on("reminder_sent", handler);
 
         return () => {
-            socket.off("reminder_sent", handler);
+            socketRef.current.off("reminder_sent", handler);
         };
-    }, [socket]);
+    }, [socketRef.current]);
 
     return {
         showReminderPopup,
