@@ -325,12 +325,25 @@
   font-weight: 800;
 }
 
+.room-card-field-note {
+  color: rgba(23, 49, 137, 0.66);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
 .room-card-actions input {
   width: 100%;
   min-width: 0;
   border: 1px solid rgba(23, 49, 137, 0.16);
   border-radius: 14px;
   padding: 10px 12px;
+}
+
+.room-card-actions input:disabled {
+  background: rgba(23, 49, 137, 0.08);
+  color: rgba(23, 49, 137, 0.58);
+  cursor: not-allowed;
 }
 
 .room-card-actions button {

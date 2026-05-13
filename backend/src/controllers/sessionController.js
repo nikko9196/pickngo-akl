@@ -25,6 +25,7 @@ const SESSION_STATUSES = [
   "voting",
   "completed",
 ];
+const ROOM_SETTINGS_EDITABLE_STATUS = "waiting";
 
 function generateSessionCode() {
   let code = "";
@@ -396,6 +397,16 @@ async function updateSession(req, res) {
 
     if (session.hostUserId.toString() !== req.userId) {
       return res.status(403).json({ message: "Only the room creator can update this room." });
+    }
+
+    if (
+      session.status !== ROOM_SETTINGS_EDITABLE_STATUS &&
+      (maxParticipants !== session.maxParticipants ||
+        maxSelectionsPerUser !== session.maxSelectionsPerUser)
+    ) {
+      return res.status(409).json({
+        message: "Room settings can only be changed while the room is waiting.",
+      });
     }
 
     if (maxParticipants < session.participants.length) {

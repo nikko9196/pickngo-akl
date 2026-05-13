@@ -12,6 +12,10 @@ import taglineImage from "../assets/Tagline 1.png";
 import { useAuth } from "../context/useAuth";
 import "./HomePage.css";
 
+function isRoomSettingsLocked(room) {
+    return room?.status !== "waiting";
+}
+
 function HomePage() {
     const navigate = useNavigate();
     const accountMenuRef = useRef(null);
@@ -124,10 +128,16 @@ function HomePage() {
         setActiveRoomId(roomId);
 
         try {
+            const room = roomsById[roomId];
+            const roomSettingsLocked = isRoomSettingsLocked(room);
             const roomDraft = roomDrafts[roomId] || {};
             const { session } = await updateSession(token, roomId, {
-                maxParticipants: Number(roomDraft.maxParticipants),
-                maxSelectionsPerUser: Number(roomDraft.maxSelectionsPerUser),
+                maxParticipants: roomSettingsLocked
+                    ? Number(room?.maxParticipants ?? 2)
+                    : Number(roomDraft.maxParticipants),
+                maxSelectionsPerUser: roomSettingsLocked
+                    ? Number(room?.maxSelectionsPerUser ?? 3)
+                    : Number(roomDraft.maxSelectionsPerUser),
             });
             setRooms((current) => current.map((room) => (room.id === roomId ? session : room)));
             setRoomDrafts((current) => ({
@@ -250,6 +260,7 @@ function HomePage() {
                                     {rooms.map((room) => {
                                         const isHost = room.currentUserRole === "host";
                                         const isBusy = activeRoomId === room.id;
+                                        const roomSettingsLocked = isRoomSettingsLocked(room);
 
                                         return (
                                             <article className="room-card" key={room.id}>
@@ -269,11 +280,17 @@ function HomePage() {
                                                                 type="number"
                                                                 min="2"
                                                                 max="50"
+                                                                disabled={roomSettingsLocked}
                                                                 value={roomDrafts[room.id]?.maxParticipants ?? String(room.maxParticipants)}
                                                                 onChange={(event) =>
                                                                     handleRoomDraftChange(room.id, "maxParticipants", event.target.value)
                                                                 }
                                                             />
+                                                            {roomSettingsLocked ? (
+                                                                <small className="room-card-field-note">
+                                                                    Locked after room starts.
+                                                                </small>
+                                                            ) : null}
                                                         </label>
                                                         <label className="room-card-field">
                                                             <span>Selections per user</span>
@@ -281,6 +298,7 @@ function HomePage() {
                                                                 type="number"
                                                                 min="1"
                                                                 max="10"
+                                                                disabled={roomSettingsLocked}
                                                                 value={
                                                                     roomDrafts[room.id]?.maxSelectionsPerUser ??
                                                                     String(room.maxSelectionsPerUser ?? 3)
@@ -293,6 +311,11 @@ function HomePage() {
                                                                     )
                                                                 }
                                                             />
+                                                            {roomSettingsLocked ? (
+                                                                <small className="room-card-field-note">
+                                                                    Locked after room starts.
+                                                                </small>
+                                                            ) : null}
                                                         </label>
                                                         <button type="button" onClick={() => handleRoomUpdate(room.id)} disabled={isBusy}>
                                                             Save
