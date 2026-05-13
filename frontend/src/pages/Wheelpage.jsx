@@ -417,7 +417,6 @@ export default function Wheelpage() {
     /** Keeps currentUserIdRef in sync with currentUserId for use inside socket callbacks. */
     useEffect(() => {
         currentUserIdRef.current = currentUserId;
-        console.log("currentUserId:", currentUserId); 
     }, [currentUserId]);
 
     /**
