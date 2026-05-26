@@ -564,7 +564,7 @@ npm run test:integration
 
 - Backend testing documentation:
   - `docs/backend-testing-documentation/`
-  - Contains MongoDB Compass screenshots and backend/database verification evidence used during development and manual testing.
+  - Contains Postman testing documentation, MongoDB Compass screenshots and backend/database verification evidence used during development and manual testing.
 
 - Frontend testing documentation:
   - `docs/frontend-testing-documentation/`
