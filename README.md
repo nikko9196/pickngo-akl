@@ -7,6 +7,11 @@ This repository currently contains a React frontend, an Express backend, and a M
 ## Live Demo
 The application is deployed on AWS and is accessible at:
 🔗 https://pickngo732.duckdns.org/
+
+**Note:** During testing, we noticed that the DuckDNS domain may occasionally show a temporary "Server Not Found" or 404 page on some devices or networks, while still working normally on others. This appears to be related to DNS caching or domain resolution rather than the application server being unavailable.
+
+If this happens, please try refreshing later, using another browser, or testing from another network/device.
+
 ## Team Members
 
 - Cheng Cheng (`cche860@aucklanduni.ac.nz`)
