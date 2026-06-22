@@ -6,14 +6,6 @@ Developed by our team Have A Byte, PicknGo AKL helps groups discover, shortlist,
 
 The project consists of a React frontend, an Express backend, a MongoDB database, and real-time session synchronisation to support collaborative restaurant selection.
 
-## Live Demo
-The application is deployed on AWS and is accessible at:
-🔗 https://pickngo732.duckdns.org/
-
-**Note:** During testing, we noticed that the DuckDNS domain may occasionally show a temporary "Server Not Found" or 404 page on some devices or networks, while still working normally on others. This appears to be related to DNS caching or domain resolution rather than the application server being unavailable.
-
-If this happens, please try refreshing later, using another browser, or testing from another network/device.
-
 ## Team Members
 
 - Nhu (Nikko) Pham *(me)*
@@ -22,6 +14,30 @@ If this happens, please try refreshing later, using another browser, or testing 
 - Phuong (Paige) Phan 
 - Vincent Su 
 - Cynthia Xie 
+
+## Live Demo
+The application is deployed on AWS and is accessible at:
+🔗 https://pickngo732.duckdns.org/
+
+**Note:** During testing, we noticed that the DuckDNS domain may occasionally show a temporary "Server Not Found" or 404 page on some devices or networks, while still working normally on others. This appears to be related to DNS caching or domain resolution rather than the application server being unavailable.
+
+If this happens, please try refreshing later, using another browser, or testing from another network/device.
+
+## UX/UI Design
+The complete UX/UI design for PicknGo AKL was designed by Nhu (Nikko) Pham using Figma.
+
+🔗 Figma Prototype: https://www.figma.com/design/36dSHjs4mnDcEIBsgqUcST/Pick-n-Go-AKL?node-id=0-1&p=f&t=PXzLUe2hVgiijZix-0
+
+The design process included user flows, wireframes, branding, visual design, mobile-first interface design, and interactive prototyping.
+
+Key design decisions included:
+- A mobile-first approach, as users would most likely access the application on their phones while deciding where to eat together.
+- A clean, fun, and social visual style to support collaborative restaurant selection.
+- A blue and orange colour palette to create a playful and energetic experience.
+- Custom branding, including the PicknGo AKL logo and the "Let Fate Pick the Table" tagline.
+- Design choices that balanced user experience goals with realistic implementation constraints within the project timeframe.
+
+The final application remained highly consistent with the original Figma prototype throughout development.
 
 ## Tech Stack
 
