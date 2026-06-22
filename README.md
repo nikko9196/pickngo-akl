@@ -24,7 +24,7 @@ The application is deployed on AWS and is accessible at:
 If this happens, please try refreshing later, using another browser, or testing from another network/device.
 
 ## UX/UI Design
-The complete UX/UI design for PicknGo AKL was designed by Nhu (Nikko) Pham using Figma.
+The complete UX/UI design for PicknGo AKL was designed by **Nhu (Nikko) Pham** using Figma.
 
 🔗 Figma Prototype: https://www.figma.com/design/36dSHjs4mnDcEIBsgqUcST/Pick-n-Go-AKL?node-id=0-1&p=f&t=PXzLUe2hVgiijZix-0
 
