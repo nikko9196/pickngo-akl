@@ -1,8 +1,10 @@
-# Have A Byte
+# PICKnGO AKL
 
-Have A Byte is a full-stack web project for CS732. Our team developed PicknGo AKL, a collaborative restaurant decision-making web application that helps groups discover, shortlist, and randomly select restaurants together through a shared spinning wheel experience.
+PICKnGO AKL is a full-stack web application developed as part of **COMPSCI 732** at the **University of Auckland**.
 
-This repository currently contains a React frontend, an Express backend, and a MongoDB Atlas database connection.
+Developed by our team Have A Byte, PicknGo AKL helps groups discover, shortlist, and collaboratively select restaurants through a shared decision-making experience that combines personalised recommendations, wheel spinning, and group voting.
+
+The project consists of a React frontend, an Express backend, a MongoDB database, and real-time session synchronisation to support collaborative restaurant selection.
 
 ## Live Demo
 The application is deployed on AWS and is accessible at:
@@ -14,12 +16,12 @@ If this happens, please try refreshing later, using another browser, or testing 
 
 ## Team Members
 
-- Cheng Cheng (`cche860@aucklanduni.ac.nz`)
-- Annie Lin (`yiln996@aucklanduni.ac.nz`)
-- Nhu (Nikko) Pham (`dpha478@aucklanduni.ac.nz`)
-- Phuong (Paige) Phan (`ppha961@aucklanduni.ac.nz`)
-- Vincent Su (`hsu901@aucklanduni.ac.nz`)
-- Cynthia Xie (`zxie211@aucklanduni.ac.nz`)
+- Nhu (Nikko) Pham *(me)*
+- Cheng Cheng 
+- Annie Lin 
+- Phuong (Paige) Phan 
+- Vincent Su 
+- Cynthia Xie 
 
 ## Tech Stack
 
@@ -40,7 +42,7 @@ If this happens, please try refreshing later, using another browser, or testing 
 - Google Places API
 - Google Maps API
 
-## Current Session Flow
+## Application Workflow
 
 1. User signs in or continues as a guest.
 2. Host creates a room.
@@ -52,7 +54,7 @@ If this happens, please try refreshing later, using another browser, or testing 
 8. Session moves to `selecting`.
 9. Each participant can save their shortlisted restaurants and reselect by clicking the repick button.
 10. Wheel is built and session moves to `spinning`.
-11. Every marks themselves as ready to lock their picks.
+11. Every participant marks themselves as ready to lock their picks.
 11. Host can click the remind button under the "Ready/Total Players" button/tab to remind players who are not ready.
 12. Host spins the wheel (only when all players are ready).
 13. Backend selects a result and session moves to `voting`.
